@@ -11,7 +11,7 @@ body {
 }
 
 .left {
-    width: 50%;
+    width: 60%;
     background: white;
     display: flex;
     justify-content: center;
@@ -22,8 +22,8 @@ body {
 }
 
 .form-box {
-    width: 60%;
-    padding: 40px;
+    width: 50%;
+    padding: 35px;
     background: rgba(243, 242, 242, 0.26);
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -69,7 +69,7 @@ button:hover {
     background-position: center;
     background-size: cover;
     background-repeat: no-repeat;
-    margin-left: -150px;
+    margin-left: -180px;
 }
 
 .dashboard {

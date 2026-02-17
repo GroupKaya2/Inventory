@@ -33,7 +33,7 @@
             </form>
 
             <p>Don't have an account? <a href="register.php">Sign up</a></p>
-            
+
             <?php
             if (isset($_SESSION['error'])) {
                 echo "<p class='error'>" . $_SESSION['error'] . "</p>";
