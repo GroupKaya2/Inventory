@@ -12,8 +12,6 @@
         <div class="form-box">
 
             <h2>Create Account</h2>
-
-            <!-- Correct form action -->
             <form action="registerprocess.php" method="POST">
                 <input type="text" name="name" placeholder="Full Name" required>
                 <input type="email" name="email" placeholder="Email" required>

@@ -10,7 +10,6 @@ if ($_SESSION['role'] != 'owner') {
 if (isset($_GET['id'])) {
     $user_id = $_GET['id'];
 
-    // Prevent owner from deleting themselves
     if ($user_id == $_SESSION['user_id']) {
         die("You cannot delete yourself!");
     }

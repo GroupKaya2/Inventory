@@ -50,7 +50,6 @@ $role = $_SESSION['role'];
     <h3>Manage Users</h3>
 
     <?php
-    // Fetch all users except the current owner
     $sql = "SELECT id, name, email, role FROM users";
     $result = $conn->query($sql);
 
@@ -65,7 +64,6 @@ $role = $_SESSION['role'];
     </tr>";
 
         while ($row = $result->fetch_assoc()) {
-            // Prevent owner from deleting themselves
             $delete_button = ($row['id'] != $_SESSION['user_id'])
                 ? "<a href='delete_user.php?id=".$row['id']."' onclick=\"return confirm('Are you sure you want to delete this user?')\">Delete</a>"
                 : "—";

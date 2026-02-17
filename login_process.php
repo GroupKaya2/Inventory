@@ -20,12 +20,10 @@ if ($result->num_rows > 0) {
             exit();
         }
 
-        // Set session variables
         $_SESSION['user'] = $user['name'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['user_id'] = $user['id'];
 
-        // ✅ Manager will see "Hello (NAME)"
         header("Location: dashboard.php");
         exit();
 

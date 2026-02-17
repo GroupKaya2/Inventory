@@ -7,7 +7,6 @@ $email = $_POST['email'];
 $password = $_POST['password'];
 $role = $_POST['role'];
 
-// Check if email already exists
 $check = "SELECT * FROM users WHERE email='$email'";
 $result = $conn->query($check);
 
@@ -17,16 +16,14 @@ if ($result->num_rows > 0) {
     exit();
 }
 
-// Hash the password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-// Insert new user
 $sql = "INSERT INTO users (name, email, password, role)
         VALUES ('$name', '$email', '$hashed_password', '$role')";
 
 if ($conn->query($sql) === TRUE) {
     $_SESSION['success'] = "Registration successful! You can now login.";
-    header("Location: index.php"); // Send user to login page
+    header("Location: index.php");
     exit();
 } else {
     $_SESSION['error'] = "Registration failed!";
