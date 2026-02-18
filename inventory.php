@@ -25,6 +25,64 @@ $activePage = 'inventory';
         body {
             background-color: #f8fafc;
         }
+        .inventory-toolbar {
+            background: linear-gradient(180deg, #111827 0%, #0b1220 100%);
+            border: 1px solid rgba(255, 255, 255, .06);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: 0 10px 25px rgba(2, 6, 23, .25);
+            margin-bottom: 18px;
+        }
+        .inventory-toolbar .form-control,
+        .inventory-toolbar .form-select {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .10);
+            color: #e5e7eb;
+            border-radius: 12px;
+            height: 44px;
+        }
+        .inventory-toolbar .form-control::placeholder {
+            color: rgba(229, 231, 235, .65);
+        }
+        .inventory-toolbar .input-group-text {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .10);
+            color: rgba(229, 231, 235, .85);
+            border-radius: 12px;
+        }
+        .inventory-toolbar .form-control:focus,
+        .inventory-toolbar .form-select:focus {
+            box-shadow: 0 0 0 .2rem rgba(99, 102, 241, .20);
+            border-color: rgba(99, 102, 241, .55);
+        }
+        .btn-toolbar-add {
+            background: #f97316;
+            border: none;
+            color: #111827;
+            height: 44px;
+            border-radius: 12px;
+            padding: 0 16px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .btn-toolbar-add:hover {
+            background: #fb8a3a;
+            color: #111827;
+        }
+        .btn-toolbar-export {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .10);
+            color: #e5e7eb;
+            height: 44px;
+            border-radius: 12px;
+            padding: 0 16px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .btn-toolbar-export:hover {
+            background: rgba(255, 255, 255, .10);
+            color: #ffffff;
+        }
         .page-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -114,13 +172,42 @@ $activePage = 'inventory';
     <div class="container-fluid">
         <div class="page-header">
             <div class="row align-items-center">
-                <div class="col-md-8">
+                <div class="col-md-12">
                     <h1 class="mb-0"><i class="bi bi-box-seam"></i> Product Inventory Management</h1>
                     <p class="mb-0 mt-2">Manage your product inventory efficiently</p>
                 </div>
-                <div class="col-md-4 text-end">
-                    <button type="button" class="btn btn-add" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                        <i class="bi bi-plus-circle"></i> Add New Product
+            </div>
+        </div>
+
+        <div class="inventory-toolbar">
+            <div class="d-flex flex-column flex-lg-row gap-2 align-items-stretch align-items-lg-center">
+                <div class="flex-grow-1">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="inventorySearch"
+                            placeholder="Search parts by name, code..."
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div style="min-width: 220px;">
+                    <select class="form-select" id="inventoryCategoryFilter">
+                        <option value="all" selected>All Categories</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <button type="button" class="btn btn-toolbar-add" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                        <i class="bi bi-plus-lg"></i> Add Part
+                    </button>
+                    <button type="button" class="btn btn-toolbar-export" id="inventoryExportBtn">
+                        <i class="bi bi-download"></i> Export
                     </button>
                 </div>
             </div>

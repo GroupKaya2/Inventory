@@ -1,14 +1,4 @@
-<?php
-session_start();
-include "db.php";
-
-// Owner-only system: show sign-up link ONLY if no users exist yet
-$stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM users");
-$stmt->execute();
-$countRow = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-$canRegister = (intval($countRow['cnt']) === 0);
-?>
+<?php session_start(); ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -35,11 +25,7 @@ $canRegister = (intval($countRow['cnt']) === 0);
 
                 <button type="submit">Login</button>
             </form>
-            <?php if ($canRegister) { ?>
-                <p>Don't have an account? <a href="signup.php">Sign up</a></p>
-            <?php } else { ?>
-                <p class="text-muted" style="font-size: 13px;">Registration is disabled. Please login.</p>
-            <?php } ?>
+            <p>Don't have an account? <a href="register.php">Sign up</a></p>
 
             <?php
             if (isset($_SESSION['error'])) {

@@ -3,6 +3,144 @@
 // Global variable to store categories
 let categories = [];
 
+// Global variables for filtering/export
+let allProducts = [];
+let filteredProducts = [];
+
+function getSearchValue() {
+    const el = document.getElementById('inventorySearch');
+    return (el?.value || '').trim().toLowerCase();
+}
+
+function getSelectedCategoryId() {
+    const el = document.getElementById('inventoryCategoryFilter');
+    const v = (el?.value || 'all').trim();
+    if (v === '' || v === 'all') return null;
+    const parsed = parseInt(v, 10);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function renderProducts(products) {
+    const tableBody = document.getElementById('productsTableBody');
+    if (!tableBody) return;
+
+    if (!products || products.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center">No products found.</td></tr>';
+        return;
+    }
+
+    tableBody.innerHTML = products.map(product => {
+        const unitCost = parseFloat(product.unit_cost);
+        const sellingPrice = parseFloat(product.selling_price);
+        const margin = parseFloat(product.margin);
+        const marginClass = margin >= 0 ? 'margin-positive' : 'margin-negative';
+        const marginSign = margin >= 0 ? '+' : '';
+
+        const safeDesc = String(product.description ?? '').replace(/'/g, "\\'");
+
+        return `
+            <tr>
+                <td>${product.product_id}</td>
+                <td>${product.category_name}</td>
+                <td>${product.description}</td>
+                <td>${product.unit}</td>
+                <td>${formatCurrency(unitCost)}</td>
+                <td>${formatCurrency(sellingPrice)}</td>
+                <td class="${marginClass}">${marginSign}${formatCurrency(margin)}</td>
+                <td>${product.initial_quantity}</td>
+                <td>
+                    <button class="btn btn-sm btn-edit me-2" onclick="editProduct(${product.product_id})">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn btn-sm btn-delete" onclick="deleteProduct(${product.product_id}, '${safeDesc}')">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function applyFilters() {
+    const q = getSearchValue();
+    const selectedCategoryId = getSelectedCategoryId();
+
+    filteredProducts = allProducts.filter(p => {
+        if (selectedCategoryId !== null && parseInt(p.category_id, 10) !== selectedCategoryId) {
+            return false;
+        }
+        if (!q) return true;
+
+        const haystack = [
+            p.description,
+            p.code,
+            p.category_name
+        ].map(v => String(v ?? '').toLowerCase()).join(' ');
+
+        return haystack.includes(q);
+    });
+
+    renderProducts(filteredProducts);
+}
+
+function debounce(fn, waitMs) {
+    let t = null;
+    return function (...args) {
+        window.clearTimeout(t);
+        t = window.setTimeout(() => fn.apply(this, args), waitMs);
+    };
+}
+
+function exportFilteredProductsToCsv() {
+    const rows = filteredProducts.length ? filteredProducts : allProducts;
+    const header = [
+        'ID',
+        'Category',
+        'Description',
+        'Unit',
+        'Unit Cost',
+        'Selling Price',
+        'Margin',
+        'Stock',
+        'Code'
+    ];
+
+    const csvEscape = (value) => {
+        const s = String(value ?? '');
+        if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+    };
+
+    const lines = [];
+    lines.push(header.map(csvEscape).join(','));
+    rows.forEach(p => {
+        lines.push([
+            p.product_id,
+            p.category_name,
+            p.description,
+            p.unit,
+            p.unit_cost,
+            p.selling_price,
+            p.margin,
+            p.initial_quantity,
+            p.code
+        ].map(csvEscape).join(','));
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const filename = `inventory_export_${stamp.getFullYear()}-${pad2(stamp.getMonth() + 1)}-${pad2(stamp.getDate())}.csv`;
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
 // Load categories and populate dropdowns
 function loadCategories() {
     fetch('get_categories.php')
@@ -30,6 +168,20 @@ function loadCategories() {
                     option.textContent = cat.category_name;
                     editCategorySelect.appendChild(option);
                 });
+
+                // Populate Inventory toolbar category filter (if present)
+                const filterSelect = document.getElementById('inventoryCategoryFilter');
+                if (filterSelect) {
+                    const current = filterSelect.value || 'all';
+                    filterSelect.innerHTML = '<option value="all">All Categories</option>';
+                    categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.category_id;
+                        option.textContent = cat.category_name;
+                        filterSelect.appendChild(option);
+                    });
+                    filterSelect.value = current;
+                }
             }
         })
         .catch(error => {
@@ -67,47 +219,15 @@ function loadProducts() {
             loadingSpinner.style.display = 'none';
             
             if (data.success) {
-                if (data.data.length === 0) {
-                    tableBody.innerHTML = '<tr><td colspan="9" class="text-center">No products found. Add your first product!</td></tr>';
-                } else {
-                    data.data.forEach(product => {
-                        // Use raw numeric values for calculations
-                        const unitCost = parseFloat(product.unit_cost);
-                        const sellingPrice = parseFloat(product.selling_price);
-                        const margin = parseFloat(product.margin);
-                        const marginClass = margin >= 0 ? 'margin-positive' : 'margin-negative';
-                        const marginSign = margin >= 0 ? '+' : '';
-                        
-                        const row = `
-                            <tr>
-                                <td>${product.product_id}</td>
-                                <td>${product.category_name}</td>
-                                <td>${product.description}</td>
-                                <td>${product.unit}</td>
-                                <td>${formatCurrency(unitCost)}</td>
-                                <td>${formatCurrency(sellingPrice)}</td>
-                                <td class="${marginClass}">${marginSign}${formatCurrency(margin)}</td>
-                                <td>${product.initial_quantity}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-edit me-2" onclick="editProduct(${product.product_id})">
-                                        <i class="bi bi-pencil"></i> Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-delete" onclick="deleteProduct(${product.product_id}, '${product.description.replace(/'/g, "\\'")}')">
-                                        <i class="bi bi-trash"></i> Delete
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
-                        tableBody.innerHTML += row;
-                    });
-                }
+                allProducts = Array.isArray(data.data) ? data.data : [];
+                applyFilters();
             } else {
-                tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading products: ' + data.message + '</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading products: ' + data.message + '</td></tr>';
             }
         })
         .catch(error => {
             loadingSpinner.style.display = 'none';
-            tableBody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error: ' + error.message + '</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error: ' + error.message + '</td></tr>';
             console.error('Error:', error);
         });
 }
@@ -332,6 +452,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load categories first, then products
     loadCategories();
     loadProducts();
+
+    const debouncedApply = debounce(applyFilters, 200);
+    const searchInput = document.getElementById('inventorySearch');
+    if (searchInput) {
+        searchInput.addEventListener('input', debouncedApply);
+    }
+
+    const filterSelect = document.getElementById('inventoryCategoryFilter');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', applyFilters);
+    }
+
+    const exportBtn = document.getElementById('inventoryExportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportFilteredProductsToCsv);
+    }
     
     // Add Product form submission
     document.getElementById('submitAddProduct').addEventListener('click', function() {
