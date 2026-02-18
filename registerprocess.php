@@ -8,15 +8,24 @@ if (!isset($_SESSION['user']) || $_SESSION['role'] != 'owner') {
     exit();
 }
 
-$name = $_POST['name'];
-$email = $_POST['email'];
-$password = $_POST['password'];
+$name = trim($_POST['name'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
 $role = 'manager'; // Only managers can be created by owner
 
-$check = "SELECT * FROM users WHERE email='$email'";
-$result = $conn->query($check);
+if ($name === '' || $email === '' || $password === '') {
+    $_SESSION['error'] = "All fields are required!";
+    header("Location: register.php");
+    exit();
+}
 
-if ($result->num_rows > 0) {
+$stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
+$stmt->bind_param("s", $email);
+$stmt->execute();
+$exists = $stmt->get_result()->num_rows > 0;
+$stmt->close();
+
+if ($exists) {
     $_SESSION['error'] = "Email already exists!";
     header("Location: register.php");
     exit();
@@ -24,15 +33,21 @@ if ($result->num_rows > 0) {
 
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-$sql = "INSERT INTO users (name, email, password, role)
-        VALUES ('$name', '$email', '$hashed_password', '$role')";
+$stmt = $conn->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
+$stmt->bind_param("ssss", $name, $email, $hashed_password, $role);
 
-if ($conn->query($sql) === TRUE) {
+if ($stmt->execute()) {
+    $stmt->close();
     $_SESSION['success'] = "Manager account created successfully!";
     header("Location: dashboard.php");
     exit();
 } else {
+    $err = $stmt->error;
+    $stmt->close();
     $_SESSION['error'] = "Failed to create manager account!";
+    if ($err) {
+        $_SESSION['error'] .= " " . $err;
+    }
     header("Location: register.php");
     exit();
 }

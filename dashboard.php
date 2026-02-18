@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-if (!isset($_SESSION['user'])) {
+if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
@@ -9,85 +9,45 @@ if (!isset($_SESSION['user'])) {
 include "db.php";
 
 $role = $_SESSION['role'];
+$activePage = 'dashboard';
 ?>
 
 <!DOCTYPE html>
 <html>
 <head>
     <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        table {
-            border-collapse: collapse;
-            width: 80%;
-            margin-top: 20px;
-        }
-        th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #0d3b66;
-            color: white;
-        }
-        a {
-            color: red;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        a:hover {
-            text-decoration: underline;
+        .card { border: none; border-radius: 14px; box-shadow: 0 10px 30px rgba(2,6,23,.08); }
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(2,6,23,.10);
         }
     </style>
 </head>
 <body>
+<?php include "sidebar.php"; ?>
 
-<h2>Welcome, <?php echo $_SESSION['user']; ?> 🎉 (<?php echo strtoupper($role); ?>)</h2>
+<main class="app-main p-3 p-md-4">
+    <div class="container-fluid">
+        <div class="hero p-4 mb-3 mb-md-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <h3 class="mb-1">Welcome, <?php echo htmlspecialchars($_SESSION['user']); ?></h3>
+                    <div class="opacity-75">Role: <?php echo htmlspecialchars(strtoupper($role)); ?></div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-light" href="inventory.php">Go to Inventory</a>
+                    <a class="btn btn-outline-light" href="profile.php">Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
 
-<hr>
-
-<?php if ($role == 'owner') { ?>
-    <p><a href="register.php">+ Add Manager Account</a></p>
-    <h3>Manage Users</h3>
-
-    <?php
-    $sql = "SELECT id, name, email, role FROM users";
-    $result = $conn->query($sql);
-
-    if ($result->num_rows > 0) {
-        echo "<table>";
-        echo "
-    <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Action</th>
-    </tr>";
-
-        while ($row = $result->fetch_assoc()) {
-            $delete_button = ($row['id'] != $_SESSION['user_id'])
-                ? "<a href='delete_user.php?id=".$row['id']."' onclick=\"return confirm('Are you sure you want to delete this user?')\">Delete</a>"
-                : "—";
-
-            echo "<tr>
-                    <td>".$row['name']."</td>
-                    <td>".$row['email']."</td>
-                    <td>".$row['role']."</td>
-                    <td>".$delete_button."</td>
-                </tr>";
-        }
-
-        echo "</table>";
-    } else {
-        echo "<p>No users found.</p>";
-    }
-    ?>
-
-<?php } ?>
-
-<br>
-<a href="logout.php">Logout</a>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html>
 </html>
