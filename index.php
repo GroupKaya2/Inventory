@@ -23,15 +23,8 @@
                 <input type="email" name="email" placeholder="Email" required>
                 <input type="password" name="password" placeholder="Password" required>
 
-                <select name="role" required>
-                    <option value="">Login as...</option>
-                    <option value="owner">Owner</option>
-                    <option value="manager">Manager</option>
-                </select>
-
                 <button type="submit">Login</button>
             </form>
-
             <p>Don't have an account? <a href="register.php">Sign up</a></p>
 
             <?php

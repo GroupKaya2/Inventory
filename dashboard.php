@@ -47,6 +47,7 @@ $role = $_SESSION['role'];
 <hr>
 
 <?php if ($role == 'owner') { ?>
+    <p><a href="register.php">+ Add Manager Account</a></p>
     <h3>Manage Users</h3>
 
     <?php
@@ -88,4 +89,5 @@ $role = $_SESSION['role'];
 <a href="logout.php">Logout</a>
 
 </body>
+</html>
 </html>

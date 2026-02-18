@@ -1,8 +1,16 @@
-<?php session_start(); ?>
+<?php session_start();
+include "db.php";
+
+// Only owner can create manager accounts
+if (!isset($_SESSION['user']) || $_SESSION['role'] != 'owner') {
+    header("Location: " . (isset($_SESSION['user']) ? "dashboard.php" : "index.php"));
+    exit();
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Register</title>
+    <title>Add Manager</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,22 +19,16 @@
     <div class="left">
         <div class="form-box">
 
-            <h2>Create Account</h2>
+            <h2>Create Manager Account</h2>
             <form action="registerprocess.php" method="POST">
                 <input type="text" name="name" placeholder="Full Name" required>
                 <input type="email" name="email" placeholder="Email" required>
                 <input type="password" name="password" placeholder="Password" required>
 
-                <select name="role" required>
-                    <option value="">Register as...</option>
-                    <option value="owner">Owner</option>
-                    <option value="manager">Manager</option>
-                </select>
-
-                <button type="submit">Register</button>
+                <button type="submit">Create Manager</button>
             </form>
 
-            <p>Already have an account? <a href="index.php">Login</a></p>
+            <p><a href="dashboard.php">Back to Dashboard</a></p>
 
             <?php
             if (isset($_SESSION['error'])) {
