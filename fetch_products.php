@@ -4,9 +4,11 @@ include "db.php";
 
 try {
     $sql = "SELECT p.product_id, p.category_id, p.description, p.unit, p.unit_cost, p.selling_price, p.code, p.initial_quantity, p.created_at,
-                   c.category_name
+                   c.category_name,
+                   COALESCE(s.current_stock, p.initial_quantity) AS current_stock
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
+            LEFT JOIN product_stock s ON s.product_id = p.product_id
             ORDER BY p.product_id DESC";
     
     $stmt = $conn->prepare($sql);
@@ -27,11 +29,12 @@ try {
             'category_name' => $row['category_name'] ?? 'N/A',
             'description' => $row['description'],
             'unit' => $row['unit'],
-            'unit_cost' => floatval($row['unit_cost']), // Raw value for JavaScript formatting
-            'selling_price' => floatval($row['selling_price']), // Raw value for JavaScript formatting
-            'margin' => $margin, // Raw value for JavaScript formatting
+            'unit_cost' => floatval($row['unit_cost']),
+            'selling_price' => floatval($row['selling_price']),
+            'margin' => $margin,
             'code' => $row['code'],
-            'initial_quantity' => $row['initial_quantity'],
+            'initial_quantity' => (int)$row['initial_quantity'],
+            'current_stock' => (int)($row['current_stock'] ?? $row['initial_quantity']),
             'created_at' => $row['created_at']
         ];
     }

@@ -15,7 +15,9 @@ try {
     $selling_price = floatval($_POST['selling_price'] ?? 0);
     $code = trim($_POST['code'] ?? '');
     $initial_quantity = intval($_POST['initial_quantity'] ?? 0);
-    $category_id = intval($_POST['category_id'] ?? 0); // Optional category
+    $category_id = intval($_POST['category_id'] ?? 0);
+    $reorder_threshold = intval($_POST['reorder_threshold'] ?? 5);
+    if ($reorder_threshold < 0) $reorder_threshold = 5;
     
     // Validation
     if (empty($description) || empty($unit) || empty($code) || $category_id <= 0) {
@@ -44,17 +46,19 @@ try {
     }
     $checkStmt->close();
     
-    // Insert product using prepared statement
-    $sql = "INSERT INTO products (category_id, description, unit, unit_cost, selling_price, code, initial_quantity) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)";
-    
-    $stmt = $conn->prepare($sql);
-    
+    $hasThreshold = @$conn->query("SHOW COLUMNS FROM products LIKE 'reorder_threshold'")->num_rows > 0;
+    if ($hasThreshold) {
+        $sql = "INSERT INTO products (category_id, description, unit, unit_cost, selling_price, code, initial_quantity, reorder_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) $stmt->bind_param("issddsii", $category_id, $description, $unit, $unit_cost, $selling_price, $code, $initial_quantity, $reorder_threshold);
+    } else {
+        $sql = "INSERT INTO products (category_id, description, unit, unit_cost, selling_price, code, initial_quantity) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) $stmt->bind_param("issddsi", $category_id, $description, $unit, $unit_cost, $selling_price, $code, $initial_quantity);
+    }
     if (!$stmt) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
-    
-    $stmt->bind_param("issddsi", $category_id, $description, $unit, $unit_cost, $selling_price, $code, $initial_quantity);
     
     if ($stmt->execute()) {
         $product_id = $conn->insert_id;

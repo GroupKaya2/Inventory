@@ -2,7 +2,6 @@
 session_start();
 include "db.php";
 
-
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 

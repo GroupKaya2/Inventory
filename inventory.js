@@ -47,7 +47,7 @@ function renderProducts(products) {
                 <td>${formatCurrency(unitCost)}</td>
                 <td>${formatCurrency(sellingPrice)}</td>
                 <td class="${marginClass}">${marginSign}${formatCurrency(margin)}</td>
-                <td>${product.initial_quantity}</td>
+                <td>${product.current_stock != null ? product.current_stock : product.initial_quantity}</td>
                 <td>
                     <button class="btn btn-sm btn-edit me-2" onclick="editProduct(${product.product_id})">
                         <i class="bi bi-pencil"></i> Edit
@@ -114,6 +114,7 @@ function exportFilteredProductsToCsv() {
     const lines = [];
     lines.push(header.map(csvEscape).join(','));
     rows.forEach(p => {
+        const stock = p.current_stock != null ? p.current_stock : p.initial_quantity;
         lines.push([
             p.product_id,
             p.category_name,
@@ -122,7 +123,7 @@ function exportFilteredProductsToCsv() {
             p.unit_cost,
             p.selling_price,
             p.margin,
-            p.initial_quantity,
+            stock,
             p.code
         ].map(csvEscape).join(','));
     });
@@ -325,6 +326,7 @@ function editProduct(productId) {
                 document.getElementById('editUnitCost').value = product.unit_cost;
                 document.getElementById('editSellingPrice').value = product.selling_price;
                 document.getElementById('editInitialQuantity').value = product.initial_quantity;
+                document.getElementById('editReorderThreshold').value = product.reorder_threshold != null ? product.reorder_threshold : 5;
                 
                 // Calculate and display margin
                 calculateEditMargin();
@@ -502,6 +504,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('addProductForm').reset();
         document.getElementById('addCategory').value = '';
         document.getElementById('addUnit').value = '';
+        document.getElementById('addReorderThreshold').value = 5;
         document.getElementById('addMarginDisplay').textContent = '₱0.00';
         document.getElementById('addMarginDisplay').className = 'margin-display';
     });

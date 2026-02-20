@@ -126,6 +126,14 @@ function sidebar_active($key, $activePage) {
             <span class="icon"><i class="bi bi-box-seam"></i></span>
             <span>Inventory</span>
         </a>
+        <a class="<?php echo sidebar_active('sales', $activePage); ?>" href="sales.php">
+            <span class="icon"><i class="bi bi-receipt"></i></span>
+            <span>Sales</span>
+        </a>
+        <a class="<?php echo sidebar_active('sms', $activePage); ?>" href="sms_management.php">
+            <span class="icon"><i class="bi bi-chat-dots"></i></span>
+            <span>SMS Management</span>
+        </a>
         <a class="<?php echo sidebar_active('profile', $activePage); ?>" href="profile.php">
             <span class="icon"><i class="bi bi-person-circle"></i></span>
             <span>Profile</span>

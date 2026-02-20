@@ -14,8 +14,9 @@ try {
         throw new Exception("Invalid product ID");
     }
     
-    $sql = "SELECT p.product_id, p.category_id, p.description, p.unit, p.unit_cost, p.selling_price, p.code, p.initial_quantity, p.created_at,
-                   c.category_name
+    $hasThreshold = @$conn->query("SHOW COLUMNS FROM products LIKE 'reorder_threshold'")->num_rows > 0;
+    $threshCol = $hasThreshold ? ', p.reorder_threshold' : '';
+    $sql = "SELECT p.product_id, p.category_id, p.description, p.unit, p.unit_cost, p.selling_price, p.code, p.initial_quantity, p.created_at $threshCol, c.category_name
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
             WHERE p.product_id = ?";
@@ -37,7 +38,9 @@ try {
     
     $product = $result->fetch_assoc();
     $stmt->close();
-    
+    if (!isset($product['reorder_threshold'])) {
+        $product['reorder_threshold'] = 5;
+    }
     echo json_encode([
         'success' => true,
         'data' => $product
