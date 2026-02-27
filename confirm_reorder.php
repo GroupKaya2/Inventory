@@ -1,8 +1,5 @@
 <?php
-/**
- * Log reorder confirmation (optional). Creates reorder_preparations record.
- * Table may not exist if migration_forecast.sql was not run.
- */
+
 session_start();
 header('Content-Type: application/json');
 

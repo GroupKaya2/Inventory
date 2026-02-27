@@ -1,24 +1,22 @@
 <?php
+ob_start();
 session_start();
-header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+function sendJson($arr) {
+    ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($arr);
     exit;
 }
 
-include __DIR__ . '/db.php';
-require_once __DIR__ . '/sms_service.php';
-
-try {
-    $status = $_GET['status'] ?? null;
-    $limit = (int)($_GET['limit'] ?? 50);
-    
-    $smsService = new SMSService($conn);
-    $history = $smsService->getSMSHistory($limit, $status);
-    
-    echo json_encode(['success' => true, 'history' => $history]);
-} catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+if (empty($_SESSION['user_id'])) {
+    sendJson(['success' => false, 'message' => 'Unauthorized']);
 }
-$conn->close();
+
+// SMS feature has been removed from this system.
+// Return empty history so any leftover calls don't break.
+sendJson([
+    'success' => true,
+    'history' => [],
+    'message' => 'SMS feature is disabled.'
+]);

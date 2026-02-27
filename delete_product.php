@@ -1,61 +1,16 @@
 <?php
-header('Content-Type: application/json');
-include "db.php";
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'message' => 'Invalid request method']);
-    exit();
-}
-
-try {
-    $product_id = intval($_POST['product_id'] ?? 0);
-    
-    if ($product_id <= 0) {
-        throw new Exception("Invalid product ID");
-    }
-    
-    // Check if product exists
-    $checkSql = "SELECT product_id FROM products WHERE product_id = ?";
-    $checkStmt = $conn->prepare($checkSql);
-    $checkStmt->bind_param("i", $product_id);
-    $checkStmt->execute();
-    $checkResult = $checkStmt->get_result();
-    
-    if ($checkResult->num_rows === 0) {
-        $checkStmt->close();
-        throw new Exception("Product not found");
-    }
-    $checkStmt->close();
-    
-    // Delete product using prepared statement
-    $sql = "DELETE FROM products WHERE product_id = ?";
-    
-    $stmt = $conn->prepare($sql);
-    
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-    
-    $stmt->bind_param("i", $product_id);
-    
-    if ($stmt->execute()) {
-        $stmt->close();
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Product deleted successfully'
-        ]);
-    } else {
-        throw new Exception("Execute failed: " . $stmt->error);
-    }
-    
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
-}
-
-$conn->close();
-?>
-
+ob_start(); session_start();
+function sendJson($a){ob_end_clean();header('Content-Type: application/json');echo json_encode($a);exit;}
+if(empty($_SESSION['user_id'])) sendJson(['success'=>false,'message'=>'Not logged in']);
+if(($_SESSION['role']??'manager')!=='owner') sendJson(['success'=>false,'message'=>'Owner only: cannot delete products']);
+include 'db.php';
+$id=(int)($_POST['product_id']??0);
+if($id<=0) sendJson(['success'=>false,'message'=>'Invalid ID']);
+$chk=$conn->prepare("SELECT COUNT(*) AS c FROM sale_items WHERE product_id=?");
+$chk->bind_param('i',$id);$chk->execute();
+$cnt=$chk->get_result()->fetch_assoc()['c'];$chk->close();
+if($cnt>0) sendJson(['success'=>false,'message'=>'Cannot delete: product has existing sales records.']);
+$stmt=$conn->prepare("DELETE FROM products WHERE product_id=?");
+$stmt->bind_param('i',$id);
+if($stmt->execute()&&$stmt->affected_rows>0) sendJson(['success'=>true,'message'=>'Product deleted.']);
+else sendJson(['success'=>false,'message'=>'Product not found.']);

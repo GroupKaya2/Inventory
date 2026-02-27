@@ -37,7 +37,7 @@ CREATE TABLE categories (
     category_name VARCHAR(100) NOT NULL UNIQUE
 );
 
-INSERT IGNORE INTO categories (category_name) VALUES 
+INSERT IGNORE INTO categories (category_name) VALUES
 ('Diesel Engine Oil'),
 ('Gasoline Engine Oils'),
 ('Transmission Fluids'),
