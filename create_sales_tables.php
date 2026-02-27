@@ -1,8 +1,5 @@
 <?php
-/**
- * Create sales and sale_items tables
- * Run this file once via browser or command line
- */
+
 include __DIR__ . '/db.php';
 
 $sql = "
@@ -40,7 +37,6 @@ CREATE TABLE sale_items (
 SET FOREIGN_KEY_CHECKS = 1;
 ";
 
-// Split SQL into individual statements
 $statements = array_filter(
     array_map('trim', explode(';', $sql)),
     function($stmt) {
@@ -66,7 +62,7 @@ foreach ($statements as $stmt) {
 
 $conn->close();
 
-// Output results
+// Output
 if (php_sapi_name() === 'cli') {
     echo "Sales Tables Migration\n";
     echo "======================\n\n";

@@ -20,14 +20,13 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// ═══════════════════════════════════════════════════════════════
+
 // KPI: TODAY
-// ═══════════════════════════════════════════════════════════════
 $todayRow = $conn->query("
     SELECT COALESCE(SUM(parts_total+labor_total),0) AS revenue,
-           COALESCE(SUM(parts_total),0)             AS parts,
-           COALESCE(SUM(labor_total),0)             AS labor,
-           COUNT(*)                                  AS sales_count
+        COALESCE(SUM(parts_total),0)             AS parts,
+        COALESCE(SUM(labor_total),0)             AS labor,
+        COUNT(*)                                  AS sales_count
     FROM sales WHERE sale_date='$today'
 ")->fetch_assoc();
 
@@ -43,14 +42,12 @@ $todayParts    = (float)$todayRow['parts'];
 $todayLabor    = (float)$todayRow['labor'];
 $todaySales    = (int)$todayRow['sales_count'];
 
-// ═══════════════════════════════════════════════════════════════
 // KPI: THIS MONTH
-// ═══════════════════════════════════════════════════════════════
 $monthRevRow = $conn->query("
     SELECT COALESCE(SUM(parts_total+labor_total),0) AS revenue,
-           COALESCE(SUM(parts_total),0)             AS parts,
-           COALESCE(SUM(labor_total),0)             AS labor,
-           COUNT(*)                                  AS cnt
+        COALESCE(SUM(parts_total),0)             AS parts,
+        COALESCE(SUM(labor_total),0)             AS labor,
+        COUNT(*)                                  AS cnt
     FROM sales WHERE sale_date BETWEEN '$monthStart' AND '$monthEnd'
 ")->fetch_assoc();
 
@@ -64,9 +61,8 @@ $monthExpenses = (float)$monthExpRow['expenses'];
 $monthProfit   = $monthRevenue - $monthExpenses;
 $monthSales    = (int)$monthRevRow['cnt'];
 
-// ═══════════════════════════════════════════════════════════════
+
 // LOW STOCK
-// ═══════════════════════════════════════════════════════════════
 $lowStockRes  = $conn->query("
     SELECT description, current_stock, reorder_threshold, category_name
     FROM product_stock WHERE current_stock <= reorder_threshold
@@ -75,23 +71,20 @@ $lowStockRes  = $conn->query("
 $lowStockItems = $lowStockRes ? $lowStockRes->fetch_all(MYSQLI_ASSOC) : [];
 $lowStockCount = count($lowStockItems);
 
-// ═══════════════════════════════════════════════════════════════
+
 // OPEN WORK ORDERS
-// ═══════════════════════════════════════════════════════════════
 $openWO = 0;
 if ($conn->query("SHOW TABLES LIKE 'work_orders'")->num_rows > 0) {
     $openWO = (int)$conn->query("SELECT COUNT(*) AS c FROM work_orders WHERE status='open'")->fetch_assoc()['c'];
 }
 
-// ═══════════════════════════════════════════════════════════════
 // DAILY REVENUE & EXPENSES – last 30 days (for charts)
-// ═══════════════════════════════════════════════════════════════
 $dailySales = [];
 $r = $conn->query("
     SELECT sale_date,
-           SUM(parts_total)              AS parts,
-           SUM(labor_total)              AS labor,
-           SUM(parts_total+labor_total)  AS revenue
+        SUM(parts_total)              AS parts,
+        SUM(labor_total)              AS labor,
+        SUM(parts_total+labor_total)  AS revenue
     FROM sales
     WHERE sale_date >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
     GROUP BY sale_date ORDER BY sale_date
@@ -129,11 +122,11 @@ for ($i = 29; $i >= 0; $i--) {
 $bestProducts = [];
 $bp = $conn->query("
     SELECT p.description, p.code, c.category_name,
-           SUM(si.quantity) AS qty_sold,
-           SUM(si.amount)   AS revenue,
-           p.selling_price,
-           p.unit_cost,
-           (p.selling_price - p.unit_cost) AS margin
+        SUM(si.quantity) AS qty_sold,
+        SUM(si.amount)   AS revenue,
+        p.selling_price,
+        p.unit_cost,
+        (p.selling_price - p.unit_cost) AS margin
     FROM sale_items si
     JOIN products p  ON si.product_id  = p.product_id
     JOIN categories c ON p.category_id = c.category_id
@@ -213,56 +206,221 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
 .app-main{min-height:100vh;}
 
 /* KPI CARDS */
-.kpi-card{border:none;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);transition:.2s;overflow:hidden;}
-.kpi-card:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,0,0,.13);}
-.kpi-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.45rem;flex-shrink:0;}
-.kpi-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;}
-.kpi-value{font-size:1.65rem;font-weight:800;color:var(--dark);line-height:1.15;}
-.kpi-sub{font-size:.74rem;color:#64748b;margin-top:2px;}
-.kpi-revenue .kpi-icon{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
-.kpi-expense .kpi-icon{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
-.kpi-profit-pos .kpi-icon{background:linear-gradient(135deg,#10b981,#059669);color:#fff;}
-.kpi-profit-neg .kpi-icon{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;}
-.kpi-labor .kpi-icon{background:linear-gradient(135deg,#06b6d4,#3b82f6);color:#fff;}
-.kpi-alert .kpi-icon{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;}
+.kpi-card{
+    border:none;
+    border-radius:16px;
+    box-shadow:0 4px 20px rgba(0,0,0,.08);
+    transition:.2s;
+    overflow:hidden;
+}
+
+.kpi-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 28px rgba(0,0,0,.13);
+}
+
+.kpi-icon{
+    width:54px;
+    height:54px;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.45rem;
+    flex-shrink:0;
+}
+
+.kpi-title{
+    font-size:.7rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    color:#94a3b8;
+}
+
+.kpi-value{
+    font-size:1.65rem;
+    font-weight:800;
+    color:var(--dark);
+    line-height:1.15;
+}
+
+.kpi-sub{
+    font-size:.74rem;
+    color:#64748b;
+    margin-top:2px;
+}
+
+.kpi-revenue .kpi-icon{
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff;
+}
+
+.kpi-expense .kpi-icon{
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;
+}
+
+.kpi-profit-pos .kpi-icon{
+    background:linear-gradient(135deg,#10b981,#059669);
+    color:#fff;
+}
+
+.kpi-profit-neg .kpi-icon{
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    color:#fff;
+}
+
+.kpi-labor .kpi-icon{
+    background:linear-gradient(135deg,#06b6d4,#3b82f6);
+    color:#fff;
+}
+
+.kpi-alert .kpi-icon{
+    background:linear-gradient(135deg,#f59e0b,#ef4444);
+    color:#fff;
+}
 
 /* PROFIT HIGHLIGHT */
 .profit-positive{color:#10b981 !important;}
 .profit-negative{color:#ef4444 !important;}
 
 /* CHART CARDS */
-.chart-card{border:none;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08);padding:20px;}
-.chart-card h6{font-weight:700;color:var(--dark);margin-bottom:14px;font-size:.9rem;}
+.chart-card{
+    border:none;
+    border-radius:16px;
+    box-shadow:0 4px 20px rgba(0,0,0,.08);
+    padding:20px;
+}
+
+.chart-card h6{
+    font-weight:700;
+    color:var(--dark);
+    margin-bottom:14px;
+    font-size:.9rem;
+}
+
 
 /* TABLE */
-.dash-table thead th{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-size:.75rem;font-weight:600;border:none;padding:9px 12px;}
-.dash-table tbody td{font-size:.82rem;vertical-align:middle;padding:8px 12px;border-color:#f1f5f9;}
-.dash-table tbody tr:hover{background:#f8fafc;}
+.dash-table thead th{
+    background:linear-gradient(135deg,var(--primary),var(--secondary));
+    color:#fff;
+    font-size:.75rem;
+    font-weight:600;
+    border:none;
+    padding:9px 12px;
+}
+
+.dash-table tbody td{
+    font-size:.82rem;
+    vertical-align:middle;
+    padding:8px 12px;
+    border-color:#f1f5f9;
+}
+.dash-table tbody tr:hover{
+    background:#f8fafc;
+}
 
 /* BEST SALES CARDS */
-.best-card{border:none;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,.07);overflow:hidden;}
-.best-card .card-header{font-weight:700;font-size:.82rem;padding:12px 16px;}
-.rank-badge{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;}
-.rank-1{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
-.rank-2{background:linear-gradient(135deg,#94a3b8,#64748b);color:#fff;}
-.rank-3{background:linear-gradient(135deg,#b45309,#92400e);color:#fff;}
-.rank-other{background:#f1f5f9;color:#64748b;}
+.best-card{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 4px 16px rgba(0,0,0,.07);
+    overflow:hidden;
+}
+
+.best-card .card-header{
+    font-weight:700;
+    font-size:.82rem;
+    padding:12px 16px;
+}
+.rank-badge{
+    width:28px;
+    height:28px;
+    border-radius:8px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:.75rem;
+    font-weight:800;
+    flex-shrink:0;
+}
+
+.rank-1{
+    background:linear-gradient(135deg,#f59e0b,#d97706);
+    color:#fff;
+}
+
+.rank-2{
+    background:linear-gradient(135deg,#94a3b8,#64748b);
+    color:#fff;
+}
+
+.rank-3{
+    background:linear-gradient(135deg,#b45309,#92400e);
+    color:#fff;
+}
+
+.rank-other{
+    background:#f1f5f9;
+    color:#64748b;
+}
 
 /* LOW STOCK */
-.low-stock-item{border-left:4px solid #f59e0b;border-radius:8px;padding:8px 12px;margin-bottom:8px;background:#fffbeb;}
-.low-stock-item.critical{border-color:#ef4444;background:#fef2f2;}
+.low-stock-item{
+    border-left:4px solid #f59e0b;
+    border-radius:8px;padding:8px 12px;
+    margin-bottom:8px;
+    background:#fffbeb;
+}
+
+.low-stock-item.critical{
+    border-color:#ef4444;
+    background:#fef2f2;
+}
+
 
 /* SECTION DIVIDER */
-.section-title{font-weight:700;color:var(--dark);font-size:1rem;border-left:4px solid var(--primary);padding-left:10px;margin-bottom:16px;}
+.section-title{
+    font-weight:700;
+    color:var(--dark);
+    font-size:1rem;
+    border-left:4px solid var(--primary);
+    padding-left:10px;
+    margin-bottom:16px;
+}
+
 
 /* PROFIT METER */
-.profit-meter{background:#f8fafc;border-radius:12px;padding:14px 16px;border:1px solid #e2e8f0;}
-.profit-meter .label{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;}
-.profit-meter .val{font-size:1.1rem;font-weight:800;}
-.progress-thin{height:6px;border-radius:3px;}
+.profit-meter{
+    background:#f8fafc;
+    border-radius:12px;
+    padding:14px 16px;
+    border:1px solid #e2e8f0;
+}
+
+.profit-meter .label{
+    font-size:.72rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:#94a3b8;
+}
+
+.profit-meter .val{
+    font-size:1.1rem;
+    font-weight:800;
+}
+
+.progress-thin{
+    height:6px;
+    border-radius:3px;
+}
+
 </style>
 </head>
 <body>
+
 <?php include "sidebar.php"; ?>
 
 <main class="app-main p-3 p-md-4">
@@ -292,7 +450,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         TODAY's KPI ROW:  Revenue | Expenses | Profit | Labor
+    TODAY's KPI ROW:  Revenue | Expenses | Profit | Labor
     ══════════════════════════════════════════════════════════════ -->
     <div class="mb-2"><span class="section-title">📅 Today – <?= date('F j, Y') ?></span></div>
     <div class="row g-3 mb-3">
