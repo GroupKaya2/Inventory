@@ -1,10 +1,4 @@
 <?php
-/**
- * Dashboard data API – returns KPIs, charts, alerts, top parts/labor, sales split, recent transactions.
- * Uses sales table when present for all money/sales KPIs so every sale is visible automatically.
- * Requires: products, categories, inventory_transactions, product_stock view.
- * Optional: sales, sale_items, work_orders, products.reorder_threshold.
- */
 session_start();
 header('Content-Type: application/json');
 
@@ -35,7 +29,7 @@ function getTodaySalesCountFromSales($conn) {
 }
 
 function getTodayItemsSoldFromSales($conn) {
-    $sql = "SELECT COALESCE(SUM(si.quantity), 0) AS total_items 
+    $sql = "SELECT COALESCE(SUM(si.quantity), 0) AS total_items
             FROM sale_items si
             INNER JOIN sales s ON s.id = si.sale_id
             WHERE s.sale_date = CURDATE() AND si.line_type = 'parts'";
@@ -176,10 +170,10 @@ function getWorkOrdersCompletedToday($conn) {
 
 function getMonthlyRevenue($conn, $year, $month) {
     $parts = "SELECT COALESCE(SUM(ABS(t.quantity_change) * p.selling_price), 0) AS total
-              FROM inventory_transactions t
-              INNER JOIN products p ON p.product_id = t.product_id
-              WHERE t.quantity_change < 0
-              AND YEAR(t.transaction_date) = ? AND MONTH(t.transaction_date) = ?";
+            FROM inventory_transactions t
+                INNER JOIN products p ON p.product_id = t.product_id
+                WHERE t.quantity_change < 0
+                AND YEAR(t.transaction_date) = ? AND MONTH(t.transaction_date) = ?";
     $st = $conn->prepare($parts);
     $st->bind_param('ii', $year, $month);
     $st->execute();
@@ -188,7 +182,7 @@ function getMonthlyRevenue($conn, $year, $month) {
 
     $labor = 0;
     $laborSql = "SELECT COALESCE(SUM(labor_amount), 0) AS total FROM work_orders
-                 WHERE status = 'completed' AND YEAR(completed_at) = ? AND MONTH(completed_at) = ?";
+                WHERE status = 'completed' AND YEAR(completed_at) = ? AND MONTH(completed_at) = ?";
     $st2 = @$conn->prepare($laborSql);
     if ($st2) {
         $st2->bind_param('ii', $year, $month);
@@ -243,7 +237,7 @@ function getTopSellingParts($conn, $limit = 5) {
 
 function getTopSellingPartsFromSales($conn, $limit = 5) {
     $sql = "SELECT COALESCE(p.description, si.description) AS description,
-                   SUM(si.amount) AS total_sales
+                SUM(si.amount) AS total_sales
             FROM sale_items si
             LEFT JOIN products p ON p.product_id = si.product_id
             WHERE si.line_type = 'parts'

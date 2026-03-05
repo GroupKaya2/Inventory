@@ -1,7 +1,4 @@
 <?php
-// Temporary file to check PHP configuration
-// DELETE THIS FILE AFTER CHECKING - IT EXPOSES SENSITIVE INFORMATION
-
 echo "<h2>MySQLi Extension Check</h2>";
 if (extension_loaded('mysqli')) {
     echo "<p style='color: green;'>✓ MySQLi extension is LOADED</p>";

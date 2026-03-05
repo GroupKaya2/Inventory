@@ -15,37 +15,156 @@ $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <style>
-body{background:#f0f2f8;}
-.page-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 18px rgba(0,0,0,.12);}
-.inventory-toolbar{background:linear-gradient(180deg,#111827 0%,#0b1220 100%);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px;box-shadow:0 10px 25px rgba(2,6,23,.25);margin-bottom:14px;}
-.inventory-toolbar .form-control,.inventory-toolbar .form-select{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);color:#e5e7eb;border-radius:12px;height:44px;}
-.inventory-toolbar .form-control::placeholder{color:rgba(229,231,235,.65);}
-.inventory-toolbar .input-group-text{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);color:rgba(229,231,235,.85);border-radius:12px;}
-.inventory-toolbar .form-control:focus,.inventory-toolbar .form-select:focus{box-shadow:0 0 0 .2rem rgba(99,102,241,.20);border-color:rgba(99,102,241,.55);}
-.inventory-toolbar .form-select option{background:#1e293b;color:#e5e7eb;}
-.btn-toolbar-add{background:#f97316;border:none;color:#111827;height:44px;border-radius:12px;padding:0 16px;font-weight:600;white-space:nowrap;}
-.btn-toolbar-add:hover{background:#fb8a3a;color:#111827;}
-.btn-toolbar-export{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);color:#e5e7eb;height:44px;border-radius:12px;padding:0 16px;font-weight:600;white-space:nowrap;}
-.btn-toolbar-export:hover{background:rgba(255,255,255,.10);color:#fff;}
-.card{border:none;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);}
-.table-responsive{border-radius:10px;overflow:hidden;}
-.table thead{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
-.table thead th{border:none;font-size:.78rem;font-weight:600;padding:10px 12px;}
-.table tbody td{font-size:.83rem;vertical-align:middle;padding:9px 12px;}
-.table tbody tr.table-warning{background:#fffbeb;}
-.btn-edit{background-color:#17a2b8;border:none;color:#fff;}
-.btn-edit:hover{background-color:#138496;color:#fff;}
-.btn-delete{background-color:#dc3545;border:none;color:#fff;}
-.btn-delete:hover{background-color:#c82333;color:#fff;}
-.margin-positive{color:#28a745;font-weight:600;}
-.margin-negative{color:#dc3545;font-weight:600;}
-.modal-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;}
-.margin-display{font-size:1.1em;font-weight:600;padding:10px;border-radius:5px;background:#e9ecef;}
-.loading-spinner{display:none;text-align:center;padding:20px;}
-.nav-inventory-tabs .nav-link{color:#475569;font-weight:500;border-radius:10px 10px 0 0;}
-.nav-inventory-tabs .nav-link:hover{color:#667eea;}
-.nav-inventory-tabs .nav-link.active{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:transparent;}
-@media(max-width:576px){
+body{
+    background:#f0f2f8;
+}
+.page-header{
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    color:#fff;
+    padding:24px 28px;
+    border-radius:14px;
+    margin-bottom:20px;
+    box-shadow:0 4px 18px rgba(0,0,0,.12);
+}
+.inventory-toolbar{
+    background:linear-gradient(180deg,#111827 0%,#0b1220 100%);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius:14px;
+    padding:12px;
+    box-shadow:0 10px 25px rgba(2,6,23,.25);margin-bottom:14px;
+}
+.inventory-toolbar .form-control,.inventory-toolbar .form-select{
+    background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+    color:#e5e7eb;
+    border-radius:12px;height:44px;
+}
+.inventory-toolbar .form-control::placeholder{
+    color:rgba(229,231,235,.65);
+}
+.inventory-toolbar .input-group-text{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    color:rgba(229,231,235,.85);
+    border-radius:12px;
+}
+.inventory-toolbar .form-control:focus,.inventory-toolbar .form-select:focus{
+    box-shadow:0 0 0 .2rem rgba(99,102,241,.20);
+    border-color:rgba(99,102,241,.55);
+}
+.inventory-toolbar .form-select option{
+    background:#1e293b;
+    color:#e5e7eb;
+}
+.btn-toolbar-add{
+    background:#f97316;
+    border:none;
+    color:#111827;
+    height:44px;
+    border-radius:12px;
+    padding:0 16px;
+    font-weight:600;
+    white-space:nowrap;
+}
+.btn-toolbar-add:hover{
+    background:#fb8a3a;
+    color:#111827;
+}
+.btn-toolbar-export{
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    color:#e5e7eb;
+    height:44px;
+    border-radius:12px;
+    padding:0 16px;
+    font-weight:600;
+    white-space:nowrap;
+}
+.btn-toolbar-export:hover{
+    background:rgba(255,255,255,.10);
+    color:#fff;
+}
+.card{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+}
+.table-responsive{
+    border-radius:10px;
+    overflow:hidden;
+}
+.table thead{
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff;
+}
+.table thead th{
+    border:none;
+    font-size:.78rem;
+    font-weight:600;
+    padding:10px 12px;
+}
+.table tbody td{
+    font-size:.83rem;
+    vertical-align:middle;
+    padding:9px 12px;
+}
+.table tbody tr.table-warning{
+    background:#fffbeb;
+}
+.btn-edit{
+    background-color:#17a2b8;
+    border:none;color:#fff;
+}
+.btn-edit:hover{
+    background-color:#138496;
+    color:#fff;
+}
+.btn-delete{
+    background-color:#dc3545;
+    border:none;
+    color:#fff;
+}
+.btn-delete:hover{
+    background-color:#c82333;
+    color:#fff;
+}
+.margin-positive{
+    color:#28a745;
+    font-weight:600;
+}
+.margin-negative{
+    color:#dc3545;
+    font-weight:600;
+}
+.modal-header{
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    color:#fff;
+}
+.margin-display{
+    font-size:1.1em;font-weight:600;
+    padding:10px;
+    border-radius:5px;
+    background:#e9ecef;
+}
+.loading-spinner{
+    display:none;
+    text-align:center;
+    padding:20px;
+}
+.nav-inventory-tabs .nav-link{
+    color:#475569;
+    font-weight:500;
+    border-radius:10px 10px 0 0;
+}
+.nav-inventory-tabs .nav-link:hover{
+    color:#667eea;
+}
+.nav-inventory-tabs .nav-link.active{
+    background:linear-gradient(135deg,#667eea,#764ba2);
+    color:#fff;
+    border-color:transparent;
+}
+@media(max-width:576px)
+{
     .table{font-size:.75rem;}
     .inventory-toolbar{padding:8px;}
 }
@@ -123,8 +242,15 @@ body{background:#f0f2f8;}
                         <table class="table table-hover align-middle mb-0">
                             <thead>
                                 <tr>
-                                    <th>ID</th><th>Category</th><th>Description / Code</th><th>Unit</th>
-                                    <th>Unit Cost</th><th>Selling Price</th><th>Margin</th><th>Stock</th><th>Actions</th>
+                                    <th>ID</th>
+                                    <th>Category</th>
+                                    <th>Description / Code</th>
+                                    <th>Unit</th>
+                                    <th>Unit Cost</th>
+                                    <th>Selling Price</th>
+                                    <th>Margin</th>
+                                    <th>Stock</th>
+                                    <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="productsTableBody"></tbody>
@@ -144,14 +270,30 @@ body{background:#f0f2f8;}
                         <h6 class="text-muted mb-2">Weekly forecast (next 4 weeks)</h6>
                         <div class="table-responsive mb-4">
                             <table class="table table-sm table-hover">
-                                <thead class="table-light"><tr><th>Part</th><th>Code</th><th>Avg weekly usage</th><th>Next 4 weeks predicted</th><th>Data points</th></tr></thead>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Part</th>
+                                        <th>Code</th>
+                                        <th>Avg weekly usage</th>
+                                        <th>Next 4 weeks predicted</th>
+                                        <th>Data points</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="weeklyForecastBody"></tbody>
                             </table>
                         </div>
                         <h6 class="text-muted mb-2">Monthly forecast (next 3 months)</h6>
                         <div class="table-responsive">
                             <table class="table table-sm table-hover">
-                                <thead class="table-light"><tr><th>Part</th><th>Code</th><th>Avg monthly usage</th><th>Next 3 months predicted</th><th>Months of data</th></tr></thead>
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Part</th>
+                                        <th>Code</th>
+                                        <th>Avg monthly usage</th>
+                                        <th>Next 3 months predicted</th>
+                                        <th>Months of data</th>
+                                    </tr>
+                                </thead>
                                 <tbody id="monthlyForecastBody"></tbody>
                             </table>
                         </div>

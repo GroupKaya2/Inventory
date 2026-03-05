@@ -1,7 +1,5 @@
 <?php session_start();
 include "db.php";
-
-// Only owner can create manager accounts
 if (!isset($_SESSION['user']) || $_SESSION['role'] != 'owner') {
     header("Location: " . (isset($_SESSION['user']) ? "dashboard.php" : "index.php"));
     exit();

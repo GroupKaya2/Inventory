@@ -1,7 +1,12 @@
 <?php
 ob_start();
 session_start();
-function sendJson($a){ob_end_clean();header('Content-Type: application/json');echo json_encode($a);exit;}
+function sendJson($a){ob_end_clean();
+    header('Content-Type: application/json');
+    echo json_encode($a);
+exit;
+}
+
 if(empty($_SESSION['user_id'])) sendJson(['success'=>false,'message'=>'Not logged in']);
 if(($_SESSION['role']??'manager')!=='owner') sendJson(['success'=>false,'message'=>'Owner only: cannot add products']);
 

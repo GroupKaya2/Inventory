@@ -34,7 +34,7 @@ function del($conn,$id){
     return $ok;
 }
 
-// BULK
+
 if(!empty($_POST['ids'])){
     $ids=json_decode($_POST['ids'],true);
     if(!is_array($ids)||!count($ids)) send(['success'=>false,'message'=>'Empty IDs']);
@@ -45,7 +45,7 @@ if(!empty($_POST['ids'])){
     send(['success'=>true,'message'=>"$n transaction(s) deleted."]);
 }
 
-// SINGLE
+
 if(!empty($_POST['id'])){
     $id=(int)$_POST['id'];
     if($id<=0) send(['success'=>false,'message'=>'Bad ID']);

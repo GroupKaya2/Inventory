@@ -11,10 +11,6 @@ if ($name === '' || $email === '' || $password === '') {
     header("Location: signup.php");
     exit();
 }
-
-// Owner-only system: allow registration if:
-// 1. No users exist yet (first registration creates owner)
-// 2. OR current user is logged in as owner (owner can create accounts)
 $stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM users");
 $stmt->execute();
 $countRow = $stmt->get_result()->fetch_assoc();

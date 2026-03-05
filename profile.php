@@ -122,8 +122,8 @@ if (!$user) {
                                                                 <span class="text-muted">—</span>
                                                             <?php else: ?>
                                                                 <a class="btn btn-sm btn-outline-danger"
-                                                                   href="delete_user.php?id=<?php echo intval($row['id']); ?>"
-                                                                   onclick="return confirm('Are you sure you want to delete this user?')">
+                                                                href="delete_user.php?id=<?php echo intval($row['id']); ?>"
+                                                                onclick="return confirm('Are you sure you want to delete this user?')">
                                                                     Delete
                                                                 </a>
                                                             <?php endif; ?>

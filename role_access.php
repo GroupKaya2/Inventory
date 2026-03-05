@@ -1,10 +1,4 @@
 <?php
-/**
- * role_access.php
- * Include this AFTER session_start() on every page.
- * Roles: 'owner' = full access, 'manager' = limited access
- */
-
 function userRole(): string {
     return $_SESSION['role'] ?? 'manager';
 }

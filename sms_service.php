@@ -1,8 +1,4 @@
 <?php
-/**
- * sms_service.php – SMS Notification Service
- * Supports Semaphore (PH) and Twilio (Global)
- */
 class SMSService {
     private $conn;
     private $enabled   = false; // Set to true + configure API key to enable

@@ -1,8 +1,4 @@
 <?php
-/**
- * Run SMS migration script
- * Creates SMS history and settings tables
- */
 
 include __DIR__ . '/db.php';
 

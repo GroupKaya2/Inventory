@@ -9,7 +9,7 @@ include 'db.php';
 $items = [];
 $r1 = $conn->query("
     SELECT si.product_id, si.line_type, si.quantity, si.description,
-           p.code, DATE(si.created_at) AS sale_date
+        p.code, DATE(si.created_at) AS sale_date
     FROM sale_items si
     LEFT JOIN products p ON si.product_id = p.product_id
     WHERE si.created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
@@ -21,8 +21,8 @@ if ($r1) while ($row = $r1->fetch_assoc()) $items[] = $row;
 $sales = [];
 $r2 = $conn->query("
     SELECT sale_date,
-           SUM(parts_total) AS parts_total,
-           SUM(labor_total) AS labor_total
+        SUM(parts_total) AS parts_total,
+        SUM(labor_total) AS labor_total
     FROM sales
     WHERE sale_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
     GROUP BY sale_date

@@ -8,7 +8,7 @@ include 'db.php';
 $items = [];
 $r = $conn->query("
     SELECT product_id, code, description, category_name,
-           current_stock, reorder_threshold, unit
+        current_stock, reorder_threshold, unit
     FROM product_stock
     WHERE current_stock <= reorder_threshold
     ORDER BY current_stock ASC, description ASC
