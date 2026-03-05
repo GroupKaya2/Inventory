@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 if (!isset($_SESSION['user_id'])) { echo json_encode(['success'=>false,'message'=>'Unauthorized']); exit; }
+if (($_SESSION['role'] ?? 'manager') !== 'owner') { echo json_encode(['success'=>false,'message'=>'Owner only']); exit; }
 include 'db.php';
 
 $id = (int)($_POST['id'] ?? 0);
@@ -10,8 +11,9 @@ if ($id <= 0) { echo json_encode(['success'=>false,'message'=>'Invalid ID']); ex
 $stmt = $conn->prepare("DELETE FROM expenses WHERE id=?");
 $stmt->bind_param('i', $id);
 if ($stmt->execute() && $stmt->affected_rows > 0) {
-    echo json_encode(['success'=>true,'message'=>'Expense deleted.']);
+    echo json_encode(['success'=>true,'message'=>'Deleted successfully']);
 } else {
     echo json_encode(['success'=>false,'message'=>'Expense not found.']);
 }
-$stmt->close(); $conn->close();
+$stmt->close();
+$conn->close();

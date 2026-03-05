@@ -1,14 +1,9 @@
 <?php
 ob_start();
 session_start();
-function sendJson($a){ob_end_clean();header('Content-Type: application/json');
-echo json_encode($a);
-exit;
-}
-if(empty($_SESSION['user_id']))
-    sendJson(['success'=>false,'message'=>'Not logged in']);
-if(($_SESSION['role']??'manager')!=='owner')
-    sendJson(['success'=>false,'message'=>'Owner only: cannot add products']);
+function sendJson($a){ob_end_clean();header('Content-Type: application/json');echo json_encode($a);exit;}
+if(empty($_SESSION['user_id'])) sendJson(['success'=>false,'message'=>'Not logged in']);
+if(($_SESSION['role']??'manager')!=='owner') sendJson(['success'=>false,'message'=>'Owner only: cannot add products']);
 
 include 'db.php';
 
@@ -25,13 +20,10 @@ if(!$catId||!$desc||!$unit)
     sendJson(['success'=>false,'message'=>'Category, description and unit are required.']);
 
 $stmt=$conn->prepare("INSERT INTO products (category_id,description,unit,code,unit_cost,selling_price,initial_quantity,reorder_threshold) VALUES (?,?,?,?,?,?,?,?)");
-$stmt->bind_param('isssddi i',$catId,$desc,$unit,$code,$cost,$price,$qty,$thresh);
-$stmt->close();
-
-$stmt=$conn->prepare("INSERT INTO products (category_id,description,unit,code,unit_cost,selling_price,initial_quantity,reorder_threshold) VALUES (?,?,?,?,?,?,?,?)");
-$stmt->bind_param('isssddi',$catId,$desc,$unit,$code,$cost,$price,$qty,$thresh);
+if(!$stmt) sendJson(['success'=>false,'message'=>'DB error: '.$conn->error]);
+$stmt->bind_param('isssddii',$catId,$desc,$unit,$code,$cost,$price,$qty,$thresh);
 
 if($stmt->execute())
-    sendJson(['success'=>true,'message'=>"Product '$desc' added."]);
+    sendJson(['success'=>true,'message'=>'Saved successfully']);
 else
     sendJson(['success'=>false,'message'=>'Failed: '.$conn->error]);

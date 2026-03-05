@@ -511,7 +511,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         PROFIT METER – THIS MONTH
+        PROFIT METER – THIS MONTH
     ══════════════════════════════════════════════════════════════ -->
     <div class="row g-3 mb-4">
         <div class="col-12">
@@ -552,7 +552,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
     </div>
 
     <!-- ══════════════════════════════════════════════════════════
-         CHARTS ROW 1: Revenue vs Expenses | Expense Breakdown
+        CHARTS ROW 1: Revenue vs Expenses | Expense Breakdown
     ══════════════════════════════════════════════════════════════ -->
     <div class="row g-3 mb-4">
         <div class="col-lg-8">

@@ -148,7 +148,6 @@ body{background:var(--dark);color:var(--text);}
     <!-- HEADER -->
     <div class="sales-header">
         <h1><i class="bi bi-receipt me-2"></i>NEW SALE TRANSACTION</h1>
-        <span class="sales-badge"><i class="bi bi-arrow-repeat me-1"></i>Auto-updates Inventory</span>
     </div>
 
     <!-- CUSTOMER INFO -->
@@ -160,11 +159,11 @@ body{background:var(--dark);color:var(--text);}
             </div>
             <div class="col-md-4">
                 <label class="form-label">Customer Name</label>
-                <input type="text" class="form-control" id="customerName" placeholder="e.g. Juan Dela Cruz">
+                <input type="text" class="form-control" id="customerName" placeholder="Customer Name">
             </div>
             <div class="col-md-4">
                 <label class="form-label">Plate Number</label>
-                <input type="text" class="form-control" id="plateNumber" placeholder="e.g. FHG-150">
+                <input type="text" class="form-control" id="plateNumber" placeholder="Plate Number">
             </div>
         </div>
     </div>
@@ -449,7 +448,6 @@ body{background:var(--dark);color:var(--text);}
                     title: '✅ Sale Saved!',
                     html: `<div style="text-align:center;">
                         Transaction <strong>#${data.sale_id}</strong> recorded.<br>
-                        <span style="font-size:.82rem;color:#64748b;">Inventory automatically updated.</span>
                     </div>${stockHtml}`,
                     confirmButtonText: 'OK',
                     confirmButtonColor: '#10b981',

@@ -3,12 +3,13 @@ session_start();
 include "db.php";
 if (!isset($_SESSION['user_id'])) { header("Location: index.php"); exit(); }
 $activePage = 'inventory';
+$isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Product Inventory – Dispeedway</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
@@ -44,7 +45,10 @@ body{background:#f0f2f8;}
 .nav-inventory-tabs .nav-link{color:#475569;font-weight:500;border-radius:10px 10px 0 0;}
 .nav-inventory-tabs .nav-link:hover{color:#667eea;}
 .nav-inventory-tabs .nav-link.active{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:transparent;}
-.reorder-item{border-left:4px solid #f59e0b;padding:10px 14px;margin-bottom:10px;background:#fffbeb;border-radius:8px;}
+@media(max-width:576px){
+    .table{font-size:.75rem;}
+    .inventory-toolbar{padding:8px;}
+}
 </style>
 </head>
 <body>
@@ -54,7 +58,7 @@ body{background:#f0f2f8;}
 <div class="container-fluid">
     <div class="page-header">
         <h4 class="mb-0"><i class="bi bi-box-seam me-2"></i>Product Inventory & Forecasting</h4>
-        <p class="mb-0 mt-1 opacity-75">Real-time stock, demand forecasting, reorder recommendations, and workload planning</p>
+        <p class="mb-0 mt-1 opacity-75">Real-time stock, demand forecasting, reorder recommendations</p>
     </div>
 
     <ul class="nav nav-tabs mb-3 nav-inventory-tabs" id="inventoryMainTabs" role="tablist">
@@ -81,7 +85,7 @@ body{background:#f0f2f8;}
     </ul>
 
     <div class="tab-content" id="inventoryTabContent">
-        <!-- ── STOCK TAB ────────────────────────────────────── -->
+        <!-- STOCK TAB -->
         <div class="tab-pane fade show active" id="stock-panel" role="tabpanel">
             <div class="inventory-toolbar">
                 <div class="d-flex flex-column flex-lg-row gap-2 align-items-stretch align-items-lg-center">
@@ -98,9 +102,11 @@ body{background:#f0f2f8;}
                     </div>
                     <div id="stockSummary" class="d-flex align-items-center gap-1"></div>
                     <div class="d-flex gap-2 justify-content-end">
+                        <?php if ($isOwner): ?>
                         <button type="button" class="btn btn-toolbar-add" data-bs-toggle="modal" data-bs-target="#addProductModal">
                             <i class="bi bi-plus-lg"></i> Add Part
                         </button>
+                        <?php endif; ?>
                         <button type="button" class="btn btn-toolbar-export" id="inventoryExportBtn">
                             <i class="bi bi-download"></i> Export
                         </button>
@@ -128,14 +134,14 @@ body{background:#f0f2f8;}
             </div>
         </div>
 
-        <!-- ── FORECAST TAB ─────────────────────────────────── -->
+        <!-- FORECAST TAB -->
         <div class="tab-pane fade" id="forecast-panel" role="tabpanel">
             <div class="card mb-3">
                 <div class="card-header bg-primary text-white"><i class="bi bi-graph-up me-1"></i>Weekly & Monthly Parts Forecasting</div>
                 <div class="card-body">
                     <div id="forecastLoading" class="text-center py-3"><div class="spinner-border text-primary"></div></div>
                     <div id="forecastContent" style="display:none;">
-                        <h6 class="text-muted mb-2">Weekly forecast (next 4 weeks) — based on historical sales</h6>
+                        <h6 class="text-muted mb-2">Weekly forecast (next 4 weeks)</h6>
                         <div class="table-responsive mb-4">
                             <table class="table table-sm table-hover">
                                 <thead class="table-light"><tr><th>Part</th><th>Code</th><th>Avg weekly usage</th><th>Next 4 weeks predicted</th><th>Data points</th></tr></thead>
@@ -158,7 +164,7 @@ body{background:#f0f2f8;}
             </div>
         </div>
 
-        <!-- ── REORDER TAB ──────────────────────────────────── -->
+        <!-- REORDER TAB -->
         <div class="tab-pane fade" id="reorder-panel" role="tabpanel">
             <div class="card">
                 <div class="card-header bg-warning text-dark"><i class="bi bi-arrow-repeat me-1"></i>Smart Reorder Recommendations</div>
@@ -167,13 +173,13 @@ body{background:#f0f2f8;}
                     <div id="reorderLoading" class="text-center py-3"><div class="spinner-border text-warning"></div></div>
                     <div id="reorderContent" style="display:none;">
                         <div id="reorderList"></div>
-                        <p id="reorderEmpty" class="text-muted text-center mt-3" style="display:none;">✅ No reorder recommendations. All stock levels are healthy!</p>
+                        <p id="reorderEmpty" class="text-muted text-center mt-3" style="display:none;">✅ All stock levels are healthy!</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ── WORKLOAD TAB ─────────────────────────────────── -->
+        <!-- WORKLOAD TAB -->
         <div class="tab-pane fade" id="workload-panel" role="tabpanel">
             <div class="card">
                 <div class="card-header bg-secondary text-white"><i class="bi bi-briefcase me-1"></i>Peak Workload Prediction</div>
@@ -192,7 +198,8 @@ body{background:#f0f2f8;}
 </div>
 </main>
 
-<!-- ── ADD PRODUCT MODAL ────────────────────────────────────── -->
+<?php if ($isOwner): ?>
+<!-- ADD PRODUCT MODAL (owner only) -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -204,48 +211,42 @@ body{background:#f0f2f8;}
                 <form id="addProductForm">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-500">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" id="addCategory" name="category_id" required>
-                                <option value="">Select Category</option>
-                            </select>
+                            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="addCategory" name="category_id" required><option value="">Select Category</option></select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-500">Product Code <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Product Code <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="addCode" name="code" required placeholder="e.g. EO-001">
                         </div>
                         <div class="col-md-12 mb-3">
-                            <label class="form-label fw-500">Description <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="addDescription" name="description" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Unit <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Unit <span class="text-danger">*</span></label>
                             <select class="form-select" id="addUnit" name="unit" required>
                                 <option value="">Select Unit</option>
-                                <option value="Gallon">Gallon</option>
-                                <option value="Liter">Liter</option>
-                                <option value="Piece">Piece</option>
-                                <option value="Box">Box</option>
-                                <option value="Set">Set</option>
+                                <option>Gallon</option><option>Liter</option><option>Piece</option><option>Box</option><option>Set</option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Unit Cost <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Unit Cost <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="addUnitCost" name="unit_cost" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Selling Price <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Selling Price <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="addSellingPrice" name="selling_price" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Initial Quantity <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Initial Quantity <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="addInitialQuantity" name="initial_quantity" min="0" required value="0">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Reorder Threshold</label>
+                            <label class="form-label fw-semibold">Reorder Threshold</label>
                             <input type="number" class="form-control" id="addReorderThreshold" name="reorder_threshold" min="0" value="5">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Margin (Auto)</label>
+                            <label class="form-label fw-semibold">Margin (Auto)</label>
                             <div class="margin-display" id="addMarginDisplay">₱0.00</div>
                         </div>
                     </div>
@@ -259,7 +260,7 @@ body{background:#f0f2f8;}
     </div>
 </div>
 
-<!-- ── EDIT PRODUCT MODAL ───────────────────────────────────── -->
+<!-- EDIT PRODUCT MODAL (owner only) -->
 <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -272,48 +273,42 @@ body{background:#f0f2f8;}
                     <input type="hidden" id="editProductId" name="product_id">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-500">Category <span class="text-danger">*</span></label>
-                            <select class="form-select" id="editCategory" name="category_id" required>
-                                <option value="">Select Category</option>
-                            </select>
+                            <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                            <select class="form-select" id="editCategory" name="category_id" required><option value="">Select Category</option></select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-500">Product Code <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Product Code <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editCode" name="code" required>
                         </div>
                         <div class="col-md-12 mb-3">
-                            <label class="form-label fw-500">Description <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="editDescription" name="description" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Unit <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Unit <span class="text-danger">*</span></label>
                             <select class="form-select" id="editUnit" name="unit" required>
                                 <option value="">Select Unit</option>
-                                <option value="Gallon">Gallon</option>
-                                <option value="Liter">Liter</option>
-                                <option value="Piece">Piece</option>
-                                <option value="Box">Box</option>
-                                <option value="Set">Set</option>
+                                <option>Gallon</option><option>Liter</option><option>Piece</option><option>Box</option><option>Set</option>
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Unit Cost <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Unit Cost <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="editUnitCost" name="unit_cost" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Selling Price <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Selling Price <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="editSellingPrice" name="selling_price" step="0.01" min="0" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Initial Quantity <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">Initial Quantity <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" id="editInitialQuantity" name="initial_quantity" min="0" required>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Reorder Threshold</label>
+                            <label class="form-label fw-semibold">Reorder Threshold</label>
                             <input type="number" class="form-control" id="editReorderThreshold" name="reorder_threshold" min="0" value="5">
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label fw-500">Margin (Auto)</label>
+                            <label class="form-label fw-semibold">Margin (Auto)</label>
                             <div class="margin-display" id="editMarginDisplay">₱0.00</div>
                         </div>
                     </div>
@@ -326,8 +321,9 @@ body{background:#f0f2f8;}
         </div>
     </div>
 </div>
+<?php endif; ?>
 
-<!-- ── RECORD RESTOCK MODAL ─────────────────────────────────── -->
+<!-- RECORD RESTOCK MODAL (all roles) -->
 <div class="modal fade" id="recordRestockModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -357,6 +353,8 @@ body{background:#f0f2f8;}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Inject role for JS -->
+<script>const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;</script>
 <script src="inventory.js"></script>
 <script src="inventory-forecast.js"></script>
 </body>

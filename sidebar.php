@@ -15,7 +15,6 @@ $isOwner    = ($userRole === 'owner');
     --sb-active: rgba(102,126,234,.18);
     --sb-orange: #f97316;
 }
-
 .sidebar {
     position: fixed; top: 0; left: 0;
     width: var(--sb-width); height: 100vh;
@@ -25,7 +24,6 @@ $isOwner    = ($userRole === 'owner');
     z-index: 1040; overflow-y: auto;
     transition: transform .25s ease;
 }
-
 .sb-logo {
     padding: 20px 18px 14px;
     border-bottom: 1px solid var(--sb-border);
@@ -41,13 +39,11 @@ $isOwner    = ($userRole === 'owner');
 }
 .sb-logo-text .title { font-size:.92rem; font-weight:800; color:#fff; line-height:1.1; }
 .sb-logo-text .sub   { font-size:.65rem; color:var(--sb-text); text-transform:uppercase; letter-spacing:.4px; }
-
 .sb-section {
     padding: 14px 18px 4px;
     font-size:.62rem; font-weight:700; text-transform:uppercase;
     letter-spacing:.7px; color:rgba(148,163,184,.5);
 }
-
 .sb-item {
     display:flex; align-items:center; gap:10px;
     padding:9px 14px; margin:1px 8px; border-radius:10px;
@@ -57,8 +53,6 @@ $isOwner    = ($userRole === 'owner');
 }
 .sb-item:hover  { background:var(--sb-hover); color:var(--sb-text-active); text-decoration:none; }
 .sb-item.active { background:var(--sb-active); color:var(--sb-text-active); }
-
-/* locked item style for manager */
 .sb-item.locked {
     opacity:.45; cursor:not-allowed; pointer-events:none;
     position:relative;
@@ -69,27 +63,18 @@ $isOwner    = ($userRole === 'owner');
     position:absolute; right:14px;
     font-size:.75rem; color:#94a3b8;
 }
-
 .sb-icon {
     width:30px; height:30px; border-radius:8px;
     display:flex; align-items:center; justify-content:center;
     font-size:.95rem; flex-shrink:0;
     background:rgba(255,255,255,.07); color:var(--sb-text);
 }
-.sb-item.active .sb-icon,
-.sb-item:hover  .sb-icon { opacity:.95; }
-
-/* Icon accent colors */
 .icon-dashboard { background:linear-gradient(135deg,#667eea,#764ba2)!important; color:#fff!important; }
 .icon-sale      { background:linear-gradient(135deg,#f97316,#ef4444)!important; color:#fff!important; }
 .icon-inventory { background:linear-gradient(135deg,#06b6d4,#3b82f6)!important; color:#fff!important; }
 .icon-history   { background:linear-gradient(135deg,#10b981,#059669)!important; color:#fff!important; }
 .icon-expense   { background:linear-gradient(135deg,#ef4444,#dc2626)!important; color:#fff!important; }
 .icon-profile   { background:linear-gradient(135deg,#94a3b8,#64748b)!important; color:#fff!important; }
-
-.sb-item.active .sb-icon { opacity:1; }
-
-/* Role badge in header */
 .sb-role-badge {
     font-size:.6rem; font-weight:700; text-transform:uppercase;
     letter-spacing:.5px; padding:2px 8px; border-radius:6px;
@@ -97,9 +82,7 @@ $isOwner    = ($userRole === 'owner');
 }
 .role-owner   { background:rgba(249,115,22,.25); color:#fb923c; }
 .role-manager { background:rgba(100,116,139,.25); color:#94a3b8; }
-
 .sb-divider { border-top:1px solid var(--sb-border); margin:8px 0; }
-
 .sb-user {
     margin-top:auto; padding:12px 14px;
     border-top:1px solid var(--sb-border);
@@ -119,10 +102,7 @@ $isOwner    = ($userRole === 'owner');
     transition:background .15s, color .15s;
 }
 .sb-logout:hover { background:rgba(239,68,68,.2); color:#fca5a5; }
-
 .app-main { margin-left:var(--sb-width); }
-
-/* Mobile */
 .sb-overlay {
     display:none; position:fixed; inset:0;
     background:rgba(0,0,0,.55); z-index:1039;
@@ -136,7 +116,7 @@ $isOwner    = ($userRole === 'owner');
 @media(max-width:768px){
     .sidebar { transform:translateX(-100%); }
     .sidebar.open { transform:translateX(0); }
-    .app-main { margin-left:0; padding-top:58px!important; }
+    .app-main { margin-left:0 !important; padding-top:60px !important; }
     .sb-toggle { display:flex; }
     .sb-overlay { display:block; opacity:0; pointer-events:none; transition:opacity .25s; }
     .sb-overlay.open { opacity:1; pointer-events:auto; }
@@ -147,8 +127,6 @@ $isOwner    = ($userRole === 'owner');
 <div class="sb-overlay" id="sbOverlay"></div>
 
 <aside class="sidebar" id="sidebar">
-
-    <!-- LOGO + ROLE -->
     <a href="dashboard.php" class="sb-logo">
         <div class="sb-logo-icon"><i class="bi bi-speedometer2"></i></div>
         <div class="sb-logo-text">
@@ -160,7 +138,6 @@ $isOwner    = ($userRole === 'owner');
         </span>
     </a>
 
-    <!-- ── MAIN ──────────────────────────────────────────── -->
     <div class="sb-section">Main</div>
 
     <a href="dashboard.php" class="sb-item <?= $activePage==='dashboard'?'active':'' ?>">
@@ -174,8 +151,6 @@ $isOwner    = ($userRole === 'owner');
     </a>
 
     <div class="sb-divider"></div>
-
-    <!-- ── INVENTORY ──────────────────────────────────────── -->
     <div class="sb-section">Inventory</div>
 
     <a href="inventory.php" class="sb-item <?= $activePage==='inventory'?'active':'' ?>">
@@ -190,7 +165,6 @@ $isOwner    = ($userRole === 'owner');
 
     <div class="sb-divider"></div>
 
-    <!-- ── FINANCE (Owner only) ───────────────────────────── -->
     <div class="sb-section">
         Finance
         <?php if (!$isOwner): ?>
@@ -217,8 +191,6 @@ $isOwner    = ($userRole === 'owner');
     <?php endif; ?>
 
     <div class="sb-divider"></div>
-
-    <!-- ── SYSTEM ─────────────────────────────────────────── -->
     <div class="sb-section">System</div>
 
     <?php if ($isOwner): ?>
@@ -233,7 +205,6 @@ $isOwner    = ($userRole === 'owner');
     </a>
     <?php endif; ?>
 
-    <!-- USER FOOTER -->
     <div class="sb-user">
         <div class="sb-avatar"><?= strtoupper(substr($_SESSION['user'] ?? 'A', 0, 1)) ?></div>
         <div>
@@ -242,7 +213,6 @@ $isOwner    = ($userRole === 'owner');
         </div>
         <a href="logout.php" class="sb-logout" title="Log out"><i class="bi bi-box-arrow-right"></i></a>
     </div>
-
 </aside>
 
 <script>
@@ -250,7 +220,17 @@ $isOwner    = ($userRole === 'owner');
     const toggle  = document.getElementById('sbToggle');
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sbOverlay');
-    toggle?.addEventListener('click', () => { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
-    overlay?.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
+    if (toggle) {
+        toggle.addEventListener('click', function() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        });
+    }
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+    }
 })();
 </script>

@@ -81,7 +81,7 @@ try {
     // 1. INSERT SALE HEADER
     $s1 = $conn->prepare(
         "INSERT INTO sales (sale_date, customer_name, plate_number, parts_total, labor_total, created_by)
-         VALUES (?, ?, ?, ?, ?, ?)"
+        VALUES (?, ?, ?, ?, ?, ?)"
     );
     if (!$s1) throw new Exception('Prepare failed: ' . $conn->error);
     $s1->bind_param('sssddi', $saleDate, $customerName, $plateNumber, $partsTotal, $laborTotal, $userId);
@@ -92,7 +92,7 @@ try {
     // 2. INSERT SALE ITEMS
     $s2 = $conn->prepare(
         "INSERT INTO sale_items (sale_id, line_type, product_id, description, quantity, unit_price, amount)
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
+        VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
     if (!$s2) throw new Exception('Prepare items failed: ' . $conn->error);
     foreach ($validItems as $item) {
@@ -110,8 +110,8 @@ try {
     // 3. DEDUCT STOCK (parts only)
     $s3 = $conn->prepare(
         "INSERT INTO inventory_transactions
-             (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
-         VALUES (?, ?, ?, 'sale', ?, ?)"
+            (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+        VALUES (?, ?, ?, 'sale', ?, ?)"
     );
     if (!$s3) throw new Exception('Prepare inventory failed: ' . $conn->error);
     $deducted = [];
