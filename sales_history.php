@@ -91,8 +91,14 @@ body { background: #f0f2f8; }
             <table class="table mb-0" id="salesTable">
                 <thead>
                     <tr>
-                        <th>#</th><th>Date</th><th>Customer</th><th>Plate</th>
-                        <th>Parts ₱</th><th>Labor ₱</th><th>Total ₱</th><th>Actions</th>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Customer</th>
+                        <th>Plate</th>
+                        <th>Parts ₱</th>
+                        <th>Labor ₱</th>
+                        <th>Total ₱</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="salesBody">

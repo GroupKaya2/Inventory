@@ -1,443 +1,405 @@
+/**
+ * inventory-forecast.js
+ * Handles the Forecasting, Reorder, and Peak Workload tabs in inventory.php
+ * Requires: Chart.js, fetch_sales_for_forecast.php, fetch_reorder.php
+ */
+
 (function () {
     'use strict';
 
-    // ── HELPERS ──────────────────────────────────────────────────────
-    function fmt(n) {
-        return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+    let forecastData = null;
+    let seasonalChart = null;
+    let workloadChart = null;
 
-    function hide(id)    { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
-    function show(id)    { const el = document.getElementById(id); if (el) el.style.display = '';    }
-    function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v;   }
-
-    // Week key: YYYY-WNN
-    function weekKey(dateStr) {
-        const d = new Date(dateStr + 'T00:00:00');
-        const tmp = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        const dayNum = tmp.getUTCDay() || 7;
-        tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
-        const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-        const weekNum = Math.ceil((((tmp - yearStart) / 86400000) + 1) / 7);
-        return `${tmp.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
-    }
-
-    // Month key: YYYY-MM
-    function monthKey(dateStr) { return dateStr.substring(0, 7); }
-
-    // ── SEASONAL CHART INSTANCE ──────────────────────────────────────
-    let seasonalChartInstance = null;
-    let workloadChartInstance = null;
-
-    // ── LOAD & PROCESS SALES DATA ────────────────────────────────────
-    async function loadForecastData() {
-        show('forecastLoading');
-        hide('forecastContent');
-
-        try {
-            const resp = await fetch('fetch_sales_for_forecast.php');
-            const data = await resp.json();
-
-            if (!data.success) {
-                setText('weeklyForecastBody', '');
-                document.getElementById('weeklyForecastBody').innerHTML =
-                    '<tr><td colspan="5" class="text-center text-danger">Error loading data: ' + (data.message || '') + '</td></tr>';
-                hide('forecastLoading');
-                show('forecastContent');
-                return;
-            }
-
-            buildForecast(data.items || [], data.sales || []);
-        } catch (e) {
-            console.error('Forecast fetch error:', e);
-            document.getElementById('weeklyForecastBody').innerHTML =
-                '<tr><td colspan="5" class="text-center text-danger">Network error loading forecast data.</td></tr>';
-        } finally {
-            hide('forecastLoading');
-            show('forecastContent');
-        }
-    }
-
-    function buildForecast(items, sales) {
-        // ── Group sale_items by product + week / month ──
-        const productMap = {}; // product_id → { description, code, weeklyQtys:{}, monthlyQtys:{} }
-
-        items.forEach(item => {
-            if (item.line_type !== 'parts' || !item.product_id) return;
-            const pid  = item.product_id;
-            const date = item.sale_date;
-
-            if (!productMap[pid]) {
-                productMap[pid] = {
-                    description: item.description || 'Unknown',
-                    code: item.code || '',
-                    weeklyQtys:  {},
-                    monthlyQtys: {}
-                };
-            }
-
-            const wk = weekKey(date);
-            const mk = monthKey(date);
-            productMap[pid].weeklyQtys[wk]  = (productMap[pid].weeklyQtys[wk]  || 0) + (parseFloat(item.quantity) || 0);
-            productMap[pid].monthlyQtys[mk] = (productMap[pid].monthlyQtys[mk] || 0) + (parseFloat(item.quantity) || 0);
-        });
-
-        // ── WEEKLY TABLE ──
-        const wkBody = document.getElementById('weeklyForecastBody');
-        wkBody.innerHTML = '';
-
-        const wkRows = Object.entries(productMap).map(([pid, p]) => {
-            const vals = Object.values(p.weeklyQtys);
-            const avg  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-            return { description: p.description, code: p.code, avg, dataPoints: vals.length };
-        }).filter(r => r.avg > 0).sort((a, b) => b.avg - a.avg);
-
-        if (!wkRows.length) {
-            wkBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No weekly sales data yet.</td></tr>';
-        } else {
-            wkRows.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${escHtml(r.description)}</td>
-                    <td><code>${escHtml(r.code)}</code></td>
-                    <td>${r.avg.toFixed(1)} units/wk</td>
-                    <td><strong>${(r.avg * 4).toFixed(0)} units</strong> (4 wks)</td>
-                    <td><span class="badge bg-secondary">${r.dataPoints} wks</span></td>
-                `;
-                wkBody.appendChild(tr);
-            });
-        }
-
-        // ── MONTHLY TABLE ──
-        const mkBody = document.getElementById('monthlyForecastBody');
-        mkBody.innerHTML = '';
-
-        const mkRows = Object.entries(productMap).map(([pid, p]) => {
-            const vals = Object.values(p.monthlyQtys);
-            const avg  = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-            return { description: p.description, code: p.code, avg, months: vals.length };
-        }).filter(r => r.avg > 0).sort((a, b) => b.avg - a.avg);
-
-        if (!mkRows.length) {
-            mkBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No monthly data yet.</td></tr>';
-        } else {
-            mkRows.forEach(r => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${escHtml(r.description)}</td>
-                    <td><code>${escHtml(r.code)}</code></td>
-                    <td>${r.avg.toFixed(1)} units/mo</td>
-                    <td><strong>${(r.avg * 3).toFixed(0)} units</strong> (3 mos)</td>
-                    <td><span class="badge bg-info text-dark">${r.months} mo</span></td>
-                `;
-                mkBody.appendChild(tr);
-            });
-        }
-
-        // ── SEASONAL CHART (last 12 months revenue) ──
-        buildSeasonalChart(sales);
-    }
-
-    function buildSeasonalChart(sales) {
-        const monthlyRevenue = {};
-        const now = new Date();
-        // Initialize last 12 months
-        for (let i = 11; i >= 0; i--) {
-            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-            const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            monthlyRevenue[k] = 0;
-        }
-
-        sales.forEach(s => {
-            const mk = monthKey(s.sale_date);
-            if (mk in monthlyRevenue) {
-                monthlyRevenue[mk] += parseFloat(s.parts_total || 0) + parseFloat(s.labor_total || 0);
-            }
-        });
-
-        const labels = Object.keys(monthlyRevenue).map(k => {
-            const [y, m] = k.split('-');
-            return new Date(y, m - 1).toLocaleString('en-PH', { month: 'short', year: '2-digit' });
-        });
-        const values = Object.values(monthlyRevenue);
-
-        const ctx = document.getElementById('seasonalChart');
-        if (!ctx) return;
-
-        if (seasonalChartInstance) seasonalChartInstance.destroy();
-
-        const grad = ctx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        grad.addColorStop(0, 'rgba(6,182,212,0.4)');
-        grad.addColorStop(1, 'rgba(6,182,212,0.02)');
-
-        seasonalChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Monthly Revenue (₱)',
-                    data: values,
-                    backgroundColor: values.map((v, i) =>
-                        i === values.length - 1 ? '#f97316' : 'rgba(6,182,212,0.75)'
-                    ),
-                    borderRadius: 6,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => ' ₱' + ctx.parsed.y.toLocaleString('en-PH', { minimumFractionDigits: 0 })
-                        }
-                    }
-                },
-                scales: {
-                    x: { grid: { display: false } },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: v => '₱' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }
-                    }
-                }
-            }
-        });
-    }
-
-    // ── REORDER RECOMMENDATIONS ──────────────────────────────────────
-    async function loadReorderRecommendations() {
-        show('reorderLoading');
-        hide('reorderContent');
-        hide('reorderEmpty');
-
-        try {
-            const resp = await fetch('fetch_reorder.php');
-            const data = await resp.json();
-
-            hide('reorderLoading');
-
-            if (!data.success || !data.items || !data.items.length) {
-                show('reorderContent');
-                show('reorderEmpty');
-                document.getElementById('reorderList').innerHTML = '';
-                return;
-            }
-
-            show('reorderContent');
-            buildReorderList(data.items);
-        } catch (e) {
-            hide('reorderLoading');
-            show('reorderContent');
-            document.getElementById('reorderList').innerHTML =
-                '<p class="text-danger text-center">Error loading recommendations.</p>';
-        }
-    }
-
-    function buildReorderList(items) {
-        const container = document.getElementById('reorderList');
-        container.innerHTML = '';
-
-        items.forEach(item => {
-            const critical  = parseInt(item.current_stock) <= 0;
-            const urgency   = critical ? 'danger' : (parseInt(item.current_stock) <= Math.ceil(parseInt(item.reorder_threshold) / 2) ? 'warning' : 'info');
-            const urgLabel  = critical ? '🔴 OUT OF STOCK' : (urgency === 'warning' ? '🟡 CRITICAL LOW' : '🔵 LOW STOCK');
-            const suggested = Math.max(parseInt(item.reorder_threshold) * 3, 20);
-
-            const div = document.createElement('div');
-            div.className = `reorder-item border-${urgency === 'danger' ? 'danger' : urgency === 'warning' ? 'warning' : 'info'} bg-${urgency === 'danger' ? 'danger' : urgency === 'warning' ? 'warning' : 'info'} bg-opacity-10`;
-            div.style.cssText = 'border-radius:10px;padding:12px 16px;margin-bottom:10px;border-left-width:4px;border-left-style:solid;';
-            div.innerHTML = `
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <div>
-                        <span class="badge bg-${urgency === 'danger' ? 'danger' : urgency === 'warning' ? 'warning text-dark' : 'info'} mb-1">${urgLabel}</span>
-                        <div class="fw-bold">${escHtml(item.description)}</div>
-                        <div class="text-muted small">${escHtml(item.category_name)} &bull; Code: <code>${escHtml(item.code)}</code></div>
-                    </div>
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="text-center">
-                            <div class="fw-bold fs-5 text-${urgency === 'danger' ? 'danger' : urgency === 'warning' ? 'warning' : 'primary'}">${item.current_stock}</div>
-                            <div class="text-muted" style="font-size:.72rem">Current</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="fw-bold fs-5">${item.reorder_threshold}</div>
-                            <div class="text-muted" style="font-size:.72rem">Min Level</div>
-                        </div>
-                        <div class="text-center">
-                            <div class="fw-bold fs-5 text-success">${suggested}</div>
-                            <div class="text-muted" style="font-size:.72rem">Order Qty</div>
-                        </div>
-                        <button class="btn btn-sm btn-success" onclick="openRestockModal(${item.product_id}, '${escHtml(item.description).replace(/'/g,"\\'")}', ${suggested})">
-                            <i class="bi bi-box-arrow-in-down"></i> Restock
-                        </button>
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    // ── RESTOCK MODAL ────────────────────────────────────────────────
-    window.openRestockModal = function (productId, productName, suggestedQty) {
-        document.getElementById('restockProductId').value   = productId;
-        document.getElementById('restockProductName').textContent = productName;
-        document.getElementById('restockQuantity').value   = suggestedQty || 20;
-        document.getElementById('restockRemarks').value    = '';
-        const modal = new bootstrap.Modal(document.getElementById('recordRestockModal'));
-        modal.show();
-    };
-
+    // ── Wait for forecast tab to be clicked ───────────────
     document.addEventListener('DOMContentLoaded', function () {
-        const submitBtn = document.getElementById('submitRestock');
-        if (submitBtn) {
-            submitBtn.addEventListener('click', async function () {
-                const pid     = document.getElementById('restockProductId').value;
-                const qty     = parseInt(document.getElementById('restockQuantity').value, 10);
-                const remarks = document.getElementById('restockRemarks').value || 'Restock';
+        const forecastTab  = document.getElementById('forecast-tab');
+        const reorderTab   = document.getElementById('reorder-tab');
+        const workloadTab  = document.getElementById('workload-tab');
 
-                if (!pid || qty <= 0) {
-                    alert('Enter a valid quantity.');
-                    return;
-                }
+        if (forecastTab)  forecastTab.addEventListener('click',  function () { if (!forecastData) loadForecast(); else renderForecast(forecastData); });
+        if (reorderTab)   reorderTab.addEventListener('click',   loadReorder);
+        if (workloadTab)  workloadTab.addEventListener('click',  function () { if (forecastData) renderWorkload(forecastData.workload); else loadForecast(); });
 
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Saving…';
-
-                try {
-                    const fd = new FormData();
-                    fd.append('product_id', pid);
-                    fd.append('quantity', qty);
-                    fd.append('remarks', remarks);
-
-                    const resp = await fetch('add_stock.php', { method: 'POST', body: fd });
-                    const data = await resp.json();
-
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('recordRestockModal'));
-                    modal.hide();
-
-                    if (data.success) {
-                        Swal.fire({ icon: 'success', title: 'Restocked!', text: data.message, timer: 1800, showConfirmButton: false });
-                        loadProducts && loadProducts();
-                        loadReorderRecommendations();
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
-                    }
-                } catch (e) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Network error.' });
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Record Restock';
-                }
-            });
-        }
+        // Also load restock modal handler
+        document.getElementById('submitRestock')?.addEventListener('click', submitRestock);
     });
 
-    // ── PEAK WORKLOAD ────────────────────────────────────────────────
-    async function loadWorkloadData() {
-        show('workloadLoading');
-        hide('workloadContent');
-        hide('workloadNoData');
+    // ── LOAD FORECAST DATA ─────────────────────────────────
+    function loadForecast() {
+        showForecastLoading(true);
 
-        try {
-            const resp = await fetch('fetch_workload.php');
-            const data = await resp.json();
+        fetch('fetch_sales_for_forecast.php')
+            .then(function (r) {
+                if (!r.ok) throw new Error('Server error: ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                showForecastLoading(false);
+                if (!data.success) {
+                    showForecastError(data.message || 'Failed to load data.');
+                    return;
+                }
+                forecastData = data;
+                renderForecast(data);
+                renderWorkload(data.workload);
+            })
+            .catch(function (err) {
+                showForecastLoading(false);
+                showForecastError('Network error: ' + err.message + '. Make sure fetch_sales_for_forecast.php exists.');
+            });
+    }
 
-            hide('workloadLoading');
+    function showForecastLoading(show) {
+        const el = document.getElementById('forecastLoading');
+        const ct = document.getElementById('forecastContent');
+        if (el) el.style.display = show ? 'block' : 'none';
+        if (ct) ct.style.display = show ? 'none' : 'block';
+    }
 
-            if (!data.success || !data.weeks || !data.weeks.length) {
-                show('workloadNoData');
-                return;
-            }
-
-            show('workloadContent');
-            buildWorkloadChart(data.weeks, data.avg_per_week);
-        } catch (e) {
-            hide('workloadLoading');
-            show('workloadNoData');
+    function showForecastError(msg) {
+        const el = document.getElementById('forecastLoading');
+        if (el) {
+            el.style.display = 'block';
+            el.innerHTML = '<div style="color:#ef4444;padding:16px;text-align:center;"><i class="bi bi-exclamation-triangle-fill fs-4 d-block mb-2"></i>' + msg + '</div>';
         }
     }
 
-    function buildWorkloadChart(weeks, avg) {
-        setText('workloadAvg', `Average: ${avg} work orders / week`);
+    // ── RENDER FORECAST TABLES ─────────────────────────────
+    function renderForecast(data) {
+        const items = data.items || [];
 
-        const ctx = document.getElementById('workloadChart');
-        if (!ctx) return;
-        if (workloadChartInstance) workloadChartInstance.destroy();
+        if (!items.length) {
+            // No sales data yet — show friendly empty state
+            const emptyHtml = '<tr><td colspan="5" class="text-center py-3 text-muted"><i class="bi bi-info-circle me-1"></i>No sales data yet. Record some sales to see forecasts.</td></tr>';
+            const wb = document.getElementById('weeklyForecastBody');
+            const mb = document.getElementById('monthlyForecastBody');
+            if (wb) wb.innerHTML = emptyHtml;
+            if (mb) mb.innerHTML = emptyHtml;
+        } else {
+            renderWeeklyForecast(items);
+            renderMonthlyForecast(items);
+        }
 
-        workloadChartInstance = new Chart(ctx, {
+        // Always render seasonal chart
+        renderSeasonalChart(data.monthly || []);
+    }
+
+    function renderWeeklyForecast(items) {
+        const body = document.getElementById('weeklyForecastBody');
+        if (!body) return;
+
+        // Avg weekly = total_qty / 12 weeks
+        const rows = items.map(function (item) {
+            const totalQty   = parseFloat(item.total_qty) || 0;
+            const avgWeekly  = totalQty / 12;
+            const next4Weeks = Math.ceil(avgWeekly * 4);
+            const dataPoints = parseInt(item.sale_weeks) || 0;
+
+            const trend = avgWeekly > 0
+                ? (avgWeekly >= 2 ? '<span style="color:#34d399;">↑ High demand</span>' : '<span style="color:#fcd34d;">→ Moderate</span>')
+                : '<span style="color:#94a3b8;">— Low / none</span>';
+
+            return '<tr>' +
+                '<td><strong>' + esc(item.description) + '</strong></td>' +
+                '<td><code style="font-size:.75rem;color:#a5b4fc;">' + esc(item.code || '—') + '</code></td>' +
+                '<td>' + avgWeekly.toFixed(1) + ' units/wk &nbsp;' + trend + '</td>' +
+                '<td><strong style="color:#f97316;">' + next4Weeks + ' units</strong></td>' +
+                '<td><span class="badge bg-secondary">' + dataPoints + ' weeks</span></td>' +
+                '</tr>';
+        });
+
+        body.innerHTML = rows.join('');
+    }
+
+    function renderMonthlyForecast(items) {
+        const body = document.getElementById('monthlyForecastBody');
+        if (!body) return;
+
+        // Avg monthly = total_qty / 3 months (last quarter is most relevant)
+        const rows = items.map(function (item) {
+            const totalQty    = parseFloat(item.total_qty) || 0;
+            const avgMonthly  = totalQty / 12; // normalize 12-month total
+            const next3Months = Math.ceil(avgMonthly * 3);
+            const dataMonths  = parseInt(item.sale_months) || 0;
+
+            const confidence = dataMonths >= 6
+                ? '<span style="color:#34d399;font-size:.72rem;">High confidence</span>'
+                : dataMonths >= 3
+                ? '<span style="color:#fcd34d;font-size:.72rem;">Moderate</span>'
+                : '<span style="color:#94a3b8;font-size:.72rem;">Low data</span>';
+
+            return '<tr>' +
+                '<td><strong>' + esc(item.description) + '</strong></td>' +
+                '<td><code style="font-size:.75rem;color:#a5b4fc;">' + esc(item.code || '—') + '</code></td>' +
+                '<td>' + avgMonthly.toFixed(1) + ' units/mo</td>' +
+                '<td><strong style="color:#60a5fa;">' + next3Months + ' units</strong> &nbsp;' + confidence + '</td>' +
+                '<td><span class="badge bg-secondary">' + dataMonths + ' months</span></td>' +
+                '</tr>';
+        });
+
+        body.innerHTML = rows.join('');
+    }
+
+    // ── SEASONAL DEMAND CHART ─────────────────────────────
+    function renderSeasonalChart(monthly) {
+        const canvas = document.getElementById('seasonalChart');
+        if (!canvas) return;
+
+        // Destroy existing chart
+        if (seasonalChart) { seasonalChart.destroy(); seasonalChart = null; }
+
+        if (!monthly || !monthly.length) {
+            canvas.parentElement.innerHTML += '<p class="text-muted text-center mt-2" style="font-size:.82rem;">No monthly data yet. Sales will appear here once recorded.</p>';
+            return;
+        }
+
+        const labels  = monthly.map(function (m) { return m.month_label; });
+        const parts   = monthly.map(function (m) { return parseFloat(m.parts_total) || 0; });
+        const labor   = monthly.map(function (m) { return parseFloat(m.labor_total) || 0; });
+        const totals  = monthly.map(function (m) { return parseFloat(m.grand_total) || 0; });
+
+        seasonalChart = new Chart(canvas, {
             type: 'bar',
             data: {
-                labels: weeks.map(w => w.week_label || w.week),
+                labels: labels,
                 datasets: [
                     {
-                        label: 'Work Orders',
-                        data: weeks.map(w => w.count),
-                        backgroundColor: weeks.map(w =>
-                            w.week === weeks[weeks.length - 1].week ? '#f97316' : 'rgba(102,126,234,0.75)'
-                        ),
+                        label: 'Parts Revenue (₱)',
+                        data: parts,
+                        backgroundColor: 'rgba(99,102,241,.7)',
                         borderRadius: 6,
                         borderSkipped: false
                     },
                     {
-                        label: 'Avg',
-                        data: weeks.map(() => avg),
+                        label: 'Labor Revenue (₱)',
+                        data: labor,
+                        backgroundColor: 'rgba(16,185,129,.7)',
+                        borderRadius: 6,
+                        borderSkipped: false
+                    },
+                    {
+                        label: 'Total Revenue (₱)',
+                        data: totals,
                         type: 'line',
-                        borderColor: '#ef4444',
-                        borderDash: [6, 4],
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249,115,22,.15)',
                         borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0
+                        pointBackgroundColor: '#f97316',
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y'
                     }
                 ]
             },
             options: {
                 responsive: true,
+                interaction: { mode: 'index', intersect: false },
                 plugins: {
-                    legend: { position: 'top' },
+                    legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
                     tooltip: {
-                        callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}` }
+                        callbacks: {
+                            label: function (ctx) {
+                                return ' ' + ctx.dataset.label + ': ₱' + ctx.parsed.y.toLocaleString('en-PH', { minimumFractionDigits: 0 });
+                            }
+                        }
                     }
                 },
                 scales: {
-                    x: { grid: { display: false } },
-                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+                    y: { ticks: { color: '#94a3b8', callback: function (v) { return '₱' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v); } }, grid: { color: 'rgba(255,255,255,.05)' } }
                 }
             }
         });
     }
 
-    // ── XSS escape ──────────────────────────────────────────────────
-    function escHtml(s) {
-        return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    // ── WORKLOAD CHART ─────────────────────────────────────
+    function renderWorkload(workload) {
+        const loading = document.getElementById('workloadLoading');
+        const content = document.getElementById('workloadContent');
+        const noData  = document.getElementById('workloadNoData');
+
+        if (loading) loading.style.display = 'none';
+
+        if (!workload || !workload.length) {
+            if (noData)  noData.style.display  = 'block';
+            if (content) content.style.display = 'none';
+            return;
+        }
+
+        if (content) content.style.display = 'block';
+        if (noData)  noData.style.display  = 'none';
+
+        // Avg
+        const avg = workload.reduce(function (s, w) { return s + parseInt(w.total_orders); }, 0) / workload.length;
+        const avgEl = document.getElementById('workloadAvg');
+        if (avgEl) avgEl.textContent = 'Average: ' + avg.toFixed(1) + ' work orders/week over the last 12 weeks';
+
+        const canvas = document.getElementById('workloadChart');
+        if (!canvas) return;
+        if (workloadChart) { workloadChart.destroy(); workloadChart = null; }
+
+        const labels    = workload.map(function (w) { return 'Wk ' + formatDate(w.week_start); });
+        const totals    = workload.map(function (w) { return parseInt(w.total_orders); });
+        const completed = workload.map(function (w) { return parseInt(w.completed); });
+
+        workloadChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Work Orders',
+                        data: totals,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99,102,241,.15)',
+                        fill: true, tension: 0.4,
+                        pointBackgroundColor: '#6366f1', pointRadius: 4, borderWidth: 2
+                    },
+                    {
+                        label: 'Completed',
+                        data: completed,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,.1)',
+                        fill: true, tension: 0.4,
+                        pointBackgroundColor: '#10b981', pointRadius: 4, borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+                    y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: 'rgba(255,255,255,.05)' } }
+                }
+            }
+        });
     }
 
-    // ── TAB ACTIVATION ───────────────────────────────────────────────
-    let forecastLoaded  = false;
-    let reorderLoaded   = false;
-    let workloadLoaded  = false;
+    // ── REORDER TAB ────────────────────────────────────────
+    function loadReorder() {
+        const loading = document.getElementById('reorderLoading');
+        const content = document.getElementById('reorderContent');
+        if (loading) loading.style.display = 'block';
+        if (content) content.style.display = 'none';
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const tabEls = document.querySelectorAll('#inventoryMainTabs [data-bs-toggle="tab"]');
-        tabEls.forEach(tab => {
-            tab.addEventListener('shown.bs.tab', function (e) {
-                const target = e.target.getAttribute('data-bs-target');
-                if (target === '#forecast-panel' && !forecastLoaded) {
-                    forecastLoaded = true;
-                    loadForecastData();
-                } else if (target === '#reorder-panel' && !reorderLoaded) {
-                    reorderLoaded = true;
-                    loadReorderRecommendations();
-                } else if (target === '#workload-panel' && !workloadLoaded) {
-                    workloadLoaded = true;
-                    loadWorkloadData();
+        fetch('fetch_reorder.php')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (loading) loading.style.display = 'none';
+                if (content) content.style.display = 'block';
+
+                const list  = document.getElementById('reorderList');
+                const empty = document.getElementById('reorderEmpty');
+
+                if (!data.success || !data.data || !data.data.length) {
+                    if (list)  list.innerHTML  = '';
+                    if (empty) empty.style.display = 'block';
+                    return;
                 }
-            });
-        });
 
-        // Reload reorder after any restock (product table reload)
-        document.addEventListener('productReloaded', function () {
-            reorderLoaded = false;
-        });
-    });
+                if (empty) empty.style.display = 'none';
+
+                const rows = data.data.map(function (item) {
+                    const stock     = parseInt(item.current_stock) || 0;
+                    const threshold = parseInt(item.reorder_threshold) || 5;
+                    const urgency   = stock <= 0
+                        ? '<span class="badge bg-danger">Out of Stock</span>'
+                        : stock <= Math.floor(threshold / 2)
+                        ? '<span class="badge bg-danger">Critical</span>'
+                        : '<span class="badge bg-warning text-dark">Low</span>';
+                    const suggested = Math.max(threshold * 2, 10);
+
+                    return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.06);">' +
+                        '<div>' +
+                            '<strong style="color:#fff;">' + esc(item.description) + '</strong>' +
+                            '<div style="font-size:.75rem;color:#94a3b8;">' + esc(item.category_name || '') + (item.code ? ' · ' + esc(item.code) : '') + '</div>' +
+                        '</div>' +
+                        '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">' +
+                            urgency +
+                            '<span style="font-size:.82rem;color:#94a3b8;">Stock: <strong style="color:#fca5a5;">' + stock + '</strong></span>' +
+                            '<span style="font-size:.82rem;color:#94a3b8;">Threshold: <strong style="color:#fcd34d;">' + threshold + '</strong></span>' +
+                            '<button onclick="openRestockModal(' + item.product_id + ', \'' + esc(item.description).replace(/'/g, "\\'") + '\', ' + suggested + ')" ' +
+                                'class="btn btn-sm btn-warning text-dark fw-bold">' +
+                                '<i class="bi bi-box-arrow-in-down me-1"></i>Restock' +
+                            '</button>' +
+                        '</div>' +
+                    '</div>';
+                });
+
+                if (list) list.innerHTML = rows.join('');
+            })
+            .catch(function (err) {
+                if (loading) loading.style.display = 'none';
+                const list = document.getElementById('reorderList');
+                if (list) list.innerHTML = '<div class="text-center text-danger py-3"><i class="bi bi-exclamation-triangle me-1"></i>Error: ' + err.message + '</div>';
+            });
+    }
+
+    // ── RESTOCK MODAL ──────────────────────────────────────
+    window.openRestockModal = function (productId, productName, suggestedQty) {
+        document.getElementById('restockProductId').value   = productId;
+        document.getElementById('restockProductName').textContent = productName;
+        document.getElementById('restockQuantity').value   = suggestedQty || 20;
+        document.getElementById('restockRemarks').value    = '';
+        new bootstrap.Modal(document.getElementById('recordRestockModal')).show();
+    };
+
+    function submitRestock() {
+        const productId = document.getElementById('restockProductId').value;
+        const qty       = parseInt(document.getElementById('restockQuantity').value);
+        const remarks   = document.getElementById('restockRemarks').value.trim();
+
+        if (!productId || qty < 1) {
+            Swal.fire({ icon: 'warning', title: 'Invalid', text: 'Enter a valid quantity.' });
+            return;
+        }
+
+        const btn = document.getElementById('submitRestock');
+        btn.disabled    = true;
+        btn.textContent = 'Saving…';
+
+        const fd = new FormData();
+        fd.append('product_id', productId);
+        fd.append('quantity',   qty);
+        fd.append('remarks',    remarks || 'Restock');
+
+        fetch('add_stock.php', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                btn.disabled    = false;
+                btn.textContent = 'Record Restock';
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('recordRestockModal')).hide();
+                    Swal.fire({ icon: 'success', title: 'Saved successfully', timer: 1400, showConfirmButton: false });
+                    // Reload products table
+                    if (typeof loadProducts === 'function') loadProducts();
+                    // Reload reorder list if visible
+                    const reorderPanel = document.getElementById('reorder-panel');
+                    if (reorderPanel && reorderPanel.classList.contains('show')) loadReorder();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message || 'Failed to save.' });
+                }
+            })
+            .catch(function (err) {
+                btn.disabled    = false;
+                btn.textContent = 'Record Restock';
+                Swal.fire({ icon: 'error', title: 'Network Error', text: err.message });
+            });
+    }
+
+    // ── HELPERS ────────────────────────────────────────────
+    function esc(str) {
+        return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return (d.getMonth() + 1) + '/' + d.getDate();
+    }
 
 })();
