@@ -151,8 +151,8 @@ if ($bl) while ($row = $bl->fetch_assoc()) $bestLabor[] = $row;
 $bestCustomers = [];
 $bc = $conn->query("
     SELECT customer_name, plate_number,
-           COUNT(*) AS visits,
-           SUM(parts_total+labor_total) AS total_spend
+        COUNT(*) AS visits,
+        SUM(parts_total+labor_total) AS total_spend
     FROM sales
     WHERE customer_name != ''
     GROUP BY customer_name, plate_number
@@ -161,21 +161,20 @@ $bc = $conn->query("
 ");
 if ($bc) while ($row = $bc->fetch_assoc()) $bestCustomers[] = $row;
 
-// ═══════════════════════════════════════════════════════════════
+
 // RECENT SALES
-// ═══════════════════════════════════════════════════════════════
+
 $recentSales = [];
 $rs = $conn->query("
     SELECT id, sale_date, customer_name, plate_number,
-           parts_total, labor_total,
-           (parts_total+labor_total) AS grand_total
+        parts_total, labor_total,
+        (parts_total+labor_total) AS grand_total
     FROM sales ORDER BY created_at DESC LIMIT 8
 ");
 if ($rs) while ($row = $rs->fetch_assoc()) $recentSales[] = $row;
 
-// ═══════════════════════════════════════════════════════════════
+
 // EXPENSE CATEGORY PIE (last 30 days)
-// ═══════════════════════════════════════════════════════════════
 $expCats = [];
 $ec = $conn->query("
     SELECT category, SUM(amount) AS total
@@ -426,12 +425,12 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
 <main class="app-main p-3 p-md-4">
 <div class="container-fluid">
 
-    <!-- PAGE TITLE -->
-    <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
-        <div>
-            <h4 class="mb-0 fw-bold" style="color:var(--dark)">
-                <i class="bi bi-speedometer2 me-2" style="color:var(--primary)"></i>Dashboard
-            </h4>
+<!-- PAGE TITLE -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h4 class="mb-0 fw-bold" style="color:var(--dark)">
+            <i class="bi bi-speedometer2 me-2" style="color:var(--primary)"></i>Dashboard
+        </h4>
             <small class="text-muted">
                 <?= htmlspecialchars($_SESSION['user'] ?? 'Admin') ?> &bull; <?= date('l, F j, Y') ?>
             </small>
@@ -449,9 +448,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-    TODAY's KPI ROW:  Revenue | Expenses | Profit | Labor
-    ══════════════════════════════════════════════════════════════ -->
+    <!--TODAY's KPI ROW:  Revenue | Expenses | Profit | Labor -->
     <div class="mb-2"><span class="section-title">📅 Today – <?= date('F j, Y') ?></span></div>
     <div class="row g-3 mb-3">
         <!-- Revenue -->
@@ -508,11 +505,9 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
                 </div>
             </div>
         </div>
-    </div>
+</div>
 
-    <!-- ══════════════════════════════════════════════════════════
-        PROFIT METER – THIS MONTH
-    ══════════════════════════════════════════════════════════════ -->
+    <!--PROFIT METER – THIS MONTH-->
     <div class="row g-3 mb-4">
         <div class="col-12">
             <div class="profit-meter d-flex flex-wrap gap-4 align-items-center">
@@ -551,9 +546,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-    CHARTS ROW 1: Revenue vs Expenses | Expense Breakdown
-    ══════════════════════════════════════════════════════════════ -->
+    <!--CHARTS ROW 1: Revenue vs Expenses | Expense Breakdown -->
     <div class="row g-3 mb-4">
         <div class="col-lg-8">
             <div class="chart-card h-100">
@@ -577,9 +570,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-         BEST SALES SECTION
-    ══════════════════════════════════════════════════════════════ -->
+    <!--BEST SALES SECTION-->
     <div class="mb-2"><span class="section-title">🏆 Best Sales</span></div>
     <div class="row g-3 mb-4">
 
@@ -663,9 +654,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-         CHARTS ROW 2: Top Products Bar | Parts vs Labor
-    ══════════════════════════════════════════════════════════════ -->
+    <!--CHARTS ROW 2: Top Products Bar | Parts vs Labor -->
     <div class="row g-3 mb-4">
         <div class="col-lg-6">
             <div class="chart-card">
@@ -681,9 +670,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
         </div>
     </div>
 
-    <!-- ══════════════════════════════════════════════════════════
-         BOTTOM: Recent Transactions | Low Stock
-    ══════════════════════════════════════════════════════════════ -->
+    <!--BOTTOM: Recent Transactions | Low Stock-->
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="chart-card">
@@ -759,7 +746,7 @@ body{background:var(--bg);font-family:'Segoe UI',sans-serif;}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ── DATA FROM PHP ────────────────────────────────────────────────
+// DATA FROM PHP
 const DAYS    = <?= $jsonDays ?>;
 const BEST_P  = <?= $jsonBestP ?>;
 const BEST_C  = <?= $jsonBestC ?>;
@@ -770,7 +757,7 @@ const PALETTE = ['#667eea','#ef4444','#10b981','#f97316','#06b6d4','#8b5cf6','#f
 Chart.defaults.font.family = "'Segoe UI', sans-serif";
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 
-// ── 1. REVENUE vs EXPENSES vs PROFIT ────────────────────────────
+//REVENUE vs EXPENSES vs PROFIT
 (function () {
     const ctx = document.getElementById('revenueExpensesChart')?.getContext('2d');
     if (!ctx) return;
@@ -838,7 +825,7 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
     });
 })();
 
-// ── 2. EXPENSE CATEGORY DONUT ────────────────────────────────────
+// EXPENSE CATEGORY DONUT
 (function () {
     const ctx = document.getElementById('expCatChart')?.getContext('2d');
     if (!ctx || !EXP_CAT.length) return;
@@ -858,7 +845,7 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
     });
 })();
 
-// ── 3. TOP PRODUCTS BAR ───────────────────────────────────────────
+// TOP PRODUCTS BAR
 (function () {
     const ctx = document.getElementById('topProductsChart')?.getContext('2d');
     if (!ctx || !BEST_P.length) return;
@@ -894,7 +881,7 @@ Chart.defaults.plugins.legend.labels.usePointStyle = true;
     });
 })();
 
-// ── 4. PARTS vs LABOR LINE ────────────────────────────────────────
+//  PARTS vs LABOR LINE
 (function () {
     const ctx = document.getElementById('partsLaborChart')?.getContext('2d');
     if (!ctx) return;

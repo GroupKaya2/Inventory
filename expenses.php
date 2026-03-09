@@ -49,23 +49,101 @@ $categories = ['Rent','Salaries','Utilities','Supplies','Equipment','Maintenance
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-body{background:#f0f2f8;}
-.page-header{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;padding:24px 28px;border-radius:14px;margin-bottom:20px;box-shadow:0 4px 18px rgba(239,68,68,.25);}
-.kpi-card{border:none;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);transition:.2s;overflow:hidden;}
-.kpi-card:hover{transform:translateY(-2px);}
-.kpi-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;}
-.kpi-title{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;}
-.kpi-value{font-size:1.6rem;font-weight:800;color:#1e293b;line-height:1.1;}
-.kpi-sub{font-size:.75rem;color:#64748b;}
-.chart-card{border:none;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);padding:20px;}
-.chart-card h6{font-weight:700;color:#1e293b;margin-bottom:14px;}
-.data-card{border:none;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,.08);}
-.table thead th{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:.78rem;font-weight:600;border:none;padding:10px 12px;}
-.table tbody td{font-size:.83rem;vertical-align:middle;padding:9px 12px;border-color:#f1f5f9;}
-.table tbody tr:hover{background:#fef2f2;}
-.modal-header-exp{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;}
-.cat-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600;}
-@media(max-width:576px){.kpi-value{font-size:1.2rem;}.table{font-size:.75rem;}}
+body{
+    background:#f0f2f8;
+}
+.page-header{
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;
+    padding:24px 28px;
+    border-radius:14px;
+    margin-bottom:20px;
+    box-shadow:0 4px 18px rgba(239,68,68,.25);
+}
+.kpi-card{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+    transition:.2s;
+    overflow:hidden;
+}
+.kpi-card:hover{
+    transform:translateY(-2px);
+}
+.kpi-icon{
+    width:52px;
+    height:52px;
+    border-radius:12px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:1.4rem;
+}
+.kpi-title{
+    font-size:.72rem;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:#94a3b8;
+}
+.kpi-value{
+    font-size:1.6rem;
+    font-weight:800;
+    color:#1e293b;
+    line-height:1.1;
+}
+.kpi-sub{
+    font-size:.75rem;
+    color:#64748b;
+}
+.chart-card{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+    padding:20px;
+}
+.chart-card h6{
+    font-weight:700;
+    color:#1e293b;
+    margin-bottom:14px;
+}
+.data-card{
+    border:none;
+    border-radius:14px;
+    box-shadow:0 4px 18px rgba(0,0,0,.08);
+}
+.table thead th{
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;
+    font-size:.78rem;
+    font-weight:600;
+    border:none;
+    padding:10px 12px;
+}
+.table tbody td{
+    font-size:.83rem;
+    vertical-align:middle;
+    padding:9px 12px;
+    border-color:#f1f5f9;
+}
+.table tbody tr:hover{
+    background:#fef2f2;
+}
+.modal-header-exp{
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff;
+}
+.cat-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 10px;
+    border-radius:20px;
+    font-size:.75rem;
+    font-weight:600;
+}
+@media
+(max-width:576px){.kpi-value{font-size:1.2rem;}.table{font-size:.75rem;}}
 </style>
 </head>
 <body>

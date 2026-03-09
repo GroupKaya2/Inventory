@@ -52,8 +52,8 @@ $r = $conn->query("
     JOIN sales s ON s.id = si.sale_id
     LEFT JOIN products p ON si.product_id = p.product_id
     WHERE si.line_type = 'parts'
-      AND si.product_id IS NOT NULL
-      AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+    AND si.product_id IS NOT NULL
+    AND s.sale_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
     GROUP BY si.product_id, si.description, p.code
     ORDER BY total_qty DESC
     LIMIT 5

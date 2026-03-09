@@ -30,6 +30,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['confirm'] ?? '') === 'DELE
 $salesCount = $conn->query("SELECT COUNT(*) AS c FROM sales")->fetch_assoc()['c'] ?? 0;
 $itemsCount = $conn->query("SELECT COUNT(*) AS c FROM sale_items")->fetch_assoc()['c'] ?? 0;
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -38,8 +40,22 @@ $itemsCount = $conn->query("SELECT COUNT(*) AS c FROM sale_items")->fetch_assoc(
 <title>Clear Sales History</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-body { background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.box { background: #1e293b; border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 36px; max-width: 460px; width: 100%; }
+body {
+    background: #0f172a;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+.box {
+    background: #1e293b;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 16px;
+    padding: 36px;
+    max-width: 460px;
+    width: 100%;
+}
 </style>
 </head>
 <body>
