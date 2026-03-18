@@ -1,84 +1,119 @@
 <?php
+// signup.php — Register / Create Account Page
+
 session_start();
-include "db.php";
+require_once 'backend/db.php';
 
-// Allow registration if:
-// 1. No users exist yet (first registration creates owner)
-// 2. OR current user is logged in as owner
-$stmt = $conn->prepare("SELECT COUNT(*) AS cnt FROM users");
-$stmt->execute();
-$cnt = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+// How many users already exist?
+$result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
+$userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
 
-$userCount = intval($cnt['cnt']);
 $isOwner = isset($_SESSION['role']) && $_SESSION['role'] === 'owner';
 
-// If users exist and user is not owner, redirect to login
+// Block registration if users exist and current visitor is not the owner
 if ($userCount > 0 && !$isOwner) {
-    $_SESSION['error'] = "Registration is disabled. Please login.";
-    header("Location: index.php");
+    $_SESSION['error'] = "Registration is closed. Please log in.";
+    header("Location: login.php");
     exit();
 }
+
+$error   = $_SESSION['error']   ?? '';
+$success = $_SESSION['success'] ?? '';
+unset($_SESSION['error'], $_SESSION['success']);
 ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sign Up</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up — Dispeedway</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="assets/css/login.css">
+    <style>
+        /* Signup card is slightly taller */
+        .login-card { height: auto; min-height: 400px; }
+        .card-left  { padding: 32px 36px; }
+        .card-right .welcome-title { font-size: 1.5rem; }
+    </style>
 </head>
 <body>
 
-<div class="container">
+    <div class="page-wrap">
+        <div class="login-card">
 
-    <div class="left">
-        <div class="form-box">
+            <!-- LEFT: Form -->
+            <div class="card-left">
+                <h1 class="form-title"><?= $isOwner ? 'Add Manager' : 'Create Account' ?></h1>
 
-            <div class="logo">
-                <img src="logo.jpg" alt="Logo">
+                <?php if ($error): ?>
+                    <div class="error-msg">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <?= htmlspecialchars($error) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($success): ?>
+                    <div class="error-msg" style="background:rgba(16,185,129,.25);border-color:rgba(16,185,129,.4);">
+                        <i class="bi bi-check-circle"></i>
+                        <?= htmlspecialchars($success) ?>
+                    </div>
+                <?php endif; ?>
+
+                <form action="backend/register.php" method="POST">
+
+                    <div class="field-group">
+                        <div class="input-wrap">
+                            <input type="text" name="name" placeholder="Full Name" required autocomplete="name">
+                            <i class="bi bi-person field-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="input-wrap">
+                            <input type="email" name="email" placeholder="Email" required autocomplete="email">
+                            <i class="bi bi-envelope field-icon"></i>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <div class="input-wrap">
+                            <input type="password" name="password" placeholder="Password" required minlength="6">
+                            <i class="bi bi-lock field-icon"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-login">
+                        <?= $isOwner ? 'Create Manager' : 'Create Account' ?>
+                    </button>
+                </form>
+
+                <p class="signup-link">
+                    <?php if ($isOwner): ?>
+                        <a href="dashboard.php"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+                    <?php else: ?>
+                        Already have an account? <a href="login.php">Login</a>
+                    <?php endif; ?>
+                </p>
             </div>
 
-            <h2><?php echo $isOwner ? 'Add New Account' : 'Create Account'; ?></h2>
-            
-            <?php if ($isOwner): ?>
-                <p class="text-muted" style="font-size: 14px; margin-bottom: 15px;">
-                    <i class="bi bi-info-circle"></i> You are creating a new account as the owner.
-                </p>
-            <?php endif; ?>
-
-            <form action="signup_process.php" method="POST">
-                <input type="text" name="name" placeholder="Full Name" required>
-                <input type="email" name="email" placeholder="Email" required>
-                <input type="password" name="password" placeholder="Password" required>
-
-                <button type="submit"><?php echo $isOwner ? 'Create Account' : 'Sign Up'; ?></button>
-            </form>
-
-            <?php if ($isOwner): ?>
-                <p><a href="dashboard.php">Back to Dashboard</a></p>
-            <?php else: ?>
-                <p>Already have an account? <a href="index.php">Login</a></p>
-            <?php endif; ?>
-
-            <?php
-            if (isset($_SESSION['error'])) {
-                echo "<p class='error'>" . $_SESSION['error'] . "</p>";
-                unset($_SESSION['error']);
-            }
-
-            if (isset($_SESSION['success'])) {
-                echo "<p class='success'>" . $_SESSION['success'] . "</p>";
-                unset($_SESSION['success']);
-            }
-            ?>
+            <!-- RIGHT: Welcome -->
+            <div class="card-right">
+                <div class="welcome-content">
+                    <div class="welcome-logo">
+                        <i class="bi bi-person-plus"></i>
+                    </div>
+                    <h2 class="welcome-title">
+                        <?= $isOwner ? 'ADD<br>MANAGER' : 'JOIN<br>US' ?>
+                    </h2>
+                    <p class="welcome-sub">Dispeedway System</p>
+                </div>
+                <div class="slash-deco"></div>
+            </div>
 
         </div>
     </div>
 
-    <div class="right"></div>
-
-</div>
-
 </body>
 </html>
-
