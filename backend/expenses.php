@@ -1,5 +1,5 @@
 <?php
-// backend/expenses.php — Expenses API (Save, Delete, Fetch)
+// Expenses API Save, Delete, Fetch
 
 session_start();
 header('Content-Type: application/json');
@@ -11,8 +11,8 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
-$userId  = (int)$_SESSION['user_id'];
-$action  = $_GET['action'] ?? $_POST['action'] ?? '';
+$userId = (int) $_SESSION['user_id'];
+$action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // Auto-create expenses table
 $conn->query("CREATE TABLE IF NOT EXISTS expenses (
@@ -26,17 +26,17 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// ── SAVE EXPENSE ────────────────────────────────────────
+//SAVE EXPENSE
 if ($action === 'save') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only.']);
         exit;
     }
 
-    $date   = trim($_POST['expense_date'] ?? '');
-    $cat    = trim($_POST['category']     ?? '');
-    $desc   = trim($_POST['description']  ?? '');
-    $amount = (float)($_POST['amount']    ?? 0);
+    $date = trim($_POST['expense_date']);
+    $cat = trim($_POST['category']);
+    $desc = trim($_POST['description']);
+    $amount = (float) ($_POST['amount']);
 
     if (!$date || !$cat || !$desc || $amount <= 0) {
         echo json_encode(['success' => false, 'message' => 'All fields are required and amount must be > 0.']);
@@ -55,14 +55,14 @@ if ($action === 'save') {
     exit;
 }
 
-// ── DELETE EXPENSE ──────────────────────────────────────
+//DELETE EXPENSE
 if ($action === 'delete') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only.']);
         exit;
     }
 
-    $id = (int)($_POST['id'] ?? 0);
+    $id = (int) ($_POST['id'] ?? 0);
     if ($id <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
         exit;

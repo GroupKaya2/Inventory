@@ -1,6 +1,5 @@
 <?php
-// index.php — Entry Point
-// Redirects to dashboard if logged in, otherwise to login page
+
 
 session_start();
 

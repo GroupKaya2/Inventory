@@ -1,9 +1,3 @@
-    /* ==============================================
-    login.css — Login Page Styles
-    Design: Dark bg + Pink/Magenta split card
-    ============================================== */
-
-    /* ── Reset & Base ── */
     *, *::before, *::after {
         box-sizing: border-box;
         margin: 0;
@@ -32,7 +26,7 @@
         overflow: hidden;
     }
 
-    /* Subtle noise texture on body */
+    
     body::before {
         content: '';
         position: fixed;
@@ -42,7 +36,7 @@
         z-index: 0;
     }
 
-    /* ── Page Wrapper ── */
+    
     .page-wrap {
         display: flex;
         align-items: center;
@@ -54,7 +48,7 @@
         z-index: 1;
     }
 
-    /* ── Login Card ── */
+    
     .login-card {
         display: flex;
         width: 620px;
@@ -62,8 +56,6 @@
         border-radius: 18px;
         overflow: hidden;
         position: relative;
-
-        /* Pink glowing border */
         border: 1.5px solid rgba(232, 23, 93, 0.6);
         box-shadow:
             0 0 0 1px rgba(232, 23, 93, 0.2),
@@ -83,7 +75,7 @@
         }
     }
 
-    /* ── LEFT side (Form) ── */
+    
     .card-left {
         width: 55%;
         background: linear-gradient(135deg, #c41055 0%, #9b0d43 60%, #7a0a36 100%);
@@ -95,7 +87,6 @@
         z-index: 2;
     }
 
-    /* Subtle inner glow on left side */
     .card-left::before {
         content: '';
         position: absolute;
@@ -104,7 +95,7 @@
         pointer-events: none;
     }
 
-    /* ── Form Title ── */
+    
     .form-title {
         font-family: 'Syne', sans-serif;
         font-size: 1.8rem;
@@ -114,7 +105,7 @@
         letter-spacing: -0.5px;
     }
 
-    /* ── Error Message ── */
+    
     .error-msg {
         background: rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.3);
@@ -128,17 +119,17 @@
         gap: 6px;
     }
 
-    /* ── Field Group ── */
+    
     .field-group {
         margin-bottom: 16px;
         position: relative;
     }
 
     .field-group label {
-        display: none; /* Using placeholder instead */
+        display: none;
     }
 
-    /* ── Input Wrap ── */
+    
     .input-wrap {
         position: relative;
         display: flex;
@@ -167,7 +158,7 @@
         border-bottom-color: #fff;
     }
 
-    /* Autofill background fix */
+    
     .input-wrap input:-webkit-autofill {
         -webkit-box-shadow: 0 0 0 100px #9b0d43 inset !important;
         -webkit-text-fill-color: #fff !important;
@@ -181,7 +172,7 @@
         pointer-events: none;
     }
 
-    /* ── Login Button ── */
+    
     .btn-login {
         width: 100%;
         padding: 11px;
@@ -223,7 +214,7 @@
         transform: translateY(0);
     }
 
-    /* ── Signup Link ── */
+    
     .signup-link {
         text-align: center;
         margin-top: 14px;
@@ -243,7 +234,7 @@
         text-decoration: underline;
     }
 
-    /* ── RIGHT side (Welcome) ── */
+    /*Welcome*/
     .card-right {
         width: 45%;
         background: linear-gradient(145deg, #e8175d 0%, #a00d40 40%, #1a0510 100%);
@@ -254,7 +245,6 @@
         overflow: hidden;
     }
 
-    /* Dark geometric slash decoration (top-right corner) */
     .slash-deco {
         position: absolute;
         top: -20px;
@@ -267,7 +257,7 @@
         pointer-events: none;
     }
 
-    /* Second slash layer */
+    
     .card-right::after {
         content: '';
         position: absolute;
@@ -281,7 +271,7 @@
         pointer-events: none;
     }
 
-    /* Radial glow inside right panel */
+    
     .card-right::before {
         content: '';
         position: absolute;
@@ -290,7 +280,7 @@
         pointer-events: none;
     }
 
-    /* ── Welcome Content ── */
+    
     .welcome-content {
         position: relative;
         z-index: 2;
@@ -299,10 +289,22 @@
     }
 
     .welcome-logo {
-        font-size: 2.2rem;
-        color: rgba(255, 255, 255, 0.85);
-        margin-bottom: 14px;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        overflow: hidden;
+        margin: 0 auto 14px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 0 20px rgba(232, 23, 93, 0.5);
         animation: pulse-glow 2.5s ease-in-out infinite;
+    }
+
+    .brand-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        border-radius: 50%;
     }
 
     @keyframes pulse-glow {
@@ -328,7 +330,7 @@
         letter-spacing: 1.5px;
     }
 
-    /* ── Responsive ── */
+    
     @media (max-width: 680px) {
         .login-card {
             flex-direction: column;

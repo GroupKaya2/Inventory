@@ -8,7 +8,7 @@ if (($_SESSION['role'] ?? 'manager') !== 'owner') { header("Location: dashboard.
 
 $activePage = 'expenses';
 
-// Auto-create expenses table
+//expenses table
 $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     expense_date DATE NOT NULL,
@@ -22,7 +22,6 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
 
 $today = date('Y-m-d');
 
-// Summary stats
 $stats = $conn->query("
     SELECT
         COALESCE(SUM(CASE WHEN expense_date = '$today' THEN amount END), 0) AS today,
@@ -32,7 +31,7 @@ $stats = $conn->query("
     FROM expenses
 ")->fetch_assoc();
 
-// Category breakdown
+//Category breakdown
 $catRows = [];
 $r = $conn->query("SELECT category, SUM(amount) AS total, COUNT(*) AS cnt FROM expenses GROUP BY category ORDER BY total DESC");
 if ($r) while ($row = $r->fetch_assoc()) $catRows[] = $row;
@@ -65,7 +64,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
 
 <main class="app-main">
 
-    <!-- Header -->
     <div class="page-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
@@ -78,7 +76,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
         </div>
     </div>
 
-    <!-- KPI Cards -->
+
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
             <div class="kpi-card">
@@ -140,7 +138,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
     </div>
     <?php endif; ?>
 
-    <!-- Filter + Table -->
+
     <div class="card">
         <div class="card-body p-0">
             <div class="p-3 d-flex flex-wrap gap-2 align-items-center" style="border-bottom:1px solid rgba(255,255,255,.07);">
@@ -209,7 +207,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
 
 </main>
 
-<!-- ADD EXPENSE MODAL -->
 <div class="modal fade" id="addExpenseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content modal-dark">
@@ -258,7 +255,7 @@ const PALETTE  = ['#e8175d','#8b5cf6','#3b82f6','#10b981','#f59e0b','#06b6d4','#
 Chart.defaults.color = '#7a8499';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
 
-// ── Charts ─────────────────────────────────────────────
+//Charts
 if (CAT_DATA.length) {
     new Chart(document.getElementById('donutChart'), {
         type: 'doughnut',
@@ -298,7 +295,7 @@ if (CAT_DATA.length) {
     });
 }
 
-// ── Filter Table ───────────────────────────────────────
+
 function filterExp() {
     const q   = document.getElementById('expSearch').value.toLowerCase();
     const cat = document.getElementById('expCatFilter').value;
@@ -311,7 +308,7 @@ function filterExp() {
 document.getElementById('expSearch').addEventListener('input', filterExp);
 document.getElementById('expCatFilter').addEventListener('change', filterExp);
 
-// ── Save Expense ───────────────────────────────────────
+//Save Expense
 document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
     const date   = document.getElementById('expDate').value;
     const cat    = document.getElementById('expCategory').value;
@@ -347,7 +344,7 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async functi
     }
 });
 
-// ── Delete Expense ─────────────────────────────────────
+//Delete Expense
 async function deleteExpense(id, desc) {
     const confirm = await Swal.fire({
         title: 'Delete expense?', text: `"${desc}"`, icon: 'warning',
@@ -370,7 +367,7 @@ async function deleteExpense(id, desc) {
     }
 }
 
-// ── Export CSV ─────────────────────────────────────────
+//Export CSV
 function exportCSV() {
     const rows = [['ID','Date','Category','Description','Amount']];
     document.querySelectorAll('#expBody tr[data-cat]').forEach(tr => {

@@ -1,14 +1,10 @@
-// assets/js/inventory.js — Inventory Page Logic
-// Handles: load products, filter, add/edit/delete, restock, forecast, reorder
-
 'use strict';
 
-// ── State ──────────────────────────────────────────────
 let allProducts  = [];
 let categories   = [];
 let seasonChart  = null;
 
-// ── Helpers ────────────────────────────────────────────
+
 function money(n) {
     return '₱' + parseFloat(n || 0).toFixed(2);
 }
@@ -26,7 +22,7 @@ function debounce(fn, ms) {
     return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
-// ── Load Categories ────────────────────────────────────
+
 async function loadCategories() {
     const res  = await fetch('backend/products.php?action=categories');
     const data = await res.json();
@@ -56,7 +52,7 @@ async function loadCategories() {
     });
 }
 
-// ── Load & Render Products ─────────────────────────────
+
 async function loadProducts() {
     const spinner = document.getElementById('loadingSpinner');
     const body    = document.getElementById('stockTableBody');
@@ -101,7 +97,6 @@ function renderProducts(products) {
                 ? `<span class="badge-yellow">${stock}</span>`
                 : `<span class="badge-green">${stock}</span>`;
 
-        // Action buttons
         let actions = `
             <button class="btn btn-sm btn-outline-success" onclick="openRestock(${p.product_id}, '${esc(p.description)}')" title="Restock">
                 <i class="bi bi-box-arrow-in-down"></i>
@@ -137,7 +132,6 @@ function renderProducts(products) {
     }).join('');
 }
 
-// ── Filter Logic ───────────────────────────────────────
 function applyFilters() {
     const q    = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
     const catId = parseInt(document.getElementById('categoryFilter')?.value) || null;
@@ -165,7 +159,6 @@ function updateSummary() {
     }
 }
 
-// ── Margin Auto-Calculate ──────────────────────────────
 function calcMargin(costId, priceId, displayId) {
     const cost  = parseFloat(document.getElementById(costId)?.value)  || 0;
     const price = parseFloat(document.getElementById(priceId)?.value) || 0;
@@ -177,7 +170,6 @@ function calcMargin(costId, priceId, displayId) {
     }
 }
 
-// ── ADD PRODUCT ────────────────────────────────────────
 async function addProduct() {
     const catId = document.getElementById('addCategory').value;
     const desc  = document.getElementById('addDesc').value.trim();
@@ -211,7 +203,6 @@ async function addProduct() {
     }
 }
 
-// ── EDIT PRODUCT ───────────────────────────────────────
 async function openEdit(id) {
     const res  = await fetch(`backend/products.php?action=get&id=${id}`);
     const data = await res.json();
@@ -293,7 +284,6 @@ async function deleteProduct(id, name) {
     }
 }
 
-// ── RESTOCK ────────────────────────────────────────────
 function openRestock(id, name) {
     document.getElementById('restockId').value        = id;
     document.getElementById('restockName').textContent = name;
@@ -329,14 +319,13 @@ async function submitRestock() {
     }
 }
 
-// ── EXPORT CSV ─────────────────────────────────────────
 function exportCSV() {
     const rows = [['ID', 'Category', 'Description', 'Code', 'Unit', 'Cost', 'Price', 'Margin', 'Stock', 'Reorder At']];
 
     allProducts.forEach(p => {
         const stock = p.current_stock != null ? p.current_stock : p.initial_quantity;
         rows.push([p.product_id, p.category_name, p.description, p.code, p.unit,
-                   p.unit_cost, p.selling_price, p.margin, stock, p.reorder_threshold]);
+                p.unit_cost, p.selling_price, p.margin, stock, p.reorder_threshold]);
     });
 
     const csv  = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -349,7 +338,7 @@ function exportCSV() {
     URL.revokeObjectURL(url);
 }
 
-// ── FORECAST ───────────────────────────────────────────
+//forecast
 async function loadForecast() {
     const loading = document.getElementById('forecastLoading');
     const content = document.getElementById('forecastContent');
@@ -467,7 +456,7 @@ function renderSeasonalChart(monthly) {
     });
 }
 
-// ── REORDER TAB ────────────────────────────────────────
+
 async function loadReorder() {
     const loading = document.getElementById('reorderLoading');
     const list    = document.getElementById('reorderList');
@@ -516,13 +505,13 @@ async function loadReorder() {
     }).join('');
 }
 
-// ── INIT ───────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', function () {
 
     loadCategories();
     loadProducts();
 
-    // Search & filter
+    // Search
     document.getElementById('searchInput')?.addEventListener('input', debounce(applyFilters, 200));
     document.getElementById('categoryFilter')?.addEventListener('change', applyFilters);
 
@@ -542,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('submitEdit')?.addEventListener('click', updateProduct);
     document.getElementById('submitRestock')?.addEventListener('click', submitRestock);
 
-    // Tab events — lazy load forecast & reorder
+    //lazy load forecast & reorder
     document.getElementById('tab-forecast-btn')?.addEventListener('click', loadForecast);
     document.getElementById('tab-reorder-btn')?.addEventListener('click', loadReorder);
 

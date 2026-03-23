@@ -1,11 +1,19 @@
 <?php
-// login.php — Login Page (Frontend)
+
 session_start();
 
-// If already logged in, go to dashboard
+
 if (isset($_SESSION['user_id'])) {
-    header("Location: dashboard.php");
-    exit();
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $p["path"], $p["domain"], $p["secure"], $p["httponly"]
+        );
+    }
+    session_destroy();
+    // Restart a clean session so error
+    session_start();
 }
 
 // Show any error messages from the backend
@@ -72,10 +80,10 @@ unset($_SESSION['error']);
             <div class="card-right">
                 <div class="welcome-content">
                     <div class="welcome-logo">
-                        <i class="bi bi-speedometer2"></i>
+                        <img src="assets/img/logo.jpg" alt="Logo" class="brand-logo">
                     </div>
                     <h2 class="welcome-title">WELCOME<br>BACK</h2>
-                    <p class="welcome-sub">Dispeedway Inventory System</p>
+                    <p class="welcome-sub">D Speedway Car Care Services</p>
                 </div>
                 <!-- Diagonal slash decoration -->
                 <div class="slash-deco"></div>

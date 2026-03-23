@@ -1,5 +1,4 @@
 <?php
-// backend/profile.php — Profile & User Management API
 
 session_start();
 header('Content-Type: application/json');
@@ -14,7 +13,7 @@ $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 $userId  = (int)$_SESSION['user_id'];
 $action  = $_POST['action'] ?? '';
 
-// ── UPDATE PROFILE ──────────────────────────────────────
+//UPDATE PROFILE
 if ($action === 'update_profile') {
     $name  = trim($_POST['name']  ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -53,10 +52,12 @@ if ($action === 'update_profile') {
     exit;
 }
 
-// ── CHANGE PASSWORD ─────────────────────────────────────
+// CHANGE PASSWORD
 if ($action === 'change_password') {
     $current = $_POST['current'] ?? '';
     $newPass = $_POST['new']     ?? '';
+
+    
 
     if (!$current || !$newPass) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
@@ -93,7 +94,7 @@ if ($action === 'change_password') {
     exit;
 }
 
-// ── DELETE USER (owner only) ────────────────────────────
+// ── DELETE USER (owner only)
 if ($action === 'delete_user') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only.']);

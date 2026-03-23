@@ -1,5 +1,5 @@
 <?php
-// sales.php — New Sale Transaction Page
+
 
 session_start();
 require_once 'backend/db.php';
@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $activePage = 'sales';
 
-// Pre-load products for the dropdown
+
 $products = [];
 $r = $conn->query("SELECT product_id, code, description, selling_price, unit FROM product_stock ORDER BY description");
 if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
@@ -29,7 +29,7 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
     <style>
-        /* ── Sales Card ── */
+        
         .sale-card {
             background: #161921;
             border: 1px solid rgba(255,255,255,.07);
@@ -38,7 +38,7 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             margin-bottom: 18px;
         }
 
-        /* ── Form inputs ── */
+        
         .sale-card .form-control,
         .sale-card .form-select {
             background: rgba(255,255,255,.06);
@@ -66,7 +66,7 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             margin-bottom: 5px;
         }
 
-        /* ── Item Row Grid ── */
+        
         .item-row {
             display: grid;
             grid-template-columns: 1fr 80px 120px 42px;
@@ -79,7 +79,6 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             .item-row { grid-template-columns: 1fr 1fr; }
         }
 
-        /* ── Remove Row Button ── */
         .btn-remove {
             width: 42px; height: 42px;
             background: rgba(239,68,68,.15);
@@ -93,7 +92,7 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
         .btn-remove:hover { background: rgba(239,68,68,.3); color: #fff; }
         .btn-remove.hidden { visibility: hidden; }
 
-        /* ── Totals ── */
+        /*Totals */
         .totals-bar {
             display: flex;
             flex-wrap: wrap;
@@ -121,7 +120,6 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             color: #e8175d;
         }
 
-        /* ── Print area ── */
         .print-area {
             display: none; }
         @media print {
@@ -138,13 +136,12 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
 <main class="app-main">
     <div style="max-width: 900px; margin: 0 auto;">
 
-        <!-- Page Title -->
         <div class="page-header mb-4">
             <h4><i class="bi bi-receipt me-2"></i>New Sale Transaction</h4>
             <p>Record parts sold and labor services for a customer</p>
         </div>
 
-        <!-- Customer Info -->
+
         <div class="sale-card">
             <p class="section-title mb-3">Customer Information</p>
             <div class="row g-3">
@@ -163,11 +160,10 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             </div>
         </div>
 
-        <!-- Line Items -->
         <div class="sale-card">
             <p class="section-title mb-3"><i class="bi bi-list-ul me-1"></i>Items & Services</p>
 
-            <!-- Column headers -->
+            
             <div class="item-row" style="margin-bottom:4px;">
                 <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Part / Service</div>
                 <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Qty</div>
@@ -176,14 +172,14 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             </div>
 
             <div id="itemsContainer">
-                <!-- First row injected by JS -->
+
             </div>
 
             <button type="button" class="btn-ghost mt-2" id="addItemBtn" style="font-size:.82rem;">
                 <i class="bi bi-plus-lg me-1"></i>Add Item
             </button>
 
-            <!-- Totals -->
+            
             <div class="totals-bar">
                 <div class="item">
                     <div class="lbl">Parts Total</div>
@@ -200,7 +196,7 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             </div>
         </div>
 
-        <!-- Action Buttons -->
+        
         <div class="d-flex flex-wrap gap-2 mb-4">
             <button type="button" class="btn-pink" id="saveBtn">
                 <i class="bi bi-save me-1"></i>Save Transaction
@@ -216,30 +212,29 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             </a>
         </div>
 
-    </div><!-- end max-width wrapper -->
+    </div>
 </main>
 
-<!-- Print Receipt Area -->
+
 <div id="printArea" class="print-area"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// Products from PHP → JS
+
 const PRODUCTS = <?= json_encode($products) ?>;
 
 (function () {
     'use strict';
 
-    // ── Format money ──────────────────────────────────────
+    //Format money
     function money(n) {
         return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
     }
 
-    // ── Build the product select HTML ─────────────────────
     function buildOptions() {
         let html = '<option value="">— Select Part or type Labor —</option>';
         html += '<option value="labor" data-price="0" data-desc="Labor" data-type="labor">⚙️ Labor / Service (enter amount manually)</option>';
-        html += '<option disabled>─────────────────────────────</option>';
+        html += '<option disabled>───</option>';
         PRODUCTS.forEach(p => {
             const label = (p.code ? p.code + ' – ' : '') + p.description + ' (₱' + parseFloat(p.selling_price).toFixed(2) + ')';
             html += `<option value="${p.product_id}" data-price="${p.selling_price}" data-desc="${p.description.replace(/"/g,'&quot;')}" data-type="parts">${label}</option>`;
@@ -247,7 +242,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         return html;
     }
 
-    // ── Create a new item row ─────────────────────────────
+    //Create a new item row
     function createRow(isFirst = false) {
         const div = document.createElement('div');
         div.className = 'item-row';
@@ -271,7 +266,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
     const container = document.getElementById('itemsContainer');
     container.appendChild(createRow(true));
 
-    // ── Event delegation ──────────────────────────────────
     container.addEventListener('change', function (e) {
         const row = e.target.closest('.item-row');
         if (!row || !e.target.classList.contains('item-select')) return;
@@ -321,7 +315,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         refreshRemoveButtons();
     });
 
-    // ── Update totals ─────────────────────────────────────
+    //Update totals
     function updateTotals() {
         let parts = 0, labor = 0;
         container.querySelectorAll('.item-row').forEach(row => {
@@ -337,7 +331,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
         document.getElementById('grandTotal').textContent = money(parts + labor);
     }
 
-    // ── Build payload for API ─────────────────────────────
     function buildPayload() {
         const items = [];
         container.querySelectorAll('.item-row').forEach(row => {
@@ -360,7 +353,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         return items;
     }
 
-    // ── SAVE ──────────────────────────────────────────────
+    // ── SAVE
     document.getElementById('saveBtn').addEventListener('click', async function () {
         const items = buildPayload();
         if (!items.length) {
@@ -385,7 +378,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
             const data = await resp.json();
 
             if (data.success) {
-                // Build stock summary HTML
+                // Build stock
                 let stockHtml = '';
                 if (data.stock_summary?.length) {
                     stockHtml = '<div style="text-align:left;margin-top:12px;">'
@@ -420,7 +413,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         }
     });
 
-    // ── PRINT ─────────────────────────────────────────────
+    // PRINT
     document.getElementById('printBtn').addEventListener('click', function () {
         let parts = 0, labor = 0;
         const lines = [];
@@ -455,7 +448,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         window.print();
     });
 
-    // ── CLEAR FORM ────────────────────────────────────────
+    //CLEAR FORM
     function clearForm() {
         document.getElementById('customerName').value = '';
         document.getElementById('plateNumber').value  = '';

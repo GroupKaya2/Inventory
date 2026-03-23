@@ -1,299 +1,389 @@
 <?php
-// sidebar.php — Navigation Sidebar
 
 $activePage = $activePage ?? '';
-$userRole   = $_SESSION['role']  ?? 'manager';
-$userName   = $_SESSION['user']  ?? 'User';
-$isOwner    = ($userRole === 'owner');
+$userRole = $_SESSION['role'] ?? 'manager';
+$userName = $_SESSION['user'] ?? 'User';
+$isOwner = ($userRole === 'owner');
 
 // Get first letter of each word for avatar
-$words    = explode(' ', trim($userName));
+$words = explode(' ', trim($userName));
 $initials = strtoupper(implode('', array_map(fn($w) => $w[0], $words)));
 $initials = substr($initials, 0, 2);
 ?>
 
 <style>
-/* ── Sidebar Styles ── */
-:root {
-    --sb-w: 240px;
-    --sb-bg: #0d0f16;
-    --sb-border: rgba(255,255,255,0.06);
-    --sb-hover: rgba(255,255,255,0.05);
-    --sb-active: rgba(232,23,93,0.18);
-    --sb-text: #7a8499;
-    --sb-text-on: #ffffff;
-    --pink: #e8175d;
-}
+    /*Sidebar Styles*/
+    :root {
+        --sb-w: 240px;
+        --sb-bg: #0d0f16;
+        --sb-border: rgba(255, 255, 255, 0.06);
+        --sb-hover: rgba(255, 255, 255, 0.05);
+        --sb-active: rgba(232, 23, 93, 0.18);
+        --sb-text: #7a8499;
+        --sb-text-on: #ffffff;
+        --pink: #e8175d;
+    }
 
-.sidebar {
-    position: fixed;
-    top: 0; left: 0;
-    width: var(--sb-w);
-    height: 100vh;
-    background: var(--sb-bg);
-    border-right: 1px solid var(--sb-border);
-    display: flex;
-    flex-direction: column;
-    z-index: 1040;
-    overflow-y: auto;
-    overflow-x: hidden;
-    transition: transform 0.25s ease;
-}
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--sb-w);
+        height: 100vh;
+        background: var(--sb-bg);
+        border-right: 1px solid var(--sb-border);
+        display: flex;
+        flex-direction: column;
+        z-index: 1040;
+        overflow-y: auto;
+        overflow-x: hidden;
+        transition: transform 0.25s ease;
+    }
 
-/* Pink top accent line */
-.sidebar::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--pink), transparent);
-}
+    /* Pink top accent line */
+    .sidebar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, var(--pink), transparent);
+    }
 
-/* ── Logo Area ── */
-.sb-logo {
-    padding: 18px 16px 14px;
-    border-bottom: 1px solid var(--sb-border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    text-decoration: none;
-}
+    /*Logo Area*/
+    .sb-logo {
+        padding: 18px 16px 14px;
+        border-bottom: 1px solid var(--sb-border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+    }
 
-.sb-logo-mark {
-    width: 36px; height: 36px;
-    background: linear-gradient(135deg, #e8175d, #9b0d43);
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem; color: #fff; flex-shrink: 0;
-    box-shadow: 0 4px 12px rgba(232,23,93,0.35);
-}
+    .sb-logo-mark {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 8px rgba(232, 23, 93, 0.4);
+    }
 
-.sb-logo-text .name { font-family: 'Syne', sans-serif; font-size: 0.9rem; font-weight: 800; color: #fff; }
-.sb-logo-text .tag  { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--sb-text); }
+    .sb-brand-logo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
 
-/* Role badge on logo */
-.sb-role {
-    margin-left: auto;
-    font-size: 0.58rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 2px 8px;
-    border-radius: 20px;
-}
+    .sb-logo-text .name {
+        font-family: 'Syne', sans-serif;
+        font-size: 0.9rem;
+        font-weight: 800;
+        color: #fff;
+    }
 
-.sb-role.owner   { background: rgba(232,23,93,.2); color: #ff6b9d; }
-.sb-role.manager { background: rgba(100,116,139,.2); color: #94a3b8; }
+    .sb-logo-text .tag {
+        font-size: 0.6rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--sb-text);
+    }
 
-/* ── Section Labels ── */
-.sb-section {
-    font-size: 0.6rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: rgba(122,132,153,0.5);
-    padding: 14px 16px 4px;
-}
+    .sb-role {
+        margin-left: auto;
+        font-size: 0.58rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
 
-/* ── Nav Items ── */
-.sb-link {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 12px;
-    margin: 1px 8px;
-    border-radius: 10px;
-    text-decoration: none;
-    color: var(--sb-text);
-    font-size: 0.82rem;
-    font-weight: 500;
-    transition: background 0.15s, color 0.15s;
-    position: relative;
-}
+    .sb-role.owner {
+        background: rgba(232, 23, 93, .2);
+        color: #ff6b9d;
+    }
 
-.sb-link:hover {
-    background: var(--sb-hover);
-    color: var(--sb-text-on);
-    text-decoration: none;
-}
+    .sb-role.manager {
+        background: rgba(100, 116, 139, .2);
+        color: #94a3b8;
+    }
 
-.sb-link.active {
-    background: var(--sb-active);
-    color: #fff;
-}
 
-/* Pink left indicator on active item */
-.sb-link.active::before {
-    content: '';
-    position: absolute;
-    left: -8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px; height: 60%;
-    background: var(--pink);
-    border-radius: 0 2px 2px 0;
-}
+    .sb-section {
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        color: rgba(122, 132, 153, 0.5);
+        padding: 14px 16px 4px;
+    }
 
-/* Locked items (manager can't access) */
-.sb-link.locked {
-    opacity: 0.4;
-    cursor: not-allowed;
-    pointer-events: none;
-}
 
-.sb-link.locked::after {
-    content: '\F4C1';
-    font-family: 'bootstrap-icons';
-    position: absolute;
-    right: 14px;
-    font-size: 0.7rem;
-}
+    .sb-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        margin: 1px 8px;
+        border-radius: 10px;
+        text-decoration: none;
+        color: var(--sb-text);
+        font-size: 0.82rem;
+        font-weight: 500;
+        transition: background 0.15s, color 0.15s;
+        position: relative;
+    }
 
-/* ── Nav Icon ── */
-.sb-icon {
-    width: 30px; height: 30px;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.9rem; flex-shrink: 0;
-    background: rgba(255,255,255,0.07);
-    color: var(--sb-text);
-    transition: background 0.15s;
-}
+    .sb-link:hover {
+        background: var(--sb-hover);
+        color: var(--sb-text-on);
+        text-decoration: none;
+    }
 
-.sb-link.active .sb-icon,
-.sb-link:hover .sb-icon {
-    background: rgba(232,23,93,0.25);
-    color: #ff6b9d;
-}
+    .sb-link.active {
+        background: var(--sb-active);
+        color: #fff;
+    }
 
-/* Icon colors for specific pages */
-.icon-pink   { background: linear-gradient(135deg,#e8175d,#9b0d43) !important; color:#fff !important; }
-.icon-green  { background: linear-gradient(135deg,#10b981,#059669) !important; color:#fff !important; }
-.icon-blue   { background: linear-gradient(135deg,#3b82f6,#1d4ed8) !important; color:#fff !important; }
-.icon-orange { background: linear-gradient(135deg,#f97316,#dc2626) !important; color:#fff !important; }
-.icon-teal   { background: linear-gradient(135deg,#06b6d4,#0891b2) !important; color:#fff !important; }
-.icon-gray   { background: linear-gradient(135deg,#475569,#334155) !important; color:#fff !important; }
 
-/* ── Divider ── */
-.sb-divider {
-    border: none;
-    border-top: 1px solid var(--sb-border);
-    margin: 6px 0;
-}
+    .sb-link.active::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 3px;
+        height: 60%;
+        background: var(--pink);
+        border-radius: 0 2px 2px 0;
+    }
 
-/* ── Count Badge on nav items ── */
-.sb-badge {
-    margin-left: auto;
-    background: rgba(232,23,93,0.25);
-    color: #ff6b9d;
-    font-size: 0.62rem;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 10px;
-    min-width: 18px;
-    text-align: center;
-}
 
-/* ── User Block at Bottom ── */
-.sb-user {
-    margin-top: auto;
-    padding: 14px 16px;
-    border-top: 1px solid var(--sb-border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+    .sb-link.locked {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 
-.sb-avatar {
-    width: 34px; height: 34px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--pink), #9b0d43);
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'Syne', sans-serif;
-    font-weight: 800; font-size: 0.82rem;
-    color: #fff; flex-shrink: 0;
-}
+    .sb-link.locked::after {
+        content: '\F4C1';
+        font-family: 'bootstrap-icons';
+        position: absolute;
+        right: 14px;
+        font-size: 0.7rem;
+    }
 
-.sb-username { font-size: 0.8rem; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-.sb-userrole { font-size: 0.66rem; color: var(--sb-text); }
+    
+    .sb-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--sb-text);
+        transition: background 0.15s;
+    }
 
-.sb-logout {
-    margin-left: auto;
-    color: var(--sb-text);
-    font-size: 1rem;
-    padding: 6px;
-    border-radius: 8px;
-    transition: background 0.15s, color 0.15s;
-    text-decoration: none;
-    flex-shrink: 0;
-}
+    .sb-link.active .sb-icon,
+    .sb-link:hover .sb-icon {
+        background: rgba(232, 23, 93, 0.25);
+        color: #ff6b9d;
+    }
 
-.sb-logout:hover {
-    background: rgba(239,68,68,.2);
-    color: #fca5a5;
-}
 
-/* ── Mobile Toggle ── */
-.sb-toggle {
-    display: none;
-    position: fixed;
-    top: 12px; left: 12px;
-    z-index: 1050;
-    background: var(--sb-bg);
-    border: 1px solid var(--sb-border);
-    color: #fff;
-    width: 40px; height: 40px;
-    border-radius: 10px;
-    align-items: center; justify-content: center;
-    font-size: 1.2rem;
-    cursor: pointer;
-}
+    .icon-pink {
+        background: linear-gradient(135deg, #e8175d, #9b0d43) !important;
+        color: #fff !important;
+    }
 
-.sb-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.6);
-    z-index: 1039;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s;
-}
+    .icon-green {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: #fff !important;
+    }
 
-.sb-overlay.open {
-    opacity: 1;
-    pointer-events: auto;
-}
+    .icon-blue {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        color: #fff !important;
+    }
 
-@media (max-width: 768px) {
-    .sidebar  { transform: translateX(-100%); }
-    .sidebar.open { transform: translateX(0); }
-    .sb-toggle { display: flex; }
-    .sb-overlay { display: block; }
-}
+    .icon-orange {
+        background: linear-gradient(135deg, #f97316, #dc2626) !important;
+        color: #fff !important;
+    }
+
+    .icon-teal {
+        background: linear-gradient(135deg, #06b6d4, #0891b2) !important;
+        color: #fff !important;
+    }
+
+    .icon-gray {
+        background: linear-gradient(135deg, #475569, #334155) !important;
+        color: #fff !important;
+    }
+
+
+    .sb-divider {
+        border: none;
+        border-top: 1px solid var(--sb-border);
+        margin: 6px 0;
+    }
+
+
+    .sb-badge {
+        margin-left: auto;
+        background: rgba(232, 23, 93, 0.25);
+        color: #ff6b9d;
+        font-size: 0.62rem;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+    }
+
+
+    .sb-user {
+        margin-top: auto;
+        padding: 14px 16px;
+        border-top: 1px solid var(--sb-border);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .sb-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--pink), #9b0d43);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Syne', sans-serif;
+        font-weight: 800;
+        font-size: 0.82rem;
+        color: #fff;
+        flex-shrink: 0;
+    }
+
+    .sb-username {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #e2e8f0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 130px;
+    }
+
+    .sb-userrole {
+        font-size: 0.66rem;
+        color: var(--sb-text);
+    }
+
+    .sb-logout {
+        margin-left: auto;
+        color: var(--sb-text);
+        font-size: 1rem;
+        padding: 6px;
+        border-radius: 8px;
+        transition: background 0.15s, color 0.15s;
+        text-decoration: none;
+        flex-shrink: 0;
+    }
+
+    .sb-logout:hover {
+        background: rgba(239, 68, 68, .2);
+        color: #fca5a5;
+    }
+
+
+    .sb-toggle {
+        display: none;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1050;
+        background: var(--sb-bg);
+        border: 1px solid var(--sb-border);
+        color: #fff;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .sb-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1039;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+    }
+
+    .sb-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sb-toggle {
+            display: flex;
+        }
+
+        .sb-overlay {
+            display: block;
+        }
+    }
 </style>
 
-<!-- Mobile hamburger button -->
+
 <button class="sb-toggle" id="sbToggle" aria-label="Open menu">
     <i class="bi bi-list"></i>
 </button>
 
-<!-- Mobile overlay -->
+
 <div class="sb-overlay" id="sbOverlay"></div>
 
-<!-- Sidebar -->
+
 <aside class="sidebar" id="sidebar">
 
-    <!-- Logo -->
+
     <a href="dashboard.php" class="sb-logo">
-        <div class="sb-logo-mark"><i class="bi bi-speedometer2"></i></div>
+        <div class="sb-logo-mark">
+            <img src="assets/img/logo.jpg" alt="Logo" class="sb-brand-logo"></div>
         <div class="sb-logo-text">
-            <div class="name">Dispeedway</div>
+            <div class="name">Dspeedway</div>
             <div class="tag">Inventory System</div>
         </div>
     </a>
 
-    <!-- Main Navigation -->
+
     <div class="sb-section">Main</div>
 
     <a href="dashboard.php" class="sb-link <?= $activePage === 'dashboard' ? 'active' : '' ?>">
@@ -333,8 +423,9 @@ $initials = substr($initials, 0, 2);
             Expenses
             <?php
             if (isset($conn)) {
-                $expToday = (int)($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
-                if ($expToday > 0) echo "<span class='sb-badge'>{$expToday}</span>";
+                $expToday = (int) ($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
+                if ($expToday > 0)
+                    echo "<span class='sb-badge'>{$expToday}</span>";
             }
             ?>
         </a>
@@ -353,7 +444,7 @@ $initials = substr($initials, 0, 2);
         <?= $isOwner ? 'Profile & Users' : 'My Profile' ?>
     </a>
 
-    <!-- User Block -->
+
     <div class="sb-user">
         <div class="sb-avatar"><?= htmlspecialchars($initials) ?></div>
         <div style="overflow:hidden;">
@@ -368,20 +459,20 @@ $initials = substr($initials, 0, 2);
 </aside>
 
 <script>
-// Mobile sidebar toggle
-(function () {
-    const toggle  = document.getElementById('sbToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sbOverlay');
 
-    toggle?.addEventListener('click', function () {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
-    });
+    (function () {
+        const toggle = document.getElementById('sbToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sbOverlay');
 
-    overlay?.addEventListener('click', function () {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-    });
-})();
+        toggle?.addEventListener('click', function () {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        });
+
+        overlay?.addEventListener('click', function () {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+    })();
 </script>

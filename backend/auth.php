@@ -1,56 +1,68 @@
 <?php
-// backend/auth.php — Handles login and logout
-
+// Handles login and logout
 session_start();
 require_once __DIR__ . '/../backend/db.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-// ── LOGIN ──────────────────────────────────────────────
+//LOGIN
 if ($action === 'login') {
 
-    $email    = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $email    = trim($_POST['email']    ?? '');
+    $password =      $_POST['password'] ?? '';
 
-    // Basic validation
     if ($email === '' || $password === '') {
         $_SESSION['error'] = "Email and password are required.";
         header("Location: ../login.php");
         exit();
     }
 
-    // Find user by email
+    // Sanitize email
+    $email = filter_var($email);
+    if (!filter_var($email)) {
+        $_SESSION['error'] = "Invalid email format.";
+        header("Location: ../login.php");
+        exit();
+    }
+
+    // Look up user
     $stmt = $conn->prepare("SELECT id, name, email, password, role FROM users WHERE email = ? LIMIT 1");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();
     $stmt->close();
 
-    // Check password
+    // Verify password and login if correct
     if ($user && password_verify($password, $user['password'])) {
-        // Save session
-        $_SESSION['user_id'] = $user['id'];
+        session_regenerate_id(true);
+
+        $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['user']    = $user['name'];
-        $_SESSION['email']   = $user['email'];
+        $_SESSION['email']   = base64_encode($user['email']);
         $_SESSION['role']    = $user['role'];
 
         header("Location: ../dashboard.php");
         exit();
     }
-
-    // Wrong credentials
     $_SESSION['error'] = "Invalid email or password.";
     header("Location: ../login.php");
     exit();
 }
 
-// ── LOGOUT ─────────────────────────────────────────────
+//LOGOUT
 if ($action === 'logout') {
+
+    $_SESSION = [];
+    if (ini_get("session.use_cookies")) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $p["path"], $p["domain"], $p["secure"], $p["httponly"]
+        );
+    }
     session_destroy();
     header("Location: ../login.php");
     exit();
 }
 
-// Unknown action — redirect to login
 header("Location: ../login.php");
 exit();

@@ -1,10 +1,10 @@
 <?php
-// signup.php — Register / Create Account Page
+// Register / Create Account Page
 
 session_start();
 require_once 'backend/db.php';
 
-// How many users already exist?
+// How many users already exist
 $result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
 $userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
 
@@ -32,7 +32,7 @@ unset($_SESSION['error'], $_SESSION['success']);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/login.css">
     <style>
-        /* Signup card is slightly taller */
+    
         .login-card { height: auto; min-height: 400px; }
         .card-left  { padding: 32px 36px; }
         .card-right .welcome-title { font-size: 1.5rem; }
@@ -43,7 +43,7 @@ unset($_SESSION['error'], $_SESSION['success']);
     <div class="page-wrap">
         <div class="login-card">
 
-            <!-- LEFT: Form -->
+        
             <div class="card-left">
                 <h1 class="form-title"><?= $isOwner ? 'Add Manager' : 'Create Account' ?></h1>
 
@@ -102,12 +102,12 @@ unset($_SESSION['error'], $_SESSION['success']);
             <div class="card-right">
                 <div class="welcome-content">
                     <div class="welcome-logo">
-                        <i class="bi bi-person-plus"></i>
+                        <img src="assets/img/logo.jpg" alt="Logo" class="brand-logo">
                     </div>
                     <h2 class="welcome-title">
                         <?= $isOwner ? 'ADD<br>MANAGER' : 'JOIN<br>US' ?>
                     </h2>
-                    <p class="welcome-sub">Dispeedway System</p>
+                    <p class="welcome-sub">D Speedway Car Care Services</p>
                 </div>
                 <div class="slash-deco"></div>
             </div>

@@ -1,5 +1,3 @@
-// login.js — Login Page Interactions
-
 document.addEventListener('DOMContentLoaded', function () {
 
     // Add loading state on form submit

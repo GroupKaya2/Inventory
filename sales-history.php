@@ -1,5 +1,5 @@
 <?php
-// sales-history.php — Sales History Page
+
 
 session_start();
 require_once 'backend/db.php';
@@ -10,7 +10,7 @@ $activePage = 'sales_history';
 $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 $today      = date('Y-m-d');
 
-// Summary stats
+
 $stats = $conn->query("
     SELECT
         COUNT(*) AS total,
@@ -86,7 +86,7 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 
 <main class="app-main">
 
-    <!-- Header -->
+
     <div class="page-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
@@ -97,7 +97,6 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         </div>
     </div>
 
-    <!-- Summary Pills -->
     <div class="d-flex flex-wrap gap-2 mb-3">
         <span class="summary-pill">Total: <strong><?= number_format($stats['total']) ?> sales</strong></span>
         <span class="summary-pill">Today: <strong>₱<?= number_format($stats['today_total'], 0) ?></strong></span>
@@ -105,7 +104,6 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         <span class="summary-pill">All Time: <strong>₱<?= number_format($stats['all_time'], 0) ?></strong></span>
     </div>
 
-    <!-- Filter Bar -->
     <div class="filter-bar">
         <input type="text"  id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
         <input type="date"  id="dateFrom"    class="form-control" style="max-width:150px;">
@@ -120,7 +118,6 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         <?php endif; ?>
     </div>
 
-    <!-- Sales Table -->
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -179,7 +176,6 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 
 </main>
 
-<!-- VIEW SALE MODAL -->
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content modal-dark">
@@ -200,7 +196,6 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 <script>
 const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
-// ── Filter ──
 function filterTable() {
     const q    = document.getElementById('searchInput').value.toLowerCase().trim();
     const from = document.getElementById('dateFrom').value;
@@ -221,7 +216,7 @@ function resetFilter() {
 
 document.getElementById('searchInput').addEventListener('input', filterTable);
 
-// ── Export CSV ────
+//Export CSV
 function exportCSV() {
     const rows = [['ID','Date','Customer','Plate','Parts','Labor','Total']];
     document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
@@ -244,7 +239,7 @@ function exportCSV() {
     a.click();
 }
 
-// ── View Sale Detail ──────────────────────────────────
+//View Sale Detai;
 async function viewSale(id) {
     const body  = document.getElementById('saleDetailBody');
     body.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border" style="color:#e8175d;"></div></div>';
@@ -296,7 +291,7 @@ async function viewSale(id) {
         </div>`;
 }
 
-// ── Delete Sale ───────────────────────────────────────
+// Delete Sale
 async function deleteSale(id, name) {
     const confirm = await Swal.fire({
         title: 'Delete this sale?',

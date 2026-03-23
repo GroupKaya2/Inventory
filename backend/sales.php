@@ -1,10 +1,9 @@
 <?php
-// backend/sales.php — Sales API (Save, Delete, Get Detail)
 
 ob_start();
 session_start();
 
-// Clean output buffer and send JSON
+
 function send($data) {
     ob_end_clean();
     header('Content-Type: application/json; charset=utf-8');
@@ -12,7 +11,7 @@ function send($data) {
     exit;
 }
 
-// Catch PHP errors and return as JSON
+
 set_error_handler(function ($no, $msg) {
     send(['success' => false, 'message' => "Server error: $msg"]);
 });
@@ -25,7 +24,7 @@ $action  = $_GET['action'] ?? '';
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 $userId  = (int)$_SESSION['user_id'];
 
-// ── SAVE SALE ───────────────────────────────────────────
+//SAVE SALE
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
 
     $input = json_decode(file_get_contents('php://input'), true);
@@ -36,12 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
     $plateNumber  = trim($input['plate_number']  ?? '');
     $items        = $input['items'] ?? [];
 
-    // Validate date
+    //Validate date
     if (!DateTime::createFromFormat('Y-m-d', $saleDate)) {
         $saleDate = date('Y-m-d');
     }
 
-    // Process line items
+
     $partsTotal = 0.0;
     $laborTotal = 0.0;
     $validItems = [];
@@ -91,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
     $conn->begin_transaction();
 
     try {
-        // 1. Insert sale header
+    
         $stmt = $conn->prepare("
             INSERT INTO sales (sale_date, customer_name, plate_number, parts_total, labor_total, created_by)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -101,7 +100,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
         $saleId = (int)$conn->insert_id;
         $stmt->close();
 
-        // 2. Insert line items
         $stmt = $conn->prepare("
             INSERT INTO sale_items (sale_id, line_type, product_id, description, quantity, unit_price, amount)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -118,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
         }
         $stmt->close();
 
-        // 3. Deduct stock for parts
+        //Deduct stock for parts
         $deducted = [];
         $stmt = $conn->prepare("
             INSERT INTO inventory_transactions (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
@@ -137,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
 
         $conn->commit();
 
-        // 4. Fetch updated stock levels to show user
+        //Fetch updated stock levels to show user
         $stockSummary = [];
         foreach ($deducted as $d) {
             $pid = (int)$d['product_id'];
@@ -160,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'save') {
     }
 }
 
-// ── GET SALE DETAIL ─────────────────────────────────────
+//GET SALE DETAIL
 if ($action === 'detail') {
     $id = (int)($_GET['id'] ?? 0);
     if ($id <= 0) send(['success' => false, 'message' => 'Invalid ID']);
@@ -188,11 +186,10 @@ if ($action === 'detail') {
     send(['success' => true, 'sale' => $sale, 'items' => $items]);
 }
 
-// ── DELETE SALE (owner only) ────────────────────────────
+//DELETE SALE (owner only)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
     if (!$isOwner) send(['success' => false, 'message' => 'Owner only.']);
 
-    // Delete one or many
     $ids = !empty($_POST['ids'])
         ? json_decode($_POST['ids'], true)
         : [(int)($_POST['id'] ?? 0)];
