@@ -3,23 +3,23 @@ session_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/db.php';
 
-//logged in
+// Logged in check
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
     exit;
 }
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
+$action  = $_GET['action'] ?? $_POST['action'] ?? '';
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 
 // FETCH all products
 if ($action === 'fetch') {
     $result = $conn->query("
-            SELECT product_id, code, description, unit, unit_cost, selling_price, margin,
-                initial_quantity, reorder_threshold, current_stock, category_id, category_name
-            FROM product_stock
-            ORDER BY category_name, description
-        ");
+        SELECT product_id, code, description, unit, unit_cost, selling_price, margin,
+            initial_quantity, reorder_threshold, current_stock, category_id, category_name
+        FROM product_stock
+        ORDER BY category_name, description
+    ");
 
     $data = [];
     if ($result) {
@@ -76,14 +76,14 @@ if ($action === 'add') {
         exit;
     }
 
-    $catId = (int) ($_POST['category_id'] ?? 0);
-    $desc = trim($_POST['description'] ?? '');
-    $unit = trim($_POST['unit'] ?? '');
-    $code = trim($_POST['code'] ?? '');
-    $cost = (float) ($_POST['unit_cost'] ?? 0);
-    $price = (float) ($_POST['selling_price'] ?? 0);
-    $qty = (int) ($_POST['initial_quantity'] ?? 0);
-    $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
+    $catId  = (int)    ($_POST['category_id']       ?? 0);
+    $desc   = trim(     $_POST['description']        ?? '');
+    $unit   = trim(     $_POST['unit']               ?? '');
+    $code   = trim(     $_POST['code']               ?? '');
+    $cost   = (float)  ($_POST['unit_cost']          ?? 0);
+    $price  = (float)  ($_POST['selling_price']      ?? 0);
+    $qty    = (int)    ($_POST['initial_quantity']   ?? 0);
+    $thresh = (int)    ($_POST['reorder_threshold']  ?? 5);
 
     if (!$catId || !$desc || !$unit) {
         echo json_encode(['success' => false, 'message' => 'Category, description and unit are required.']);
@@ -91,10 +91,10 @@ if ($action === 'add') {
     }
 
     $stmt = $conn->prepare("
-            INSERT INTO products 
-            (category_id, description, unit, code, unit_cost, selling_price, initial_quantity, reorder_threshold)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ");
+        INSERT INTO products
+        (category_id, description, unit, code, unit_cost, selling_price, initial_quantity, reorder_threshold)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ");
 
     $stmt->bind_param('isssddii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh);
 
@@ -116,15 +116,15 @@ if ($action === 'update') {
         exit;
     }
 
-    $id = (int) ($_POST['product_id'] ?? 0);
-    $catId = (int) ($_POST['category_id'] ?? 0);
-    $desc = trim($_POST['description'] ?? '');
-    $unit = trim($_POST['unit'] ?? '');
-    $code = trim($_POST['code'] ?? '');
-    $cost = (float) ($_POST['unit_cost'] ?? 0);
-    $price = (float) ($_POST['selling_price'] ?? 0);
-    $qty = (int) ($_POST['initial_quantity'] ?? 0);
-    $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
+    $id     = (int)    ($_POST['product_id']         ?? 0);
+    $catId  = (int)    ($_POST['category_id']        ?? 0);
+    $desc   = trim(     $_POST['description']        ?? '');
+    $unit   = trim(     $_POST['unit']               ?? '');
+    $code   = trim(     $_POST['code']               ?? '');
+    $cost   = (float)  ($_POST['unit_cost']          ?? 0);
+    $price  = (float)  ($_POST['selling_price']      ?? 0);
+    $qty    = (int)    ($_POST['initial_quantity']   ?? 0);
+    $thresh = (int)    ($_POST['reorder_threshold']  ?? 5);
 
     if (!$id || !$catId || !$desc || !$unit) {
         echo json_encode(['success' => false, 'message' => 'Missing required fields.']);
@@ -132,11 +132,11 @@ if ($action === 'update') {
     }
 
     $stmt = $conn->prepare("
-            UPDATE products
-            SET category_id=?, description=?, unit=?, code=?,
-                unit_cost=?, selling_price=?, initial_quantity=?, reorder_threshold=?
-            WHERE product_id=?
-        ");
+        UPDATE products
+        SET category_id=?, description=?, unit=?, code=?,
+            unit_cost=?, selling_price=?, initial_quantity=?, reorder_threshold=?
+        WHERE product_id=?
+    ");
 
     $stmt->bind_param('isssddiii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $id);
 
@@ -193,9 +193,9 @@ if ($action === 'delete') {
 if ($action === 'restock') {
 
     $productId = (int) ($_POST['product_id'] ?? 0);
-    $quantity = (int) ($_POST['quantity'] ?? 0);
-    $remarks = trim($_POST['remarks'] ?? 'Restock');
-    $userId = (int) $_SESSION['user_id'];
+    $quantity  = (int) ($_POST['quantity']   ?? 0);
+    $remarks   = trim( $_POST['remarks']     ?? 'Restock');
+    $userId    = (int) $_SESSION['user_id'];
 
     if ($productId <= 0 || $quantity <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid input.']);
@@ -203,10 +203,10 @@ if ($action === 'restock') {
     }
 
     $stmt = $conn->prepare("
-            INSERT INTO inventory_transactions
-            (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
-            VALUES (?, CURDATE(), ?, 'restock', ?, ?)
-        ");
+        INSERT INTO inventory_transactions
+        (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+        VALUES (?, CURDATE(), ?, 'restock', ?, ?)
+    ");
 
     $stmt->bind_param('iisi', $productId, $quantity, $remarks, $userId);
 
@@ -225,12 +225,12 @@ if ($action === 'reorder-list') {
     $items = [];
 
     $result = $conn->query("
-            SELECT product_id, code, description, category_name,
-                current_stock, reorder_threshold, unit
-            FROM product_stock
-            WHERE current_stock <= reorder_threshold
-            ORDER BY current_stock ASC
-        ");
+        SELECT product_id, code, description, category_name,
+            current_stock, reorder_threshold, unit
+        FROM product_stock
+        WHERE current_stock <= reorder_threshold
+        ORDER BY current_stock ASC
+    ");
 
     if ($result)
         while ($row = $result->fetch_assoc())

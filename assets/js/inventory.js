@@ -24,7 +24,7 @@ function debounce(fn, ms) {
 
 
 async function loadCategories() {
-    const res  = await fetch('backend/products.php?action=categories');
+    const res  = await fetch('products.php?action=categories');
     const data = await res.json();
     if (!data.success) return;
 
@@ -59,7 +59,7 @@ async function loadProducts() {
 
     if (spinner) spinner.style.display = 'block';
 
-    const res  = await fetch('backend/products.php?action=fetch');
+    const res  = await fetch('products.php?action=fetch');
     const data = await res.json();
 
     if (spinner) spinner.style.display = 'none';

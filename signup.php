@@ -1,16 +1,12 @@
 <?php
-// Register / Create Account Page
-
 session_start();
 require_once 'backend/db.php';
 
-// How many users already exist
 $result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
 $userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
 
 $isOwner = isset($_SESSION['role']) && $_SESSION['role'] === 'owner';
 
-// Block registration if users exist and current visitor is not the owner
 if ($userCount > 0 && !$isOwner) {
     $_SESSION['error'] = "Registration is closed. Please log in.";
     header("Location: login.php");
@@ -32,7 +28,6 @@ unset($_SESSION['error'], $_SESSION['success']);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/login.css">
     <style>
-    
         .login-card { height: auto; min-height: 400px; }
         .card-left  { padding: 32px 36px; }
         .card-right .welcome-title { font-size: 1.5rem; }
@@ -43,7 +38,6 @@ unset($_SESSION['error'], $_SESSION['success']);
     <div class="page-wrap">
         <div class="login-card">
 
-        
             <div class="card-left">
                 <h1 class="form-title"><?= $isOwner ? 'Add Manager' : 'Create Account' ?></h1>
 
@@ -62,7 +56,6 @@ unset($_SESSION['error'], $_SESSION['success']);
                 <?php endif; ?>
 
                 <form action="backend/register.php" method="POST">
-
                     <div class="field-group">
                         <div class="input-wrap">
                             <input type="text" name="name" placeholder="Full Name" required autocomplete="name">

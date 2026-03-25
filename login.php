@@ -1,7 +1,5 @@
 <?php
-
 session_start();
-
 
 if (isset($_SESSION['user_id'])) {
     $_SESSION = [];
@@ -12,11 +10,9 @@ if (isset($_SESSION['user_id'])) {
         );
     }
     session_destroy();
-    // Restart a clean session so error
     session_start();
 }
 
-// Show any error messages from the backend
 $error = $_SESSION['error'] ?? '';
 unset($_SESSION['error']);
 ?>
@@ -34,8 +30,6 @@ unset($_SESSION['error']);
 <body>
 
     <div class="page-wrap">
-
-        <!-- Glowing login card -->
         <div class="login-card">
 
             <!-- LEFT: Form side -->
@@ -85,12 +79,10 @@ unset($_SESSION['error']);
                     <h2 class="welcome-title">WELCOME<br>BACK</h2>
                     <p class="welcome-sub">D Speedway Car Care Services</p>
                 </div>
-                <!-- Diagonal slash decoration -->
                 <div class="slash-deco"></div>
             </div>
 
         </div>
-
     </div>
 
     <script src="assets/js/login.js"></script>

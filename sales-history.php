@@ -1,6 +1,4 @@
 <?php
-
-
 session_start();
 require_once 'backend/db.php';
 
@@ -9,7 +7,6 @@ if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 $activePage = 'sales_history';
 $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 $today      = date('Y-m-d');
-
 
 $stats = $conn->query("
     SELECT
@@ -20,7 +17,6 @@ $stats = $conn->query("
     FROM sales
 ")->fetch_assoc();
 
-// All sales
 $salesRows = [];
 $r = $conn->query("SELECT id, sale_date, customer_name, plate_number, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
 if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
@@ -37,55 +33,13 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
-    <style>
-        .filter-bar {
-            background: #161921;
-            border: 1px solid rgba(255,255,255,.07);
-            border-radius: 12px;
-            padding: 12px 16px;
-            margin-bottom: 14px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
-        .filter-bar .form-control,
-        .filter-bar .form-select {
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.1);
-            color: #e8ecf4;
-            border-radius: 10px;
-            height: 38px;
-            font-size: .82rem;
-        }
-        .filter-bar .form-control::placeholder { color: #7a8499; }
-        .filter-bar .form-control:focus,
-        .filter-bar .form-select:focus {
-            border-color: rgba(232,23,93,.5);
-            box-shadow: 0 0 0 3px rgba(232,23,93,.12);
-            background: rgba(255,255,255,.09);
-            color: #fff;
-        }
-        .summary-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.08);
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: .8rem;
-            color: #94a3b8;
-        }
-        .summary-pill strong { color: #e8175d; }
-    </style>
+    <link rel="stylesheet" href="assets/css/sales-history.css">
 </head>
 <body>
 
 <?php include 'sidebar.php'; ?>
 
 <main class="app-main">
-
 
     <div class="page-header mb-4">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -104,9 +58,11 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         <span class="summary-pill">All Time: <strong>₱<?= number_format($stats['all_time'], 0) ?></strong></span>
     </div>
 
+    <!-- Fixed: added missing dateTo input field that the JS references -->
     <div class="filter-bar">
-        <input type="text"  id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
-        <input type="date"  id="dateFrom"    class="form-control" style="max-width:150px;">
+        <input type="text" id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
+        <input type="date" id="dateFrom"    class="form-control" style="max-width:150px;">
+        <input type="date" id="dateTo"      class="form-control" style="max-width:150px;">
         <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterTable()">
             <i class="bi bi-search me-1"></i>Filter
         </button>
@@ -176,6 +132,7 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 
 </main>
 
+<!-- View Sale Modal -->
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content modal-dark">
@@ -202,21 +159,20 @@ function filterTable() {
     const to   = document.getElementById('dateTo').value;
 
     document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
-        const d       = tr.dataset.date;
-        const matchQ  = !q || tr.dataset.search.includes(q);
-        const matchD  = (!from || d >= from) && (!to || d <= to);
+        const d      = tr.dataset.date;
+        const matchQ = !q || tr.dataset.search.includes(q);
+        const matchD = (!from || d >= from) && (!to || d <= to);
         tr.style.display = matchQ && matchD ? '' : 'none';
     });
 }
 
 function resetFilter() {
-    ['searchInput', 'dateFrom', 'dateTo'].forEach(id => document.getElementById(id).value = '');
+    ['searchInput','dateFrom','dateTo'].forEach(id => document.getElementById(id).value = '');
     document.querySelectorAll('#salesBody tr').forEach(tr => tr.style.display = '');
 }
 
 document.getElementById('searchInput').addEventListener('input', filterTable);
 
-//Export CSV
 function exportCSV() {
     const rows = [['ID','Date','Customer','Plate','Parts','Labor','Total']];
     document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
@@ -232,16 +188,15 @@ function exportCSV() {
             cells[6].textContent.replace(/[₱,]/g,'').trim(),
         ]);
     });
-    const csv  = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const a    = document.createElement('a');
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a   = document.createElement('a');
     a.href     = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
     a.download = 'sales_' + new Date().toISOString().slice(0,10) + '.csv';
     a.click();
 }
 
-//View Sale Detai;
 async function viewSale(id) {
-    const body  = document.getElementById('saleDetailBody');
+    const body = document.getElementById('saleDetailBody');
     body.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border" style="color:#e8175d;"></div></div>';
     new bootstrap.Modal(document.getElementById('viewModal')).show();
 
@@ -253,7 +208,7 @@ async function viewSale(id) {
         return;
     }
 
-    const s = data.sale;
+    const s     = data.sale;
     const total = parseFloat(s.parts_total) + parseFloat(s.labor_total);
 
     body.innerHTML = `
@@ -265,13 +220,7 @@ async function viewSale(id) {
         <div class="table-responsive">
             <table class="data-table">
                 <thead>
-                <tr>
-                <th>Type</th>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Amount</th>
-                </tr>
+                    <tr><th>Type</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr>
                 </thead>
                 <tbody>
                     ${data.items.map(i => `<tr>
@@ -291,7 +240,6 @@ async function viewSale(id) {
         </div>`;
 }
 
-// Delete Sale
 async function deleteSale(id, name) {
     const confirm = await Swal.fire({
         title: 'Delete this sale?',

@@ -1,6 +1,4 @@
 <?php
-
-
 session_start();
 require_once 'backend/db.php';
 
@@ -23,10 +21,8 @@ $me = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!isset($me['created_at'])) $me['created_at'] = null;
 
-// Decode email
 $myEmail = $me['email'];
 
-// All users (owner)
 $allUsers = [];
 if ($isOwner) {
     $r = $conn->query("SELECT $fields FROM users ORDER BY role DESC, name ASC");
@@ -48,100 +44,7 @@ $initials = substr($initials, 0, 2);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
-    <style>
-        .settings-layout { display:flex; gap:20px; max-width:1060px; }
-        .settings-nav { width:220px; flex-shrink:0; }
-        .settings-nav .nav-btn {
-            display:flex; align-items:center; gap:10px;
-            padding:10px 14px; border-radius:10px;
-            border:none; background:none; color:#808080;
-            font-size:.85rem; font-weight:500;
-            width:100%; text-align:left; cursor:pointer;
-            transition:background .15s,color .15s; margin-bottom:2px;
-        }
-        .settings-nav .nav-btn:hover { background:rgba(255,255,255,.06); color:#e8ecf4; }
-        .settings-nav .nav-btn.active { background:rgba(232,23,93,.18); color:#fff; }
-        .settings-nav .nav-btn i { width:20px; text-align:center; }
-        .nav-section-label {
-            font-size:.6rem; font-weight:700; text-transform:uppercase;
-            letter-spacing:.7px; color:rgba(122,132,153,.5); padding:12px 14px 4px;
-        }
-        .settings-content { flex:1; }
-        .settings-panel { display:none; }
-        .settings-panel.active { display:block; }
-        .profile-avatar {
-            width:72px; height:72px; border-radius:16px;
-            background:linear-gradient(135deg,#e8175d,#9b0d43);
-            display:flex; align-items:center; justify-content:center;
-            font-family:'Syne',sans-serif; font-size:1.6rem; font-weight:800;
-            color:#fff; flex-shrink:0;
-            box-shadow:0 6px 20px rgba(232,23,93,.35); position:relative;
-        }
-        .profile-avatar .online-dot {
-            position:absolute; bottom:-2px; right:-2px;
-            width:16px; height:16px; border-radius:50%;
-            background:#10b981; border:3px solid #1c2030;
-        }
-        /* User management cards */
-        .user-card {
-            background:rgba(255,255,255,.03);
-            border:1px solid rgba(255,255,255,.07);
-            border-radius:12px; padding:14px 18px;
-            display:flex; align-items:center; gap:14px;
-            flex-wrap:wrap; margin-bottom:10px;
-            transition:border-color .15s;
-        }
-        .user-card:hover { border-color:rgba(232,23,93,.25); }
-        .user-card .avatar-sm {
-            width:40px; height:40px; border-radius:10px;
-            display:flex; align-items:center; justify-content:center;
-            font-family:'Syne',sans-serif; font-weight:800;
-            font-size:.88rem; color:#fff; flex-shrink:0;
-        }
-        .user-actions { display:flex; gap:6px; margin-left:auto; flex-wrap:wrap; }
-        .btn-edit-user {
-            background:rgba(59,130,246,.15);
-            border:1px solid rgba(59,130,246,.3);
-            color:#93c5fd; padding:6px 14px;
-            border-radius:8px; font-size:.78rem; cursor:pointer;
-            transition:background .15s;
-        }
-        .btn-edit-user:hover { background:rgba(59,130,246,.3); color:#fff; }
-        .btn-del-user {
-            background:rgba(239,68,68,.15);
-            border:1px solid rgba(239,68,68,.3);
-            color:#fca5a5; padding:6px 14px;
-            border-radius:8px; font-size:.78rem; cursor:pointer;
-            transition:background .15s;
-        }
-        .btn-del-user:hover { background:rgba(239,68,68,.3); color:#fff; }
-        /* Toggle switch */
-        .toggle-wrap {
-            display:flex; align-items:center; justify-content:space-between;
-            padding:14px 0; border-bottom:1px solid rgba(255,255,255,.07);
-        }
-        .toggle-wrap:last-child { border-bottom:none; }
-        .toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
-        .toggle-switch input { display:none; }
-        .toggle-slider {
-            position:absolute; inset:0;
-            background:rgba(255,255,255,.15); border-radius:24px;
-            cursor:pointer; transition:.3s;
-        }
-        .toggle-slider::before {
-            content:''; position:absolute;
-            width:18px; height:18px; left:3px; bottom:3px;
-            background:#fff; border-radius:50%; transition:.3s;
-        }
-        input:checked + .toggle-slider { background:#e8175d; }
-        input:checked + .toggle-slider::before { transform:translateX(20px); }
-        @media (max-width:768px) {
-            .settings-layout { flex-direction:column; }
-            .settings-nav { width:100%; display:flex; flex-wrap:wrap; gap:4px; }
-            .settings-nav .nav-btn { width:auto; }
-            .nav-section-label { display:none; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/profile.css">
 </head>
 <body>
 
@@ -180,10 +83,9 @@ $initials = substr($initials, 0, 2);
             <?php endif; ?>
         </div>
 
-    
         <div class="settings-content">
 
-
+            <!-- OVERVIEW -->
             <div class="settings-panel active" id="panel-overview">
                 <div class="card p-4 mb-3">
                     <div class="d-flex align-items-center gap-4 flex-wrap">
@@ -230,6 +132,7 @@ $initials = substr($initials, 0, 2);
                 </div>
             </div>
 
+            <!-- PERSONAL INFO -->
             <div class="settings-panel" id="panel-personal">
                 <div class="card p-4">
                     <p class="section-title mb-4"><i class="bi bi-person-circle me-2" style="color:#60a5fa;"></i>Personal Information</p>
@@ -288,7 +191,7 @@ $initials = substr($initials, 0, 2);
 
                 <div id="usersList">
                 <?php foreach ($allUsers as $u):
-                    $ini   = strtoupper(substr($u['name'], 0, 1));
+                    $ini    = strtoupper(substr($u['name'], 0, 1));
                     $bgGrad = $u['role'] === 'owner'
                         ? 'linear-gradient(135deg,#e8175d,#9b0d43)'
                         : 'linear-gradient(135deg,#667eea,#764ba2)';
@@ -313,7 +216,6 @@ $initials = substr($initials, 0, 2);
                         <?= $u['role'] === 'owner' ? '👑 Owner' : '🔧 Manager' ?>
                     </span>
                     <div class="user-actions">
-                        <!-- Edit: owner can edit any manager, or edit themselves -->
                         <?php if ($u['role'] !== 'owner' || $u['id'] == $userId): ?>
                         <button class="btn-edit-user"
                             onclick="openEditUser(<?= $u['id'] ?>, '<?= addslashes($uName) ?>', '<?= addslashes($uEmail) ?>')"
@@ -321,7 +223,6 @@ $initials = substr($initials, 0, 2);
                             <i class="bi bi-pencil me-1"></i>Edit
                         </button>
                         <?php endif; ?>
-                
                         <?php if ($u['id'] != $userId && $u['role'] !== 'owner'): ?>
                         <button class="btn-del-user"
                             onclick="removeUser(<?= $u['id'] ?>, '<?= addslashes($uName) ?>')">
@@ -359,8 +260,8 @@ $initials = substr($initials, 0, 2);
 
 </main>
 
-
 <?php if ($isOwner): ?>
+<!-- Edit User Modal -->
 <div class="modal fade" id="editUserModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content modal-dark">
@@ -400,7 +301,7 @@ $initials = substr($initials, 0, 2);
     </div>
 </div>
 
-
+<!-- Add Manager Modal -->
 <div class="modal fade" id="addManagerModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content modal-dark">
@@ -439,7 +340,6 @@ $initials = substr($initials, 0, 2);
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-//Panel Switcher
 function showPanel(id, btn) {
     document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.settings-nav .nav-btn').forEach(b => b.classList.remove('active'));
@@ -447,7 +347,6 @@ function showPanel(id, btn) {
     btn?.classList.add('active');
 }
 
-//Save Own Profile
 async function saveProfile() {
     const name  = document.getElementById('updName').value.trim();
     const email = document.getElementById('updEmail').value.trim();
@@ -469,7 +368,6 @@ async function saveProfile() {
     });
 }
 
-//Change Own Password
 async function changePassword() {
     const cur  = document.getElementById('curPass').value;
     const nw   = document.getElementById('newPass').value;
@@ -495,48 +393,37 @@ async function changePassword() {
     }
 }
 
-//Open Edit User Modal
 function openEditUser(id, name, email) {
-    document.getElementById('editUserId').value    = id;
-    document.getElementById('editUserName').value  = '';
-    document.getElementById('editUserEmail').value = '';
-    document.getElementById('editUserPass').value  = '';
-    document.getElementById('editUserPassConf').value = '';
-    document.getElementById('editUserName').placeholder  = name;
-    document.getElementById('editUserEmail').placeholder = email;
-
+    document.getElementById('editUserId').value           = id;
+    document.getElementById('editUserName').value         = '';
+    document.getElementById('editUserEmail').value        = '';
+    document.getElementById('editUserPass').value         = '';
+    document.getElementById('editUserPassConf').value     = '';
+    document.getElementById('editUserName').placeholder   = name;
+    document.getElementById('editUserEmail').placeholder  = email;
     new bootstrap.Modal(document.getElementById('editUserModal')).show();
 }
 
-//Owner: Submit Edit User
 async function submitEditUser() {
-    const id        = document.getElementById('editUserId').value;
-    const newName   = document.getElementById('editUserName').value.trim();
-    const newEmail  = document.getElementById('editUserEmail').value.trim();
-    const newPass   = document.getElementById('editUserPass').value;
-    const confPass  = document.getElementById('editUserPassConf').value;
+    const id       = document.getElementById('editUserId').value;
+    const newName  = document.getElementById('editUserName').value.trim();
+    const newEmail = document.getElementById('editUserEmail').value.trim();
+    const newPass  = document.getElementById('editUserPass').value;
+    const confPass = document.getElementById('editUserPassConf').value;
 
     if (!newName && !newEmail && !newPass) {
-        Swal.fire({ icon:'warning', title:'Nothing to update', text:'Fill at least one field.' });
-        return;
+        Swal.fire({ icon:'warning', title:'Nothing to update', text:'Fill at least one field.' }); return;
     }
-
-    if (newPass && newPass !== confPass) {
-        Swal.fire({ icon:'error', title:"Passwords don't match" });
-        return;
-    }
-    if (newPass && newPass.length < 6) {
-        Swal.fire({ icon:'warning', title:'Password too short', text:'Min 6 characters.' });
-        return;
-    }
+    if (newPass && newPass !== confPass) { Swal.fire({ icon:'error', title:"Passwords don't match" }); return; }
+    if (newPass && newPass.length < 6)   { Swal.fire({ icon:'warning', title:'Too short', text:'Min 6 chars.' }); return; }
 
     const btn = document.getElementById('saveEditUserBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving…';
 
     const fd = new FormData();
-    fd.append('action',       'update_user');
-    fd.append('user_id',      id);
+    fd.append('action',  'update_user');
+    fd.append('user_id', id);
     if (newName)  fd.append('new_name',     newName);
     if (newEmail) fd.append('new_email',    newEmail);
     if (newPass)  fd.append('new_password', newPass);
@@ -556,7 +443,6 @@ async function submitEditUser() {
     }
 }
 
-//Owner: Open Add Manager Modal
 function openAddManager() {
     ['newMgrName','newMgrEmail','newMgrPass','newMgrPassConf'].forEach(id => {
         document.getElementById(id).value = '';
@@ -564,22 +450,15 @@ function openAddManager() {
     new bootstrap.Modal(document.getElementById('addManagerModal')).show();
 }
 
-// Owner: Submit Add Manager
 async function submitAddManager() {
     const name  = document.getElementById('newMgrName').value.trim();
     const email = document.getElementById('newMgrEmail').value.trim();
     const pass  = document.getElementById('newMgrPass').value;
     const conf  = document.getElementById('newMgrPassConf').value;
 
-    if (!name || !email || !pass || !conf) {
-        Swal.fire({ icon:'warning', title:'Fill all fields' }); return;
-    }
-    if (pass !== conf) {
-        Swal.fire({ icon:'error', title:"Passwords don't match" }); return;
-    }
-    if (pass.length < 6) {
-        Swal.fire({ icon:'warning', title:'Password too short', text:'Min 6 characters.' }); return;
-    }
+    if (!name || !email || !pass || !conf) { Swal.fire({ icon:'warning', title:'Fill all fields' }); return; }
+    if (pass !== conf) { Swal.fire({ icon:'error', title:"Passwords don't match" }); return; }
+    if (pass.length < 6) { Swal.fire({ icon:'warning', title:'Too short', text:'Min 6 chars.' }); return; }
 
     const btn = document.getElementById('saveNewMgrBtn');
     btn.disabled = true;
@@ -602,7 +481,6 @@ async function submitAddManager() {
     }
 }
 
-//Owner: Remove User
 async function removeUser(id, name) {
     const confirm = await Swal.fire({
         title: `Remove ${name}?`,
@@ -629,7 +507,6 @@ async function removeUser(id, name) {
     }
 }
 
-//Danger: Clear Sales History
 async function clearSalesHistory() {
     const result = await Swal.fire({
         title: 'Clear ALL Sales History?',

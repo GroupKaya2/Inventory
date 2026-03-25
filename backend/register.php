@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 require_once __DIR__ . '/db.php';
 
@@ -7,14 +6,13 @@ $name     = trim($_POST['name']     ?? '');
 $email    = trim($_POST['email']    ?? '');
 $password =      $_POST['password'] ?? '';
 
-
 if ($name === '' || $email === '' || $password === '') {
     $_SESSION['error'] = "All fields are required.";
     header("Location: ../signup.php");
     exit();
 }
 
-//Sanitize
+// Sanitize
 $email = filter_var($email, FILTER_SANITIZE_EMAIL);
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $_SESSION['error'] = "Invalid email address.";
@@ -35,12 +33,11 @@ if (strlen($password) < 6) {
     exit();
 }
 
-//Determine role
+// Determine role
 $result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
 $userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
 
 $isOwnerSession = isset($_SESSION['role']) && $_SESSION['role'] === 'owner';
-
 
 if ($userCount > 0 && !$isOwnerSession) {
     $_SESSION['error'] = "Registration is closed. Please log in.";
@@ -48,10 +45,9 @@ if ($userCount > 0 && !$isOwnerSession) {
     exit();
 }
 
-
 $role = ($userCount === 0) ? 'owner' : 'manager';
 
-//Duplicate email check
+// Duplicate email check
 $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
 $stmt->bind_param("s", $email);
 $stmt->execute();
@@ -64,10 +60,10 @@ if ($exists) {
     exit();
 }
 
-//Hash password
+// Hash password
 $hashedPassword = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 
-//Insert user
+// Insert user
 $stmt = $conn->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
 $stmt->bind_param("ssss", $name, $email, $hashedPassword, $role);
 

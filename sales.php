@@ -1,6 +1,4 @@
 <?php
-
-
 session_start();
 require_once 'backend/db.php';
 
@@ -10,7 +8,6 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $activePage = 'sales';
-
 
 $products = [];
 $r = $conn->query("SELECT product_id, code, description, selling_price, unit FROM product_stock ORDER BY description");
@@ -28,119 +25,19 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
-    <style>
-        
-        .sale-card {
-            background: #161921;
-            border: 1px solid rgba(255,255,255,.07);
-            border-radius: 14px;
-            padding: 22px;
-            margin-bottom: 18px;
-        }
-
-        
-        .sale-card .form-control,
-        .sale-card .form-select {
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.1);
-            color: #e8ecf4;
-            border-radius: 10px;
-            height: 42px;
-            font-size: .85rem;
-        }
-        .sale-card .form-control::placeholder { color: #7a8499; }
-        .sale-card .form-select option { background: #1c2030; }
-        .sale-card .form-control:focus,
-        .sale-card .form-select:focus {
-            border-color: rgba(232,23,93,.5);
-            box-shadow: 0 0 0 3px rgba(232,23,93,.12);
-            background: rgba(255,255,255,.09);
-            color: #fff;
-        }
-        .sale-card .form-label {
-            font-size: .68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #7a8499;
-            margin-bottom: 5px;
-        }
-
-        
-        .item-row {
-            display: grid;
-            grid-template-columns: 1fr 80px 120px 42px;
-            gap: 10px;
-            align-items: end;
-            margin-bottom: 10px;
-        }
-
-        @media (max-width: 600px) {
-            .item-row { grid-template-columns: 1fr 1fr; }
-        }
-
-        .btn-remove {
-            width: 42px; height: 42px;
-            background: rgba(239,68,68,.15);
-            border: 1px solid rgba(239,68,68,.25);
-            color: #fca5a5;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            cursor: pointer;
-            transition: background .15s;
-        }
-        .btn-remove:hover { background: rgba(239,68,68,.3); color: #fff; }
-        .btn-remove.hidden { visibility: hidden; }
-
-        /*Totals */
-        .totals-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 24px;
-            padding-top: 16px;
-            margin-top: 14px;
-            border-top: 1px solid rgba(255,255,255,.07);
-        }
-        .totals-bar .item { }
-        .totals-bar .lbl  {
-            font-size: .72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #7a8499;
-        }
-        .totals-bar .val  {
-            font-family: 'Syne', sans-serif;
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #fff;
-        }
-        .totals-bar .val.grand {
-            font-size: 1.3rem;
-            color: #e8175d;
-        }
-
-        .print-area {
-            display: none; }
-        @media print {
-            body * { visibility: hidden; }
-            .print-area, .print-area * { visibility: visible; }
-            .print-area { display: block !important; position: absolute; left: 0; top: 0; background: #fff; color: #000; padding: 24px; }
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/sales.css">
 </head>
 <body>
 
 <?php include 'sidebar.php'; ?>
 
 <main class="app-main">
-    <div style="max-width: 900px; margin: 0 auto;">
+    <div style="max-width:900px;margin:0 auto;">
 
         <div class="page-header mb-4">
             <h4><i class="bi bi-receipt me-2"></i>New Sale Transaction</h4>
             <p>Record parts sold and labor services for a customer</p>
         </div>
-
 
         <div class="sale-card">
             <p class="section-title mb-3">Customer Information</p>
@@ -163,7 +60,6 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
         <div class="sale-card">
             <p class="section-title mb-3"><i class="bi bi-list-ul me-1"></i>Items & Services</p>
 
-            
             <div class="item-row" style="margin-bottom:4px;">
                 <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Part / Service</div>
                 <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Qty</div>
@@ -171,15 +67,12 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
                 <div></div>
             </div>
 
-            <div id="itemsContainer">
-
-            </div>
+            <div id="itemsContainer"></div>
 
             <button type="button" class="btn-ghost mt-2" id="addItemBtn" style="font-size:.82rem;">
                 <i class="bi bi-plus-lg me-1"></i>Add Item
             </button>
 
-            
             <div class="totals-bar">
                 <div class="item">
                     <div class="lbl">Parts Total</div>
@@ -196,7 +89,6 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
             </div>
         </div>
 
-        
         <div class="d-flex flex-wrap gap-2 mb-4">
             <button type="button" class="btn-pink" id="saveBtn">
                 <i class="bi bi-save me-1"></i>Save Transaction
@@ -215,18 +107,15 @@ if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
     </div>
 </main>
 
-
 <div id="printArea" class="print-area"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-
 const PRODUCTS = <?= json_encode($products) ?>;
 
 (function () {
     'use strict';
 
-    //Format money
     function money(n) {
         return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
     }
@@ -242,7 +131,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
         return html;
     }
 
-    //Create a new item row
     function createRow(isFirst = false) {
         const div = document.createElement('div');
         div.className = 'item-row';
@@ -262,30 +150,24 @@ const PRODUCTS = <?= json_encode($products) ?>;
         });
     }
 
-    // Add first row
     const container = document.getElementById('itemsContainer');
     container.appendChild(createRow(true));
 
     container.addEventListener('change', function (e) {
         const row = e.target.closest('.item-row');
         if (!row || !e.target.classList.contains('item-select')) return;
-
-        const opt    = e.target.options[e.target.selectedIndex];
-        const type   = opt?.dataset?.type || 'parts';
-        const price  = parseFloat(opt?.dataset?.price || 0);
-        const qty    = parseInt(row.querySelector('.item-qty').value) || 1;
-        const amtEl  = row.querySelector('.item-amount');
-
-        if (type === 'parts' && price > 0) {
-            amtEl.value = (price * qty).toFixed(2);
-        }
+        const opt   = e.target.options[e.target.selectedIndex];
+        const type  = opt?.dataset?.type || 'parts';
+        const price = parseFloat(opt?.dataset?.price || 0);
+        const qty   = parseInt(row.querySelector('.item-qty').value) || 1;
+        const amtEl = row.querySelector('.item-amount');
+        if (type === 'parts' && price > 0) amtEl.value = (price * qty).toFixed(2);
         updateTotals();
     });
 
     container.addEventListener('input', function (e) {
         const row = e.target.closest('.item-row');
         if (!row) return;
-
         if (e.target.classList.contains('item-qty')) {
             const sel   = row.querySelector('.item-select');
             const opt   = sel?.options[sel.selectedIndex];
@@ -315,7 +197,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
         refreshRemoveButtons();
     });
 
-    //Update totals
     function updateTotals() {
         let parts = 0, labor = 0;
         container.querySelectorAll('.item-row').forEach(row => {
@@ -353,7 +234,7 @@ const PRODUCTS = <?= json_encode($products) ?>;
         return items;
     }
 
-    // ── SAVE
+    // SAVE
     document.getElementById('saveBtn').addEventListener('click', async function () {
         const items = buildPayload();
         if (!items.length) {
@@ -378,7 +259,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
             const data = await resp.json();
 
             if (data.success) {
-                // Build stock
                 let stockHtml = '';
                 if (data.stock_summary?.length) {
                     stockHtml = '<div style="text-align:left;margin-top:12px;">'
@@ -448,7 +328,6 @@ const PRODUCTS = <?= json_encode($products) ?>;
         window.print();
     });
 
-    //CLEAR FORM
     function clearForm() {
         document.getElementById('customerName').value = '';
         document.getElementById('plateNumber').value  = '';

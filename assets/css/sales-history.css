@@ -1,0 +1,47 @@
+/* sales-history.css — page-specific styles for sales-history.php */
+
+.filter-bar {
+    background: #161921;
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.filter-bar .form-control,
+.filter-bar .form-select {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.1);
+    color: #e8ecf4;
+    border-radius: 10px;
+    height: 38px;
+    font-size: .82rem;
+}
+
+.filter-bar .form-control::placeholder { color: #7a8499; }
+
+.filter-bar .form-control:focus,
+.filter-bar .form-select:focus {
+    border-color: rgba(232,23,93,.5);
+    box-shadow: 0 0 0 3px rgba(232,23,93,.12);
+    background: rgba(255,255,255,.09);
+    color: #fff;
+}
+
+.summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: .8rem;
+    color: #94a3b8;
+}
+
+.summary-pill strong { color: #e8175d; }

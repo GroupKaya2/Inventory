@@ -1,11 +1,11 @@
 <?php
 // Handles login and logout
 session_start();
-require_once __DIR__ . '/../backend/db.php';
+require_once __DIR__ . '/db.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-//LOGIN
+// LOGIN
 if ($action === 'login') {
 
     $email    = trim($_POST['email']    ?? '');
@@ -17,9 +17,9 @@ if ($action === 'login') {
         exit();
     }
 
-    // Sanitize email
-    $email = filter_var($email);
-    if (!filter_var($email)) {
+    // Sanitize & validate email
+    $email = filter_var($email, FILTER_SANITIZE_EMAIL);
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $_SESSION['error'] = "Invalid email format.";
         header("Location: ../login.php");
         exit();
@@ -44,12 +44,13 @@ if ($action === 'login') {
         header("Location: ../dashboard.php");
         exit();
     }
+
     $_SESSION['error'] = "Invalid email or password.";
     header("Location: ../login.php");
     exit();
 }
 
-//LOGOUT
+// LOGOUT
 if ($action === 'logout') {
 
     $_SESSION = [];

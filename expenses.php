@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 require_once 'backend/db.php';
 
@@ -8,7 +7,6 @@ if (($_SESSION['role'] ?? 'manager') !== 'owner') { header("Location: dashboard.
 
 $activePage = 'expenses';
 
-//expenses table
 $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     id INT AUTO_INCREMENT PRIMARY KEY,
     expense_date DATE NOT NULL,
@@ -31,12 +29,10 @@ $stats = $conn->query("
     FROM expenses
 ")->fetch_assoc();
 
-//Category breakdown
 $catRows = [];
 $r = $conn->query("SELECT category, SUM(amount) AS total, COUNT(*) AS cnt FROM expenses GROUP BY category ORDER BY total DESC");
 if ($r) while ($row = $r->fetch_assoc()) $catRows[] = $row;
 
-// All expenses
 $expenses = [];
 $r2 = $conn->query("SELECT e.*, u.name AS creator FROM expenses e LEFT JOIN users u ON e.created_by = u.id ORDER BY e.expense_date DESC, e.id DESC");
 if ($r2) while ($row = $r2->fetch_assoc()) $expenses[] = $row;
@@ -57,6 +53,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/expenses.css">
 </head>
 <body>
 
@@ -75,7 +72,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
             </button>
         </div>
     </div>
-
 
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
@@ -120,7 +116,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
         </div>
     </div>
 
-    <!-- Charts -->
     <?php if (!empty($catRows)): ?>
     <div class="row g-3 mb-4">
         <div class="col-lg-4">
@@ -137,7 +132,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
         </div>
     </div>
     <?php endif; ?>
-
 
     <div class="card">
         <div class="card-body p-0">
@@ -207,6 +201,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
 
 </main>
 
+<!-- Add Expense Modal -->
 <div class="modal fade" id="addExpenseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content modal-dark">
@@ -255,7 +250,6 @@ const PALETTE  = ['#e8175d','#8b5cf6','#3b82f6','#10b981','#f59e0b','#06b6d4','#
 Chart.defaults.color = '#7a8499';
 Chart.defaults.font.family = "'DM Sans', sans-serif";
 
-//Charts
 if (CAT_DATA.length) {
     new Chart(document.getElementById('donutChart'), {
         type: 'doughnut',
@@ -295,7 +289,6 @@ if (CAT_DATA.length) {
     });
 }
 
-
 function filterExp() {
     const q   = document.getElementById('expSearch').value.toLowerCase();
     const cat = document.getElementById('expCatFilter').value;
@@ -308,7 +301,6 @@ function filterExp() {
 document.getElementById('expSearch').addEventListener('input', filterExp);
 document.getElementById('expCatFilter').addEventListener('change', filterExp);
 
-//Save Expense
 document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
     const date   = document.getElementById('expDate').value;
     const cat    = document.getElementById('expCategory').value;
@@ -344,7 +336,6 @@ document.getElementById('saveExpenseBtn').addEventListener('click', async functi
     }
 });
 
-//Delete Expense
 async function deleteExpense(id, desc) {
     const confirm = await Swal.fire({
         title: 'Delete expense?', text: `"${desc}"`, icon: 'warning',
@@ -367,7 +358,6 @@ async function deleteExpense(id, desc) {
     }
 }
 
-//Export CSV
 function exportCSV() {
     const rows = [['ID','Date','Category','Description','Amount']];
     document.querySelectorAll('#expBody tr[data-cat]').forEach(tr => {
