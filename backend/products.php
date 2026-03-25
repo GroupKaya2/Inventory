@@ -40,7 +40,7 @@ if ($action === 'get') {
         exit;
     }
 
-    $stmt = $conn->prepare("SELECT * FROM product_stock WHERE product_id = ?");
+    $stmt = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
     $stmt->bind_param('i', $id);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
@@ -57,7 +57,7 @@ if ($action === 'get') {
 
 // FETCH categories
 if ($action === 'categories') {
-    $result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_name");
+    $result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_id");
 
     $data = [];
     if ($result)
@@ -227,7 +227,7 @@ if ($action === 'reorder-list') {
     $result = $conn->query("
         SELECT product_id, code, description, category_name,
             current_stock, reorder_threshold, unit
-        FROM product_stock
+        FROM products
         WHERE current_stock <= reorder_threshold
         ORDER BY current_stock ASC
     ");
