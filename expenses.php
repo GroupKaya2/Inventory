@@ -65,7 +65,6 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h4 style="margin:0;"><i class="bi bi-wallet2 me-2"></i>Expenses Management</h4>
-                <p style="margin:4px 0 0;">Track rent, salaries, utilities, supplies, and more</p>
             </div>
             <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
                 <i class="bi bi-plus-lg me-1"></i>Add Expense

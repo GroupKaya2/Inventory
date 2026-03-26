@@ -1,8 +1,8 @@
-/* sales.css — page-specific styles for sales.php */
+
 
 .sale-card {
     background: #161921;
-    border: 1px solid rgba(255,255,255,.07);
+    border: 1px solid rgba(255, 255, 255, .07);
     border-radius: 14px;
     padding: 22px;
     margin-bottom: 18px;
@@ -10,22 +10,27 @@
 
 .sale-card .form-control,
 .sale-card .form-select {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.1);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .1);
     color: #e8ecf4;
     border-radius: 10px;
     height: 42px;
     font-size: .85rem;
 }
 
-.sale-card .form-control::placeholder { color: #7a8499; }
-.sale-card .form-select option { background: #1c2030; }
+.sale-card .form-control::placeholder {
+    color: #ffffff;
+}
+
+.sale-card .form-select option {
+    background: #d6d8dd;
+}
 
 .sale-card .form-control:focus,
 .sale-card .form-select:focus {
-    border-color: rgba(232,23,93,.5);
-    box-shadow: 0 0 0 3px rgba(232,23,93,.12);
-    background: rgba(255,255,255,.09);
+    border-color: rgba(232, 23, 93, .5);
+    box-shadow: 0 0 0 3px rgba(232, 23, 93, .12);
+    background: rgba(255, 255, 255, .09);
     color: #fff;
 }
 
@@ -34,7 +39,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .5px;
-    color: #7a8499;
+    color: #ffffff;
     margin-bottom: 5px;
 }
 
@@ -47,14 +52,16 @@
 }
 
 @media (max-width: 600px) {
-    .item-row { grid-template-columns: 1fr 1fr; }
+    .item-row {
+        grid-template-columns: 1fr 1fr;
+    }
 }
 
 .btn-remove {
     width: 42px;
     height: 42px;
-    background: rgba(239,68,68,.15);
-    border: 1px solid rgba(239,68,68,.25);
+    background: rgba(239, 68, 68, .15);
+    border: 1px solid rgba(239, 68, 68, .25);
     color: #fca5a5;
     border-radius: 10px;
     display: flex;
@@ -64,8 +71,14 @@
     transition: background .15s;
 }
 
-.btn-remove:hover { background: rgba(239,68,68,.3); color: #fff; }
-.btn-remove.hidden { visibility: hidden; }
+.btn-remove:hover {
+    background: rgba(239, 68, 68, .3);
+    color: #fff;
+}
+
+.btn-remove.hidden {
+    visibility: hidden;
+}
 
 .totals-bar {
     display: flex;
@@ -73,7 +86,7 @@
     gap: 24px;
     padding-top: 16px;
     margin-top: 14px;
-    border-top: 1px solid rgba(255,255,255,.07);
+    border-top: 1px solid rgba(255, 255, 255, .07);
 }
 
 .totals-bar .lbl {
@@ -96,15 +109,25 @@
     color: #e8175d;
 }
 
-.print-area { display: none; }
+.print-area {
+    display: none;
+}
 
 @media print {
-    body * { visibility: hidden; }
-    .print-area, .print-area * { visibility: visible; }
+    body * {
+        visibility: hidden;
+    }
+
+    .print-area,
+    .print-area * {
+        visibility: visible;
+    }
+
     .print-area {
         display: block !important;
         position: absolute;
-        left: 0; top: 0;
+        left: 0;
+        top: 0;
         background: #fff;
         color: #000;
         padding: 24px;

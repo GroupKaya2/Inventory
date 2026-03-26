@@ -45,7 +45,7 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h4 style="margin:0;"><i class="bi bi-clock-history me-2"></i>Sales History</h4>
-                <p style="margin:4px 0 0;">All recorded transactions</p>
+
             </div>
             <a href="sales.php" class="btn-pink"><i class="bi bi-plus-lg me-1"></i>New Sale</a>
         </div>
@@ -58,13 +58,12 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
         <span class="summary-pill">All Time: <strong>₱<?= number_format($stats['all_time'], 0) ?></strong></span>
     </div>
 
-    <!-- Fixed: added missing dateTo input field that the JS references -->
+
     <div class="filter-bar">
         <input type="text" id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
-        <input type="date" id="dateFrom"    class="form-control" style="max-width:150px;">
         <input type="date" id="dateTo"      class="form-control" style="max-width:150px;">
         <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterTable()">
-            <i class="bi bi-search me-1"></i>Filter
+            <i class="bi bi-search me-1"></i>Search
         </button>
         <button class="btn-ghost" style="font-size:.82rem;padding:7px 16px;" onclick="resetFilter()">Reset</button>
         <?php if ($isOwner): ?>
@@ -135,12 +134,12 @@ if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 <!-- View Sale Modal -->
 <div class="modal fade" id="viewModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content modal-dark">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Sale Details</h5>
+        <div class="modal-content modal-dark" style="background:#fff;color:#111;border:1px solid #ddd;">
+            <div class="modal-header" style="background:linear-gradient(135deg,#e8175d,#b0134a);color:#fff;border:none;">
+                <h5 class="modal-title" style="color:#fff;"><i class="bi bi-receipt me-2"></i>Sale Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="saleDetailBody">
+            <div class="modal-body" id="saleDetailBody" style="background:#fff;color:#111;">
                 <div style="text-align:center;padding:30px;">
                     <div class="spinner-border" style="color:#e8175d;"></div>
                 </div>
@@ -212,10 +211,10 @@ async function viewSale(id) {
     const total = parseFloat(s.parts_total) + parseFloat(s.labor_total);
 
     body.innerHTML = `
-        <div class="row mb-3 g-2">
-            <div class="col-sm-4"><strong>Date:</strong> ${s.sale_date}</div>
-            <div class="col-sm-4"><strong>Customer:</strong> ${s.customer_name || '—'}</div>
-            <div class="col-sm-4"><strong>Plate:</strong> ${s.plate_number || '—'}</div>
+        <div class="row mb-3 g-2" style="color:#111;">
+            <div class="col-sm-4"><strong style="color:#000;">Date:</strong> ${s.sale_date}</div>
+            <div class="col-sm-4"><strong style="color:#000;">Customer:</strong> ${s.customer_name || '—'}</div>
+            <div class="col-sm-4"><strong style="color:#000;">Plate:</strong> ${s.plate_number || '—'}</div>
         </div>
         <div class="table-responsive">
             <table class="data-table">
@@ -225,17 +224,17 @@ async function viewSale(id) {
                 <tbody>
                     ${data.items.map(i => `<tr>
                         <td><span class="${i.line_type === 'parts' ? 'badge-blue' : 'badge-green'}">${i.line_type}</span></td>
-                        <td>${i.description || '—'}</td>
-                        <td>${i.quantity}</td>
-                        <td>₱${parseFloat(i.unit_price).toFixed(2)}</td>
-                        <td>₱${parseFloat(i.amount).toFixed(2)}</td>
+                        <td style="color:#111;">${i.description || '—'}</td>
+                        <td style="color:#111;">${i.quantity}</td>
+                        <td style="color:#111;">₱${parseFloat(i.unit_price).toFixed(2)}</td>
+                        <td style="color:#111;">₱${parseFloat(i.amount).toFixed(2)}</td>
                     </tr>`).join('')}
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-end gap-4 mt-3" style="padding-top:12px;border-top:1px solid rgba(255,255,255,.07);">
-            <span>Parts: <strong style="color:#93c5fd;">₱${parseFloat(s.parts_total).toFixed(2)}</strong></span>
-            <span>Labor: <strong style="color:#34d399;">₱${parseFloat(s.labor_total).toFixed(2)}</strong></span>
+        <div class="d-flex justify-content-end gap-4 mt-3" style="padding-top:12px;border-top:1px solid #ddd;color:#111;">
+            <span>Parts: <strong style="color:#1d4ed8;">₱${parseFloat(s.parts_total).toFixed(2)}</strong></span>
+            <span>Labor: <strong style="color:#059669;">₱${parseFloat(s.labor_total).toFixed(2)}</strong></span>
             <span style="font-size:1.1rem;">TOTAL: <strong style="color:#e8175d;">₱${total.toFixed(2)}</strong></span>
         </div>`;
 }

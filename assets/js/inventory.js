@@ -1,547 +1,543 @@
 'use strict';
 
-let allProducts  = [];
-let categories   = [];
-let seasonChart  = null;
+const API = 'backend/products.php';
+const FCAST = 'backend/forecast.php';
 
-
-function money(n) {
-    return '₱' + parseFloat(n || 0).toFixed(2);
+function peso(n) {
+    return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function esc(str) {
-    return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+function stockBadge(qty, threshold) {
+    qty = parseInt(qty) || 0;
+    threshold = parseInt(threshold) || 0;
+    if (qty <= 0) return `<span class="badge bg-danger">Out of Stock</span>`;
+    if (qty <= threshold) return `<span class="badge bg-warning text-dark">${qty} ⚠ Low</span>`;
+    return `<span class="badge bg-success">${qty}</span>`;
 }
 
-function debounce(fn, ms) {
-    let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
+let allProducts = [];
+let allCategories = [];
 
+const tbody = document.getElementById('stockTableBody');
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const exportBtn = document.getElementById('exportBtn');
 
-async function loadCategories() {
-    const res  = await fetch('products.php?action=categories');
-    const data = await res.json();
-    if (!data.success) return;
-
-    categories = data.data;
-
-    ['addCategory', 'editCategory', 'categoryFilter'].forEach(id => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-
-        const isFilter = id === 'categoryFilter';
-        const current  = sel.value;
-
-        sel.innerHTML = isFilter
-            ? '<option value="">All Categories</option>'
-            : '<option value="">Select Category</option>';
-
-        categories.forEach(cat => {
-            const opt = document.createElement('option');
-            opt.value       = cat.category_id;
-            opt.textContent = cat.category_name;
-            sel.appendChild(opt);
-        });
-
-        if (current) sel.value = current;
-    });
-}
-
-
+/*LOAD PRODUCTS*/
 async function loadProducts() {
-    const spinner = document.getElementById('loadingSpinner');
-    const body    = document.getElementById('stockTableBody');
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;">
+            <div class="spinner-border" style="color:#e8175d;"></div>
+        </td></tr>`;
 
-    if (spinner) spinner.style.display = 'block';
+    try {
+        const res = await fetch(`${API}?action=fetch`);
+        const json = await res.json();
 
-    const res  = await fetch('products.php?action=fetch');
-    const data = await res.json();
-
-    if (spinner) spinner.style.display = 'none';
-
-    if (!data.success) {
-        body.innerHTML = `<tr><td colspan="9" style="text-align:center;color:#fca5a5;padding:24px;">Error: ${data.message}</td></tr>`;
-        return;
-    }
-
-    allProducts = data.data || [];
-    applyFilters();
-    updateSummary();
-}
-
-function renderProducts(products) {
-    const body = document.getElementById('stockTableBody');
-    if (!body) return;
-
-    if (!products.length) {
-        body.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#7a8499;">No products found.</td></tr>';
-        return;
-    }
-
-    body.innerHTML = products.map(p => {
-        const stock    = p.current_stock != null ? parseInt(p.current_stock) : parseInt(p.initial_quantity);
-        const thresh   = parseInt(p.reorder_threshold) || 5;
-        const isLow    = stock <= thresh && stock > 0;
-        const isZero   = stock <= 0;
-        const margin   = parseFloat(p.margin || 0);
-        const rowClass = isZero ? 'row-zero' : (isLow ? 'row-low' : '');
-
-        const stockBadge = isZero
-            ? `<span class="badge-red">${stock}</span>`
-            : isLow
-                ? `<span class="badge-yellow">${stock}</span>`
-                : `<span class="badge-green">${stock}</span>`;
-
-        let actions = `
-            <button class="btn btn-sm btn-outline-success" onclick="openRestock(${p.product_id}, '${esc(p.description)}')" title="Restock">
-                <i class="bi bi-box-arrow-in-down"></i>
-            </button>`;
-
-        if (IS_OWNER) {
-            actions += `
-            <button class="btn btn-sm" style="background:#3b82f6;color:#fff;margin-left:4px;"
-                onclick="openEdit(${p.product_id})" title="Edit">
-                <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-sm" style="background:#ef4444;color:#fff;margin-left:4px;"
-                onclick="deleteProduct(${p.product_id}, '${esc(p.description)}')" title="Delete">
-                <i class="bi bi-trash"></i>
-            </button>`;
+        if (!json.success) {
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#fca5a5;">
+                    ⚠ ${json.message || 'Failed to load products.'}</td></tr>`;
+            return;
         }
 
-        return `
-        <tr class="${rowClass}">
-            <td>${p.product_id}</td>
-            <td>${esc(p.category_name)}</td>
-            <td>
-                <div style="font-weight:600;">${esc(p.description)}</div>
-                <code style="font-size:.72rem;color:#a5b4fc;">${esc(p.code || '—')}</code>
-            </td>
-            <td>${esc(p.unit)}</td>
-            <td>${money(p.unit_cost)}</td>
-            <td>${money(p.selling_price)}</td>
-            <td class="${margin >= 0 ? 'text-profit' : 'text-loss'}">${margin >= 0 ? '+' : ''}${money(margin)}</td>
-            <td>${stockBadge}</td>
-            <td style="white-space:nowrap;">${actions}</td>
-        </tr>`;
-    }).join('');
+        allProducts = json.data || [];
+        renderTable(allProducts);
+        buildSummary(allProducts);
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:24px;color:#fca5a5;">
+                ⚠ Network error — could not reach backend. (${err.message})</td></tr>`;
+    }
+}
+function renderTable(products) {
+    if (!products.length) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:30px;color:#7a8499;">
+                No products found.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = products.map(p => `
+            <tr data-id="${p.product_id}">
+                <td><span class="badge-gray">${p.product_id}</span></td>
+                <td>${p.category_name || '—'}</td>
+                <td>
+                    <div style="font-weight:600;">${p.description}</div>
+                    ${p.code ? `<div style="font-size:.75rem;color:#7a8499;">${p.code}</div>` : ''}
+                </td>
+                <td>${p.unit}</td>
+                <td style="color:#93c5fd;">${peso(p.unit_cost)}</td>
+                <td style="color:#fff;">${peso(p.selling_price)}</td>
+                <td style="color:${parseFloat(p.margin) >= 0 ? '#34d399' : '#f87171'};">${peso(p.margin)}</td>
+                <td>${stockBadge(p.current_stock, p.reorder_threshold)}</td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-info"
+                            onclick="openRestock(${p.product_id}, '${escHtml(p.description)}')"
+                            title="Restock"><i class="bi bi-box-arrow-in-down"></i></button>
+                        ${IS_OWNER ? `
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="openEdit(${p.product_id})"
+                            title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteProduct(${p.product_id}, '${escHtml(p.description)}')"
+                            title="Delete"><i class="bi bi-trash"></i></button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>`).join('');
 }
 
-function applyFilters() {
-    const q    = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
-    const catId = parseInt(document.getElementById('categoryFilter')?.value) || null;
-
-    const filtered = allProducts.filter(p => {
-        if (catId && parseInt(p.category_id) !== catId) return false;
-        if (!q) return true;
-        return (p.description + ' ' + p.code + ' ' + p.category_name).toLowerCase().includes(q);
-    });
-
-    renderProducts(filtered);
+function escHtml(str) {
+    return String(str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-function updateSummary() {
-    const total  = allProducts.length;
-    const lowCnt = allProducts.filter(p => {
-        const s = p.current_stock != null ? parseInt(p.current_stock) : parseInt(p.initial_quantity);
-        return s <= (parseInt(p.reorder_threshold) || 5);
-    }).length;
-
+function buildSummary(products) {
     const el = document.getElementById('stockSummary');
-    if (el) {
-        el.innerHTML = `<span class="badge-blue">${total} Products</span>
-            ${lowCnt > 0 ? `<span class="badge-yellow">${lowCnt} Low</span>` : ''}`;
+    if (!el) return;
+    const low = products.filter(p => parseInt(p.current_stock) <= parseInt(p.reorder_threshold) && parseInt(p.current_stock) > 0).length;
+    const out = products.filter(p => parseInt(p.current_stock) <= 0).length;
+    el.innerHTML = `
+            <span class="summary-pill">Total: <strong>${products.length}</strong></span>
+            ${low ? `<span class="summary-pill" style="border-color:#fbbf24;color:#fbbf24;">⚠ Low: <strong>${low}</strong></span>` : ''}
+            ${out ? `<span class="summary-pill" style="border-color:#f87171;color:#f87171;">✖ Out: <strong>${out}</strong></span>` : ''}
+        `;
+}
+
+/* search */
+function applyFilters() {
+    const q = (searchInput?.value || '').toLowerCase();
+    const cat = categoryFilter?.value || '';
+    const filtered = allProducts.filter(p => {
+        const matchQ = !q || p.description.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q);
+        const matchCat = !cat || p.category_name === cat;
+        return matchQ && matchCat;
+    });
+    renderTable(filtered);
+}
+
+searchInput?.addEventListener('input', applyFilters);
+categoryFilter?.addEventListener('change', applyFilters);
+
+/*  LOAD CATEGORIES */
+async function loadCategories() {
+    try {
+        const res = await fetch(`${API}?action=categories`);
+        const json = await res.json();
+        if (!json.success) return;
+
+        allCategories = json.data || [];
+
+        // Populate filter dropdown
+        if (categoryFilter) {
+            categoryFilter.innerHTML = '<option value="">All Categories</option>' +
+                allCategories.map(c => `<option value="${c.category_name}">${c.category_name}</option>`).join('');
+        }
+
+        // Populate add/edit modal selects
+        ['addCategory', 'editCategory'].forEach(id => {
+            const sel = document.getElementById(id);
+            if (!sel) return;
+            sel.innerHTML = '<option value="">Select Category</option>' +
+                allCategories.map(c => `<option value="${c.category_id}">${c.category_name}</option>`).join('');
+        });
+    } catch (e) {
+        console.warn('Could not load categories:', e);
     }
 }
 
-function calcMargin(costId, priceId, displayId) {
-    const cost  = parseFloat(document.getElementById(costId)?.value)  || 0;
-    const price = parseFloat(document.getElementById(priceId)?.value) || 0;
-    const m     = price - cost;
-    const el    = document.getElementById(displayId);
-    if (el) {
-        el.textContent = (m >= 0 ? '+' : '') + money(m);
-        el.style.color = m >= 0 ? '#34d399' : '#fca5a5';
-    }
-}
+/*  ADD PRODUCT*/
+['addCost', 'addPrice'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+        const cost = parseFloat(document.getElementById('addCost')?.value) || 0;
+        const price = parseFloat(document.getElementById('addPrice')?.value) || 0;
+        const el = document.getElementById('addMargin');
+        if (el) el.textContent = peso(price - cost);
+    });
+});
 
-async function addProduct() {
-    const catId = document.getElementById('addCategory').value;
-    const desc  = document.getElementById('addDesc').value.trim();
-    const unit  = document.getElementById('addUnit').value;
+document.getElementById('submitAdd')?.addEventListener('click', async () => {
+    const btn = document.getElementById('submitAdd');
+
+    const catId = document.getElementById('addCategory')?.value;
+    const desc = document.getElementById('addDesc')?.value.trim();
+    const unit = document.getElementById('addUnit')?.value;
 
     if (!catId || !desc || !unit) {
-        Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Category, description, and unit are required.' });
+        Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });
         return;
     }
 
     const fd = new FormData();
-    fd.append('action',             'add');
-    fd.append('category_id',        catId);
-    fd.append('description',        desc);
-    fd.append('unit',               unit);
-    fd.append('code',               document.getElementById('addCode').value.trim());
-    fd.append('unit_cost',          document.getElementById('addCost').value);
-    fd.append('selling_price',      document.getElementById('addPrice').value);
-    fd.append('initial_quantity',   document.getElementById('addQty').value);
-    fd.append('reorder_threshold',  document.getElementById('addThresh').value);
+    fd.append('category_id', catId);
+    fd.append('description', desc);
+    fd.append('unit', unit);
+    fd.append('code', document.getElementById('addCode')?.value.trim() || '');
+    fd.append('unit_cost', document.getElementById('addCost')?.value || '0');
+    fd.append('selling_price', document.getElementById('addPrice')?.value || '0');
+    fd.append('initial_quantity', document.getElementById('addQty')?.value || '0');
+    fd.append('reorder_threshold', document.getElementById('addThresh')?.value || '5');
 
-    const res  = await fetch('backend/products.php', { method: 'POST', body: fd });
-    const data = await res.json();
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
 
-    if (data.success) {
-        Swal.fire({ icon: 'success', title: 'Saved!', timer: 1400, showConfirmButton: false });
-        bootstrap.Modal.getInstance(document.getElementById('addModal'))?.hide();
-        loadProducts();
-    } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+    try {
+        const res = await fetch(`${API}?action=add`, { method: 'POST', body: fd });
+        const json = await res.json();
+
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addModal'))?.hide();
+            Swal.fire({ icon: 'success', title: 'Product added!', timer: 1400, showConfirmButton: false });
+            await loadProducts();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Product';
     }
-}
+});
+
+/* EDIT PRODUCT*/
+['editCost', 'editPrice'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+        const cost = parseFloat(document.getElementById('editCost')?.value) || 0;
+        const price = parseFloat(document.getElementById('editPrice')?.value) || 0;
+        const el = document.getElementById('editMargin');
+        if (el) el.textContent = peso(price - cost);
+    });
+});
 
 async function openEdit(id) {
-    const res  = await fetch(`backend/products.php?action=get&id=${id}`);
-    const data = await res.json();
-    if (!data.success) { Swal.fire({ icon: 'error', title: 'Error', text: data.message }); return; }
+    try {
+        const res = await fetch(`${API}?action=get&id=${id}`);
+        const json = await res.json();
+        if (!json.success) { Swal.fire({ icon: 'error', title: 'Error', text: json.message }); return; }
 
-    const p = data.data;
-    document.getElementById('editId').value       = p.product_id;
-    document.getElementById('editCategory').value  = p.category_id;
-    document.getElementById('editCode').value      = p.code;
-    document.getElementById('editDesc').value      = p.description;
-    document.getElementById('editUnit').value      = p.unit;
-    document.getElementById('editCost').value      = p.unit_cost;
-    document.getElementById('editPrice').value     = p.selling_price;
-    document.getElementById('editQty').value       = p.initial_quantity;
-    document.getElementById('editThresh').value    = p.reorder_threshold;
-    calcMargin('editCost', 'editPrice', 'editMargin');
+        const p = json.data;
+        document.getElementById('editId').value = p.product_id;
+        document.getElementById('editCode').value = p.code || '';
+        document.getElementById('editDesc').value = p.description || '';
+        document.getElementById('editCost').value = p.unit_cost || 0;
+        document.getElementById('editPrice').value = p.selling_price || 0;
+        document.getElementById('editQty').value = p.initial_quantity || 0;
+        document.getElementById('editThresh').value = p.reorder_threshold || 5;
 
-    new bootstrap.Modal(document.getElementById('editModal')).show();
+        // Set category
+        const catSel = document.getElementById('editCategory');
+        if (catSel) catSel.value = p.category_id;
+
+        // Set unit
+        const unitSel = document.getElementById('editUnit');
+        if (unitSel) unitSel.value = p.unit;
+
+        // Update margin display
+        const margin = parseFloat(p.selling_price) - parseFloat(p.unit_cost);
+        const mEl = document.getElementById('editMargin');
+        if (mEl) mEl.textContent = peso(margin);
+
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+    }
 }
 
-async function updateProduct() {
-    const catId = document.getElementById('editCategory').value;
-    const desc  = document.getElementById('editDesc').value.trim();
-    const unit  = document.getElementById('editUnit').value;
+document.getElementById('submitEdit')?.addEventListener('click', async () => {
+    const btn = document.getElementById('submitEdit');
 
-    if (!catId || !desc || !unit) {
-        Swal.fire({ icon: 'warning', title: 'Required Fields', text: 'Category, description, and unit are required.' });
+    const id = document.getElementById('editId')?.value;
+    const catId = document.getElementById('editCategory')?.value;
+    const desc = document.getElementById('editDesc')?.value.trim();
+    const unit = document.getElementById('editUnit')?.value;
+
+    if (!id || !catId || !desc || !unit) {
+        Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });
         return;
     }
 
     const fd = new FormData();
-    fd.append('action',             'update');
-    fd.append('product_id',         document.getElementById('editId').value);
-    fd.append('category_id',        catId);
-    fd.append('description',        desc);
-    fd.append('unit',               unit);
-    fd.append('code',               document.getElementById('editCode').value.trim());
-    fd.append('unit_cost',          document.getElementById('editCost').value);
-    fd.append('selling_price',      document.getElementById('editPrice').value);
-    fd.append('initial_quantity',   document.getElementById('editQty').value);
-    fd.append('reorder_threshold',  document.getElementById('editThresh').value);
+    fd.append('product_id', id);
+    fd.append('category_id', catId);
+    fd.append('description', desc);
+    fd.append('unit', unit);
+    fd.append('code', document.getElementById('editCode')?.value.trim() || '');
+    fd.append('unit_cost', document.getElementById('editCost')?.value || '0');
+    fd.append('selling_price', document.getElementById('editPrice')?.value || '0');
+    fd.append('initial_quantity', document.getElementById('editQty')?.value || '0');
+    fd.append('reorder_threshold', document.getElementById('editThresh')?.value || '5');
 
-    const res  = await fetch('backend/products.php', { method: 'POST', body: fd });
-    const data = await res.json();
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
 
-    if (data.success) {
-        Swal.fire({ icon: 'success', title: 'Updated!', timer: 1400, showConfirmButton: false });
-        bootstrap.Modal.getInstance(document.getElementById('editModal'))?.hide();
-        loadProducts();
-    } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+    try {
+        const res = await fetch(`${API}?action=update`, { method: 'POST', body: fd });
+        const json = await res.json();
+
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editModal'))?.hide();
+            Swal.fire({ icon: 'success', title: 'Updated!', timer: 1400, showConfirmButton: false });
+            await loadProducts();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Update Product';
     }
-}
+});
 
-// ── DELETE PRODUCT ─────────────────────────────────────
+/*DELETE PRODUCT */
 async function deleteProduct(id, name) {
-    const res = await Swal.fire({
-        title: 'Delete product?',
+    const confirm = await Swal.fire({
+        title: 'Delete this product?',
         text: `"${name}" will be permanently removed.`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
-        confirmButtonText: 'Yes, delete!',
+        confirmButtonText: 'Delete',
     });
-    if (!res.isConfirmed) return;
+    if (!confirm.isConfirmed) return;
 
     const fd = new FormData();
-    fd.append('action', 'delete');
     fd.append('id', id);
 
-    const resp = await fetch('backend/products.php', { method: 'POST', body: fd });
-    const data = await resp.json();
+    try {
+        const res = await fetch(`${API}?action=delete`, { method: 'POST', body: fd });
+        const json = await res.json();
 
-    if (data.success) {
-        Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
-        loadProducts();
-    } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+        if (json.success) {
+            Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
+            await loadProducts();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
     }
 }
 
+/*  RESTOCK*/
 function openRestock(id, name) {
-    document.getElementById('restockId').value        = id;
+    document.getElementById('restockId').value = id;
     document.getElementById('restockName').textContent = name;
-    document.getElementById('restockQty').value       = 20;
-    document.getElementById('restockRemarks').value   = '';
+    document.getElementById('restockQty').value = 20;
+    document.getElementById('restockRemarks').value = '';
     new bootstrap.Modal(document.getElementById('restockModal')).show();
 }
 
-async function submitRestock() {
-    const id  = document.getElementById('restockId').value;
-    const qty = parseInt(document.getElementById('restockQty').value);
+document.getElementById('submitRestock')?.addEventListener('click', async () => {
+    const btn = document.getElementById('submitRestock');
+    const id = document.getElementById('restockId')?.value;
+    const qty = parseInt(document.getElementById('restockQty')?.value) || 0;
+    const remarks = document.getElementById('restockRemarks')?.value.trim() || '';
 
-    if (!id || qty < 1) {
-        Swal.fire({ icon: 'warning', title: 'Invalid', text: 'Enter a valid quantity.' });
+    if (qty <= 0) {
+        Swal.fire({ icon: 'warning', title: 'Enter a valid quantity' });
         return;
     }
 
     const fd = new FormData();
-    fd.append('action',     'restock');
     fd.append('product_id', id);
-    fd.append('quantity',   qty);
-    fd.append('remarks',    document.getElementById('restockRemarks').value || 'Restock');
+    fd.append('quantity', qty);
+    fd.append('remarks', remarks);
 
-    const res  = await fetch('backend/products.php', { method: 'POST', body: fd });
-    const data = await res.json();
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
 
-    if (data.success) {
-        bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
-        Swal.fire({ icon: 'success', title: 'Restocked!', timer: 1400, showConfirmButton: false });
-        loadProducts();
-    } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+    try {
+        const res = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
+        const json = await res.json();
+
+        // Fallback: if backend has no restock action yet, update stock locally via update
+        if (!json.success && json.message === 'Unknown action') {
+            // Find product and increment qty via update
+            const p = allProducts.find(x => x.product_id == id);
+            if (p) {
+                const fd2 = new FormData();
+                fd2.append('product_id', p.product_id);
+                fd2.append('category_id', p.category_id || 1);
+                fd2.append('description', p.description);
+                fd2.append('unit', p.unit);
+                fd2.append('code', p.code || '');
+                fd2.append('unit_cost', p.unit_cost);
+                fd2.append('selling_price', p.selling_price);
+                fd2.append('initial_quantity', parseInt(p.current_stock) + qty);
+                fd2.append('reorder_threshold', p.reorder_threshold);
+                await fetch(`${API}?action=update`, { method: 'POST', body: fd2 });
+            }
+            bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
+            Swal.fire({ icon: 'success', title: 'Restocked!', timer: 1400, showConfirmButton: false });
+            await loadProducts();
+        } else if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
+            Swal.fire({ icon: 'success', title: 'Restocked!', timer: 1400, showConfirmButton: false });
+            await loadProducts();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Record Restock';
     }
-}
+});
 
-function exportCSV() {
-    const rows = [['ID', 'Category', 'Description', 'Code', 'Unit', 'Cost', 'Price', 'Margin', 'Stock', 'Reorder At']];
-
-    allProducts.forEach(p => {
-        const stock = p.current_stock != null ? p.current_stock : p.initial_quantity;
-        rows.push([p.product_id, p.category_name, p.description, p.code, p.unit,
-                p.unit_cost, p.selling_price, p.margin, stock, p.reorder_threshold]);
+/*EXPORT CSV */
+exportBtn?.addEventListener('click', () => {
+    const visible = allProducts.filter(p => {
+        const q = (searchInput?.value || '').toLowerCase();
+        const cat = categoryFilter?.value || '';
+        return (!q || p.description.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q))
+            && (!cat || p.category_name === cat);
     });
 
-    const csv  = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `inventory_${new Date().toISOString().slice(0, 10)}.csv`;
+    const rows = [['ID', 'Category', 'Description', 'Code', 'Unit', 'Cost', 'Price', 'Margin', 'Stock', 'Threshold']];
+    visible.forEach(p => rows.push([
+        p.product_id, p.category_name, p.description, p.code, p.unit,
+        p.unit_cost, p.selling_price, p.margin, p.current_stock, p.reorder_threshold
+    ]));
+
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = 'inventory_' + new Date().toISOString().slice(0, 10) + '.csv';
     a.click();
-    URL.revokeObjectURL(url);
-}
+});
 
-//forecast
+/*  FORECASTING TAB */
+let forecastLoaded = false;
+
+document.getElementById('tab-forecast-btn')?.addEventListener('click', () => {
+    if (!forecastLoaded) loadForecast();
+});
+
 async function loadForecast() {
-    const loading = document.getElementById('forecastLoading');
-    const content = document.getElementById('forecastContent');
+    try {
+        const res = await fetch(FCAST);
+        const json = await res.json();
 
-    loading.style.display = 'block';
-    content.style.display = 'none';
+        document.getElementById('forecastLoading').style.display = 'none';
+        document.getElementById('forecastContent').style.display = '';
 
-    const res  = await fetch('backend/forecast.php');
-    const data = await res.json();
+        const items = json.items || [];
+        const monthly = json.monthly || [];
 
-    loading.style.display = 'none';
+        // Weekly table
+        const wBody = document.getElementById('weeklyBody');
+        if (wBody) {
+            wBody.innerHTML = items.length ? items.map(i => {
+                const avgWeekly = i.sale_weeks > 0 ? (i.total_qty / i.sale_weeks).toFixed(1) : 0;
+                const next4 = (parseFloat(avgWeekly) * 4).toFixed(0);
+                return `<tr>
+                        <td>${i.description}</td>
+                        <td>${i.code || '—'}</td>
+                        <td>${avgWeekly}</td>
+                        <td><strong>${next4}</strong></td>
+                        <td>${i.sale_weeks} wks</td>
+                    </tr>`;
+            }).join('') : `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
+        }
 
-    if (!data.success || !data.items?.length) {
-        loading.style.display = 'block';
-        loading.innerHTML = '<p style="color:#7a8499;padding:20px;">No sales data yet. Record some sales to see forecasts.</p>';
-        return;
+        // Monthly table
+        const mBody = document.getElementById('monthlyBody');
+        if (mBody) {
+            mBody.innerHTML = items.length ? items.map(i => {
+                const avgMonthly = i.sale_months > 0 ? (i.total_qty / i.sale_months).toFixed(1) : 0;
+                const next3 = (parseFloat(avgMonthly) * 3).toFixed(0);
+                return `<tr>
+                        <td>${i.description}</td>
+                        <td>${i.code || '—'}</td>
+                        <td>${avgMonthly}</td>
+                        <td><strong>${next3}</strong></td>
+                        <td>${i.sale_months} mos</td>
+                    </tr>`;
+            }).join('') : `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
+        }
+
+        // Seasonal chart
+        if (monthly.length && document.getElementById('seasonalChart')) {
+            const ctx = document.getElementById('seasonalChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthly.map(m => m.month_label),
+                    datasets: [
+                        { label: 'Parts ₱', data: monthly.map(m => m.parts_total), backgroundColor: 'rgba(59,130,246,.7)' },
+                        { label: 'Labor ₱', data: monthly.map(m => m.labor_total), backgroundColor: 'rgba(52,211,153,.7)' },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#e2e8f0' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.05)' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.05)' } }
+                    }
+                }
+            });
+        }
+
+        forecastLoaded = true;
+    } catch (e) {
+        document.getElementById('forecastLoading').innerHTML =
+            `<p style="color:#fca5a5;">Failed to load forecast data. (${e.message})</p>`;
     }
-
-    content.style.display = 'block';
-
-    // Weekly forecast table
-    const weeklyBody = document.getElementById('weeklyBody');
-    weeklyBody.innerHTML = data.items.map(item => {
-        const avgWeekly  = parseFloat(item.total_qty) / 12;
-        const next4Weeks = Math.ceil(avgWeekly * 4);
-        const trend = avgWeekly >= 2
-            ? '<span style="color:#34d399;">↑ High</span>'
-            : '<span style="color:#fcd34d;">→ Moderate</span>';
-
-        return `<tr>
-            <td><strong>${esc(item.description)}</strong></td>
-            <td><code style="color:#a5b4fc;">${esc(item.code || '—')}</code></td>
-            <td>${avgWeekly.toFixed(1)} units/wk &nbsp;${trend}</td>
-            <td><strong style="color:#f97316;">${next4Weeks} units</strong></td>
-            <td><span class="badge-gray">${item.sale_weeks} wks</span></td>
-        </tr>`;
-    }).join('');
-
-    // Monthly forecast table
-    const monthlyBody = document.getElementById('monthlyBody');
-    monthlyBody.innerHTML = data.items.map(item => {
-        const avgMonthly  = parseFloat(item.total_qty) / 12;
-        const next3Months = Math.ceil(avgMonthly * 3);
-        const months      = parseInt(item.sale_months) || 0;
-        const conf = months >= 6
-            ? '<span style="color:#34d399;font-size:.72rem;">High confidence</span>'
-            : months >= 3
-                ? '<span style="color:#fcd34d;font-size:.72rem;">Moderate</span>'
-                : '<span style="color:#7a8499;font-size:.72rem;">Low data</span>';
-
-        return `<tr>
-            <td><strong>${esc(item.description)}</strong></td>
-            <td><code style="color:#a5b4fc;">${esc(item.code || '—')}</code></td>
-            <td>${avgMonthly.toFixed(1)} units/mo</td>
-            <td><strong style="color:#60a5fa;">${next3Months} units</strong> &nbsp;${conf}</td>
-            <td><span class="badge-gray">${months} months</span></td>
-        </tr>`;
-    }).join('');
-
-    // Seasonal chart
-    renderSeasonalChart(data.monthly || []);
 }
 
-function renderSeasonalChart(monthly) {
-    const canvas = document.getElementById('seasonalChart');
-    if (!canvas) return;
+/*  REORDER TAB*/
+let reorderLoaded = false;
 
-    if (seasonChart) { seasonChart.destroy(); seasonChart = null; }
-
-    if (!monthly.length) {
-        canvas.parentElement.innerHTML += '<p style="text-align:center;color:#7a8499;font-size:.82rem;">No monthly data yet.</p>';
-        return;
-    }
-
-    seasonChart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: monthly.map(m => m.month_label),
-            datasets: [
-                {
-                    label: 'Parts ₱',
-                    data: monthly.map(m => parseFloat(m.parts_total) || 0),
-                    backgroundColor: 'rgba(232,23,93,.7)',
-                    borderRadius: 6,
-                },
-                {
-                    label: 'Labor ₱',
-                    data: monthly.map(m => parseFloat(m.labor_total) || 0),
-                    backgroundColor: 'rgba(16,185,129,.7)',
-                    borderRadius: 6,
-                },
-                {
-                    label: 'Total ₱',
-                    data: monthly.map(m => parseFloat(m.grand_total) || 0),
-                    type: 'line',
-                    borderColor: '#f97316',
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    fill: false,
-                    tension: 0.4,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { labels: { color: '#7a8499' } } },
-            scales: {
-                x: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { color: '#7a8499' } },
-                y: {
-                    grid: { color: 'rgba(255,255,255,.04)' },
-                    ticks: { color: '#7a8499', callback: v => '₱' + (v >= 1000 ? (v/1000).toFixed(0)+'k' : v) }
-                },
-            },
-        },
-    });
-}
-
+document.getElementById('tab-reorder-btn')?.addEventListener('click', () => {
+    if (!reorderLoaded) loadReorder();
+});
 
 async function loadReorder() {
-    const loading = document.getElementById('reorderLoading');
-    const list    = document.getElementById('reorderList');
-    const empty   = document.getElementById('reorderEmpty');
+    try {
+        const res = await fetch(`${API}?action=reorder-list`);
+        const json = await res.json();
 
-    loading.style.display = 'block';
-    list.style.display    = 'none';
-    empty.style.display   = 'none';
+        document.getElementById('reorderLoading').style.display = 'none';
 
-    const res  = await fetch('backend/products.php?action=reorder-list');
-    const data = await res.json();
+        if (!json.items?.length) {
+            document.getElementById('reorderEmpty').style.display = '';
+            reorderLoaded = true;
+            return;
+        }
 
-    loading.style.display = 'none';
+        const list = document.getElementById('reorderList');
+        list.style.display = '';
+        list.innerHTML = `<table class="data-table">
+                <thead><tr>
+                    <th>ID</th><th>Category</th><th>Description</th><th>Code</th>
+                    <th>Stock</th><th>Threshold</th><th>Unit</th><th>Action</th>
+                </tr></thead>
+                <tbody>
+                ${json.items.map(p => `<tr>
+                    <td>${p.product_id}</td>
+                    <td>${p.category_name || '—'}</td>
+                    <td>${p.description}</td>
+                    <td>${p.code || '—'}</td>
+                    <td style="color:#fbbf24;">${p.current_stock}</td>
+                    <td>${p.reorder_threshold}</td>
+                    <td>${p.unit}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-success"
+                            onclick="openRestock(${p.product_id}, '${escHtml(p.description)}')">
+                            <i class="bi bi-box-arrow-in-down"></i> Restock
+                        </button>
+                    </td>
+                </tr>`).join('')}
+                </tbody>
+            </table>`;
 
-    if (!data.success || !data.items?.length) {
-        empty.style.display = 'block';
-        return;
+        reorderLoaded = true;
+    } catch (e) {
+        document.getElementById('reorderLoading').innerHTML =
+            `<p style="color:#fca5a5;padding:20px;">Failed to load reorder list. (${e.message})</p>`;
     }
-
-    list.style.display = 'block';
-    list.innerHTML = data.items.map(item => {
-        const stock     = parseInt(item.current_stock) || 0;
-        const thresh    = parseInt(item.reorder_threshold) || 5;
-        const suggested = Math.max(thresh * 2, 10);
-        const urgency   = stock <= 0
-            ? '<span class="badge-red">Out of Stock</span>'
-            : stock <= Math.floor(thresh / 2)
-                ? '<span class="badge-red">Critical</span>'
-                : '<span class="badge-yellow">Low</span>';
-
-        return `<div class="reorder-row">
-            <div>
-                <strong style="color:#fff;font-size:.88rem;">${esc(item.description)}</strong>
-                <div style="font-size:.75rem;color:#7a8499;">${esc(item.category_name)}${item.code ? ' · ' + esc(item.code) : ''}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                ${urgency}
-                <span style="font-size:.82rem;color:#7a8499;">Stock: <strong style="color:#fca5a5;">${stock}</strong></span>
-                <span style="font-size:.82rem;color:#7a8499;">Min: <strong style="color:#fcd34d;">${thresh}</strong></span>
-                <button onclick="openRestock(${item.product_id}, '${esc(item.description).replace(/'/g, "\\'")}')"
-                    style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#111;padding:6px 14px;border-radius:20px;font-size:.8rem;font-weight:700;cursor:pointer;">
-                    <i class="bi bi-box-arrow-in-down me-1"></i>Restock
-                </button>
-            </div>
-        </div>`;
-    }).join('');
 }
 
-
-document.addEventListener('DOMContentLoaded', function () {
-
-    loadCategories();
-    loadProducts();
-
-    // Search
-    document.getElementById('searchInput')?.addEventListener('input', debounce(applyFilters, 200));
-    document.getElementById('categoryFilter')?.addEventListener('change', applyFilters);
-
-    // Export
-    document.getElementById('exportBtn')?.addEventListener('click', exportCSV);
-
-    // Margin auto-calc
-    ['addCost', 'addPrice'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', () => calcMargin('addCost', 'addPrice', 'addMargin'));
-    });
-    ['editCost', 'editPrice'].forEach(id => {
-        document.getElementById(id)?.addEventListener('input', () => calcMargin('editCost', 'editPrice', 'editMargin'));
-    });
-
-    // Modal submit buttons
-    document.getElementById('submitAdd')?.addEventListener('click', addProduct);
-    document.getElementById('submitEdit')?.addEventListener('click', updateProduct);
-    document.getElementById('submitRestock')?.addEventListener('click', submitRestock);
-
-    //lazy load forecast & reorder
-    document.getElementById('tab-forecast-btn')?.addEventListener('click', loadForecast);
-    document.getElementById('tab-reorder-btn')?.addEventListener('click', loadReorder);
-
-    // Reset add modal on close
-    document.getElementById('addModal')?.addEventListener('hidden.bs.modal', function () {
-        ['addCategory', 'addCode', 'addDesc', 'addUnit', 'addCost', 'addPrice', 'addQty', 'addThresh'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.value = el.tagName === 'SELECT' ? '' : (id.includes('Thresh') ? '5' : '0');
-        });
-        const m = document.getElementById('addMargin');
-        if (m) { m.textContent = '₱0.00'; m.style.color = '#34d399'; }
-    });
-});
+loadCategories();
+loadProducts();

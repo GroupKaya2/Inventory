@@ -33,7 +33,6 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 
     <div class="page-header mb-4">
         <h4><i class="bi bi-box-seam me-2"></i>Product Inventory & Forecasting</h4>
-        <p>Manage stock, view demand forecasts, and handle reorders</p>
     </div>
 
     <!-- Tabs -->
@@ -58,7 +57,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 
     <div class="tab-content">
 
-        <!-- STOCK TAB -->
+        <!-- STOCK -->
         <div class="tab-pane fade show active" id="tab-stock">
             <div class="inv-toolbar">
                 <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -174,7 +173,6 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
             </div>
         </div>
 
-        <!-- REORDER TAB — fixed: removed duplicate id, kept single id="tab-reorder" on tab-pane -->
         <div class="tab-pane fade" id="tab-reorder">
             <div class="card">
                 <div class="card-header-pink">
@@ -311,7 +309,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                             <input type="number" class="form-input" id="editThresh" min="0">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Margin (auto)</label>
+                            <label class="form-label">Margin</label>
                             <div class="margin-box" id="editMargin" style="color:#34d399;">₱0.00</div>
                         </div>
                     </div>

@@ -2,347 +2,266 @@
 session_start();
 require_once 'backend/db.php';
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
+if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
 
-$activePage = 'sales';
+$activePage = 'sales_history';
+$isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
+$today      = date('Y-m-d');
 
-$products = [];
-$r = $conn->query("SELECT product_id, code, description, selling_price, unit FROM product_stock ORDER BY description");
-if ($r) while ($row = $r->fetch_assoc()) $products[] = $row;
+$stats = $conn->query("
+    SELECT
+        COUNT(*) AS total,
+        COALESCE(SUM(parts_total + labor_total), 0) AS all_time,
+        COALESCE(SUM(CASE WHEN sale_date = '$today' THEN parts_total + labor_total ELSE 0 END), 0) AS today_total,
+        COALESCE(SUM(CASE WHEN sale_date >= DATE_FORMAT(NOW(),'%Y-%m-01') THEN parts_total + labor_total ELSE 0 END), 0) AS month_total
+    FROM sales
+")->fetch_assoc();
+
+$salesRows = [];
+$r = $conn->query("SELECT id, sale_date, customer_name, plate_number, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
+if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Sale — Dispeedway</title>
+    <title>Sales History — Dispeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
-    <link rel="stylesheet" href="assets/css/sales.css">
+    <link rel="stylesheet" href="assets/css/sales-history.css">
 </head>
 <body>
 
 <?php include 'sidebar.php'; ?>
 
 <main class="app-main">
-    <div style="max-width:900px;margin:0 auto;">
 
-        <div class="page-header mb-4">
-            <h4><i class="bi bi-receipt me-2"></i>New Sale Transaction</h4>
-            <p>Record parts sold and labor services for a customer</p>
-        </div>
+    <div class="page-header mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 style="margin:0;"><i class="bi bi-clock-history me-2"></i>Sales History</h4>
 
-        <div class="sale-card">
-            <p class="section-title mb-3">Customer Information</p>
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Date</label>
-                    <input type="date" class="form-control" id="saleDate" value="<?= date('Y-m-d') ?>">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Customer Name</label>
-                    <input type="text" class="form-control" id="customerName" placeholder="Customer Name">
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Plate Number</label>
-                    <input type="text" class="form-control" id="plateNumber" placeholder="e.g. ABC 1234">
-                </div>
             </div>
+            <a href="sales.php" class="btn-pink"><i class="bi bi-plus-lg me-1"></i>New Sale</a>
         </div>
-
-        <div class="sale-card">
-            <p class="section-title mb-3"><i class="bi bi-list-ul me-1"></i>Items & Services</p>
-
-            <div class="item-row" style="margin-bottom:4px;">
-                <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Part / Service</div>
-                <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Qty</div>
-                <div style="font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7a8499;">Amount (₱)</div>
-                <div></div>
-            </div>
-
-            <div id="itemsContainer"></div>
-
-            <button type="button" class="btn-ghost mt-2" id="addItemBtn" style="font-size:.82rem;">
-                <i class="bi bi-plus-lg me-1"></i>Add Item
-            </button>
-
-            <div class="totals-bar">
-                <div class="item">
-                    <div class="lbl">Parts Total</div>
-                    <div class="val" id="partsTotal">₱0.00</div>
-                </div>
-                <div class="item">
-                    <div class="lbl">Labor Total</div>
-                    <div class="val" id="laborTotal">₱0.00</div>
-                </div>
-                <div class="item">
-                    <div class="lbl">Grand Total</div>
-                    <div class="val grand" id="grandTotal">₱0.00</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="d-flex flex-wrap gap-2 mb-4">
-            <button type="button" class="btn-pink" id="saveBtn">
-                <i class="bi bi-save me-1"></i>Save Transaction
-            </button>
-            <button type="button" class="btn-ghost" id="printBtn">
-                <i class="bi bi-printer me-1"></i>Print Receipt
-            </button>
-            <button type="button" class="btn-ghost" id="clearBtn">
-                <i class="bi bi-file-earmark-plus me-1"></i>New Order
-            </button>
-            <a href="sales-history.php" class="btn-ghost ms-auto">
-                <i class="bi bi-clock-history me-1"></i>View History
-            </a>
-        </div>
-
     </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="summary-pill">Total: <strong><?= number_format($stats['total']) ?> sales</strong></span>
+        <span class="summary-pill">Today: <strong>₱<?= number_format($stats['today_total'], 0) ?></strong></span>
+        <span class="summary-pill">This Month: <strong>₱<?= number_format($stats['month_total'], 0) ?></strong></span>
+        <span class="summary-pill">All Time: <strong>₱<?= number_format($stats['all_time'], 0) ?></strong></span>
+    </div>
+
+
+    <div class="filter-bar">
+        <input type="text" id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
+        <input type="date" id="dateTo"      class="form-control" style="max-width:150px;">
+        <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterTable()">
+            <i class="bi bi-search me-1"></i>Search
+        </button>
+        <button class="btn-ghost" style="font-size:.82rem;padding:7px 16px;" onclick="resetFilter()">Reset</button>
+        <?php if ($isOwner): ?>
+        <button class="btn-ghost ms-auto" style="font-size:.82rem;padding:7px 16px;" onclick="exportCSV()">
+            <i class="bi bi-download me-1"></i>Export CSV
+        </button>
+        <?php endif; ?>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="data-table" id="salesTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Customer</th>
+                            <th>Plate</th>
+                            <th>Parts ₱</th>
+                            <th>Labor ₱</th>
+                            <th>Total ₱</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salesBody">
+                    <?php if (empty($salesRows)): ?>
+                        <tr>
+                            <td colspan="8" style="text-align:center;padding:30px;color:#7a8499;">
+                                No sales yet. <a href="sales.php">Record one →</a>
+                            </td>
+                        </tr>
+                    <?php else: foreach ($salesRows as $s): ?>
+                        <tr
+                            data-id="<?= $s['id'] ?>"
+                            data-date="<?= $s['sale_date'] ?>"
+                            data-search="<?= strtolower(htmlspecialchars($s['customer_name'] . ' ' . $s['plate_number'])) ?>"
+                        >
+                            <td><span class="badge-gray"><?= $s['id'] ?></span></td>
+                            <td><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
+                            <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
+                            <td><?= htmlspecialchars($s['plate_number']  ?: '—') ?></td>
+                            <td style="color:#93c5fd;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?></td>
+                            <td style="color:#34d399;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?></td>
+                            <td><strong>₱<?= number_format($s['grand_total'], 2) ?></strong></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" onclick="viewSale(<?= $s['id'] ?>)" title="View">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                <?php if ($isOwner): ?>
+                                <button class="btn btn-sm btn-outline-danger ms-1"
+                                    onclick="deleteSale(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['customer_name'] ?: 'Sale #' . $s['id'])) ?>')"
+                                    title="Delete">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                    <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
 </main>
 
-<div id="printArea" class="print-area"></div>
+<!-- View Sale Modal -->
+<div class="modal fade" id="viewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content modal-dark" style="background:#1c2030;color:#e8ecf4;border:1px solid rgba(255,255,255,0.07);">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Sale Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailBody" style="background:#1c2030;color:#e8ecf4;">
+                <div style="text-align:center;padding:30px;">
+                    <div class="spinner-border" style="color:#e8175d;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const PRODUCTS = <?= json_encode($products) ?>;
+const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
-(function () {
-    'use strict';
+function filterTable() {
+    const q    = document.getElementById('searchInput').value.toLowerCase().trim();
+    const from = document.getElementById('dateFrom').value;
+    const to   = document.getElementById('dateTo').value;
 
-    function money(n) {
-        return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 });
+    document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
+        const d      = tr.dataset.date;
+        const matchQ = !q || tr.dataset.search.includes(q);
+        const matchD = (!from || d >= from) && (!to || d <= to);
+        tr.style.display = matchQ && matchD ? '' : 'none';
+    });
+}
+
+function resetFilter() {
+    ['searchInput','dateFrom','dateTo'].forEach(id => document.getElementById(id).value = '');
+    document.querySelectorAll('#salesBody tr').forEach(tr => tr.style.display = '');
+}
+
+document.getElementById('searchInput').addEventListener('input', filterTable);
+
+function exportCSV() {
+    const rows = [['ID','Date','Customer','Plate','Parts','Labor','Total']];
+    document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
+        if (tr.style.display === 'none') return;
+        const cells = tr.querySelectorAll('td');
+        rows.push([
+            cells[0].textContent.trim(),
+            cells[1].textContent.trim(),
+            cells[2].textContent.trim(),
+            cells[3].textContent.trim(),
+            cells[4].textContent.replace(/[₱,]/g,'').trim(),
+            cells[5].textContent.replace(/[₱,]/g,'').trim(),
+            cells[6].textContent.replace(/[₱,]/g,'').trim(),
+        ]);
+    });
+    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const a   = document.createElement('a');
+    a.href     = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = 'sales_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+}
+
+async function viewSale(id) {
+    const body = document.getElementById('saleDetailBody');
+    body.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border" style="color:#e8175d;"></div></div>';
+    new bootstrap.Modal(document.getElementById('viewModal')).show();
+
+    const resp = await fetch(`backend/sales.php?action=detail&id=${id}`);
+    const data = await resp.json();
+
+    if (!data.success) {
+        body.innerHTML = `<p style="color:#fca5a5;text-align:center;">${data.message}</p>`;
+        return;
     }
 
-    function buildOptions() {
-        let html = '<option value="">— Select Part or type Labor —</option>';
-        html += '<option value="labor" data-price="0" data-desc="Labor" data-type="labor">⚙️ Labor / Service (enter amount manually)</option>';
-        html += '<option disabled>───</option>';
-        PRODUCTS.forEach(p => {
-            const label = (p.code ? p.code + ' – ' : '') + p.description + ' (₱' + parseFloat(p.selling_price).toFixed(2) + ')';
-            html += `<option value="${p.product_id}" data-price="${p.selling_price}" data-desc="${p.description.replace(/"/g,'&quot;')}" data-type="parts">${label}</option>`;
-        });
-        return html;
+    const s     = data.sale;
+    const total = parseFloat(s.parts_total) + parseFloat(s.labor_total);
+
+    body.innerHTML = `
+        <div class="row mb-3 g-2" style="color:#e8ecf4;">
+            <div class="col-sm-4"><strong style="color:#fff;">Date:</strong> ${s.sale_date}</div>
+            <div class="col-sm-4"><strong style="color:#fff;">Customer:</strong> ${s.customer_name || '—'}</div>
+            <div class="col-sm-4"><strong style="color:#fff;">Plate:</strong> ${s.plate_number || '—'}</div>
+        </div>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr><th>Type</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr>
+                </thead>
+                <tbody>
+                    ${data.items.map(i => `<tr>
+                        <td><span class="${i.line_type === 'parts' ? 'badge-blue' : 'badge-green'}">${i.line_type}</span></td>
+                        <td style="color:#e8ecf4;">${i.description || '—'}</td>
+                        <td style="color:#e8ecf4;">${i.quantity}</td>
+                        <td style="color:#e8ecf4;">₱${parseFloat(i.unit_price).toFixed(2)}</td>
+                        <td style="color:#e8ecf4;">₱${parseFloat(i.amount).toFixed(2)}</td>
+                    </tr>`).join('')}
+                </tbody>
+            </table>
+        </div>
+        <div class="d-flex justify-content-end gap-4 mt-3" style="padding-top:12px;border-top:1px  rgba(73, 141, 214, 0.07);">
+            <span>Parts: <strong style="color:#93c5fd;">₱${parseFloat(s.parts_total).toFixed(2)}</strong></span>
+            <span>Labor: <strong style="color:#34d399;">₱${parseFloat(s.labor_total).toFixed(2)}</strong></span>
+            <span style="font-size:1.1rem;">TOTAL: <strong style="color:#e8175d;">₱${total.toFixed(2)}</strong></span>
+        </div>`;
+}
+
+async function deleteSale(id, name) {
+    const confirm = await Swal.fire({
+        title: 'Delete this sale?',
+        text: `"${name}" will be permanently removed.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Delete',
+    });
+    if (!confirm.isConfirmed) return;
+
+    const fd = new FormData();
+    fd.append('id', id);
+    const resp = await fetch('backend/sales.php?action=delete', { method: 'POST', body: fd });
+    const data = await resp.json();
+
+    if (data.success) {
+        document.querySelector(`#salesBody tr[data-id="${id}"]`)?.remove();
+        Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
+    } else {
+        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
     }
-
-    function createRow(isFirst = false) {
-        const div = document.createElement('div');
-        div.className = 'item-row';
-        div.innerHTML = `
-            <div><select class="form-select item-select" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:10px;height:42px;font-size:.83rem;">${buildOptions()}</select></div>
-            <div><input type="number" class="form-control item-qty" min="1" value="1" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:10px;height:42px;"></div>
-            <div><input type="number" class="form-control item-amount" min="0" step="0.01" value="0" placeholder="0.00" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:10px;height:42px;"></div>
-            <div><button type="button" class="btn-remove ${isFirst ? 'hidden' : ''}" title="Remove"><i class="bi bi-dash-lg"></i></button></div>
-        `;
-        return div;
-    }
-
-    function refreshRemoveButtons() {
-        const rows = document.querySelectorAll('#itemsContainer .item-row');
-        rows.forEach((row, i) => {
-            row.querySelector('.btn-remove')?.classList.toggle('hidden', i === 0);
-        });
-    }
-
-    const container = document.getElementById('itemsContainer');
-    container.appendChild(createRow(true));
-
-    container.addEventListener('change', function (e) {
-        const row = e.target.closest('.item-row');
-        if (!row || !e.target.classList.contains('item-select')) return;
-        const opt   = e.target.options[e.target.selectedIndex];
-        const type  = opt?.dataset?.type || 'parts';
-        const price = parseFloat(opt?.dataset?.price || 0);
-        const qty   = parseInt(row.querySelector('.item-qty').value) || 1;
-        const amtEl = row.querySelector('.item-amount');
-        if (type === 'parts' && price > 0) amtEl.value = (price * qty).toFixed(2);
-        updateTotals();
-    });
-
-    container.addEventListener('input', function (e) {
-        const row = e.target.closest('.item-row');
-        if (!row) return;
-        if (e.target.classList.contains('item-qty')) {
-            const sel   = row.querySelector('.item-select');
-            const opt   = sel?.options[sel.selectedIndex];
-            const type  = opt?.dataset?.type || 'parts';
-            const price = parseFloat(opt?.dataset?.price || 0);
-            const qty   = parseInt(e.target.value) || 1;
-            if (type === 'parts' && price > 0) {
-                row.querySelector('.item-amount').value = (price * qty).toFixed(2);
-            }
-        }
-        updateTotals();
-    });
-
-    container.addEventListener('click', function (e) {
-        const btn = e.target.closest('.btn-remove');
-        if (!btn) return;
-        const rows = container.querySelectorAll('.item-row');
-        if (rows.length > 1) {
-            btn.closest('.item-row').remove();
-            refreshRemoveButtons();
-            updateTotals();
-        }
-    });
-
-    document.getElementById('addItemBtn').addEventListener('click', function () {
-        container.appendChild(createRow(false));
-        refreshRemoveButtons();
-    });
-
-    function updateTotals() {
-        let parts = 0, labor = 0;
-        container.querySelectorAll('.item-row').forEach(row => {
-            const sel    = row.querySelector('.item-select');
-            const opt    = sel?.options[sel.selectedIndex];
-            const type   = opt?.dataset?.type || 'parts';
-            const amount = parseFloat(row.querySelector('.item-amount')?.value) || 0;
-            if (type === 'labor') labor += amount;
-            else parts += amount;
-        });
-        document.getElementById('partsTotal').textContent = money(parts);
-        document.getElementById('laborTotal').textContent = money(labor);
-        document.getElementById('grandTotal').textContent = money(parts + labor);
-    }
-
-    function buildPayload() {
-        const items = [];
-        container.querySelectorAll('.item-row').forEach(row => {
-            const sel    = row.querySelector('.item-select');
-            const opt    = sel?.options[sel.selectedIndex];
-            const type   = opt?.dataset?.type || 'parts';
-            const qty    = parseInt(row.querySelector('.item-qty')?.value) || 1;
-            const amount = parseFloat(row.querySelector('.item-amount')?.value) || 0;
-            if (amount <= 0) return;
-
-            if (type === 'labor') {
-                items.push({ type: 'labor', product_id: null, description: 'Labor', quantity: 1, unit_price: amount, amount });
-            } else {
-                const pid   = parseInt(sel.value) || 0;
-                if (!pid) return;
-                const price = parseFloat(opt?.dataset?.price || 0);
-                items.push({ type: 'parts', product_id: pid, description: opt?.dataset?.desc || '', quantity: qty, unit_price: price, amount });
-            }
-        });
-        return items;
-    }
-
-    // SAVE
-    document.getElementById('saveBtn').addEventListener('click', async function () {
-        const items = buildPayload();
-        if (!items.length) {
-            Swal.fire({ icon: 'warning', title: 'No items', text: 'Add at least one item with an amount.' });
-            return;
-        }
-
-        this.disabled = true;
-        this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving…';
-
-        try {
-            const resp = await fetch('backend/sales.php?action=save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sale_date:     document.getElementById('saleDate').value,
-                    customer_name: document.getElementById('customerName').value,
-                    plate_number:  document.getElementById('plateNumber').value,
-                    items,
-                }),
-            });
-            const data = await resp.json();
-
-            if (data.success) {
-                let stockHtml = '';
-                if (data.stock_summary?.length) {
-                    stockHtml = '<div style="text-align:left;margin-top:12px;">'
-                        + '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:8px;">📦 Stock Deducted</div>'
-                        + data.stock_summary.map(s => {
-                            const color = s.stock_left <= 0 ? '#fca5a5' : (s.low_stock ? '#fcd34d' : '#34d399');
-                            const low   = s.low_stock ? '<span style="background:#fef3c7;color:#d97706;font-size:.62rem;padding:1px 6px;border-radius:6px;margin-left:4px;font-weight:700;">LOW</span>' : '';
-                            return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:.82rem;">
-                                <span>${s.description}</span>
-                                <span style="color:#fca5a5;font-weight:700;">-${s.qty_removed}</span>
-                                <span style="color:${color};font-weight:700;">${s.stock_left} left${low}</span>
-                            </div>`;
-                        }).join('')
-                        + '</div>';
-                }
-
-                Swal.fire({
-                    icon: 'success',
-                    title: `Sale #${data.sale_id} Saved!`,
-                    html: stockHtml || 'Transaction recorded successfully.',
-                    confirmButtonColor: '#e8175d',
-                });
-                clearForm();
-            } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: data.message });
-            }
-        } catch (err) {
-            Swal.fire({ icon: 'error', title: 'Network Error', text: err.message });
-        } finally {
-            this.disabled = false;
-            this.innerHTML = '<i class="bi bi-save me-1"></i>Save Transaction';
-        }
-    });
-
-    // PRINT
-    document.getElementById('printBtn').addEventListener('click', function () {
-        let parts = 0, labor = 0;
-        const lines = [];
-
-        container.querySelectorAll('.item-row').forEach(row => {
-            const sel    = row.querySelector('.item-select');
-            const opt    = sel?.options[sel.selectedIndex];
-            const type   = opt?.dataset?.type || 'parts';
-            const desc   = opt?.dataset?.desc || (type === 'labor' ? 'Labor' : 'Item');
-            const qty    = parseInt(row.querySelector('.item-qty')?.value) || 1;
-            const amount = parseFloat(row.querySelector('.item-amount')?.value) || 0;
-            if (amount <= 0) return;
-            if (type === 'labor') labor += amount; else parts += amount;
-            lines.push({ desc, qty, amount });
-        });
-
-        document.getElementById('printArea').innerHTML = `
-            <h3 style="text-align:center;border-bottom:2px solid #000;padding-bottom:8px;">DISPEEDWAY</h3>
-            <p><b>Date:</b> ${document.getElementById('saleDate').value}</p>
-            <p><b>Customer:</b> ${document.getElementById('customerName').value || '—'}</p>
-            <p><b>Plate:</b> ${document.getElementById('plateNumber').value || '—'}</p>
-            <hr>
-            ${lines.map(l => `<div>${l.desc} x${l.qty}<span style="float:right">${money(l.amount)}</span></div>`).join('')}
-            <hr>
-            <p>Parts: <b style="float:right">${money(parts)}</b><br style="clear:both">
-            Labor: <b style="float:right">${money(labor)}</b><br style="clear:both"></p>
-            <p style="font-size:1.15em;border-top:2px solid #000;padding-top:6px;">
-                TOTAL: <b style="float:right">${money(parts + labor)}</b>
-            </p>
-            <p style="text-align:center;margin-top:16px;font-size:.85em;">Thank you for choosing Dispeedway!</p>
-        `;
-        window.print();
-    });
-
-    function clearForm() {
-        document.getElementById('customerName').value = '';
-        document.getElementById('plateNumber').value  = '';
-        container.innerHTML = '';
-        container.appendChild(createRow(true));
-        updateTotals();
-    }
-
-    document.getElementById('clearBtn').addEventListener('click', function () {
-        clearForm();
-        Swal.fire({ icon: 'info', title: 'Cleared', text: 'Ready for new transaction.', timer: 1200, showConfirmButton: false });
-    });
-
-    updateTotals();
-})();
+}
 </script>
 </body>
 </html>
