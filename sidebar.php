@@ -1,29 +1,30 @@
 <?php
 $activePage = $activePage ?? '';
-$userRole   = $_SESSION['role'] ?? 'manager';
-$userName   = $_SESSION['user'] ?? 'User';
-$isOwner    = ($userRole === 'owner');
+$userRole = $_SESSION['role'] ?? 'manager';
+$userName = $_SESSION['user'] ?? 'User';
+$isOwner = ($userRole === 'owner');
 
-$words    = explode(' ', trim($userName));
+$words = explode(' ', trim($userName));
 $initials = strtoupper(implode('', array_map(fn($w) => $w[0], $words)));
 $initials = substr($initials, 0, 2);
 ?>
 
 <style>
     :root {
-        --sb-w:      240px;
-        --sb-bg:     #0d0f16;
-        --sb-border: rgba(255,255,255,0.06);
-        --sb-hover:  rgba(255,255,255,0.05);
-        --sb-active: rgba(232,23,93,0.18);
-        --sb-text:   #7a8499;
-        --sb-text-on:#ffffff;
-        --pink:      #e8175d;
+        --sb-w: 240px;
+        --sb-bg: #0d0f16;
+        --sb-border: rgba(255, 255, 255, 0.06);
+        --sb-hover: rgba(255, 255, 255, 0.05);
+        --sb-active: rgba(232, 23, 93, 0.18);
+        --sb-text: #7a8499;
+        --sb-text-on: #ffffff;
+        --pink: #e8175d;
     }
 
     .sidebar {
         position: fixed;
-        top: 0; left: 0;
+        top: 0;
+        left: 0;
         width: var(--sb-w);
         height: 100vh;
         background: var(--sb-bg);
@@ -39,7 +40,9 @@ $initials = substr($initials, 0, 2);
     .sidebar::before {
         content: '';
         position: absolute;
-        top: 0; left: 0; right: 0;
+        top: 0;
+        left: 0;
+        right: 0;
         height: 2px;
         background: linear-gradient(90deg, var(--pink), transparent);
     }
@@ -54,19 +57,21 @@ $initials = substr($initials, 0, 2);
     }
 
     .sb-logo-mark {
-        width: 36px; height: 36px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        border: 1.5px solid rgba(255,255,255,0.3);
-        box-shadow: 0 0 8px rgba(232,23,93,0.4);
+        border: 1.5px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 8px rgba(232, 23, 93, 0.4);
     }
 
     .sb-brand-logo {
-        width: 100%; height: 100%;
+        width: 100%;
+        height: 100%;
         object-fit: cover;
         display: block;
     }
@@ -95,15 +100,22 @@ $initials = substr($initials, 0, 2);
         border-radius: 20px;
     }
 
-    .sb-role.owner   { background: rgba(232,23,93,.2);  color: #ff6b9d; }
-    .sb-role.manager { background: rgba(100,116,139,.2); color: #94a3b8; }
+    .sb-role.owner {
+        background: rgba(232, 23, 93, .2);
+        color: #ff6b9d;
+    }
+
+    .sb-role.manager {
+        background: rgba(100, 116, 139, .2);
+        color: #94a3b8;
+    }
 
     .sb-section {
         font-size: 0.6rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.7px;
-        color: rgba(122,132,153,0.5);
+        color: rgba(122, 132, 153, 0.5);
         padding: 14px 16px 4px;
     }
 
@@ -136,9 +148,11 @@ $initials = substr($initials, 0, 2);
     .sb-link.active::before {
         content: '';
         position: absolute;
-        left: -8px; top: 50%;
+        left: -8px;
+        top: 50%;
         transform: translateY(-50%);
-        width: 3px; height: 60%;
+        width: 3px;
+        height: 60%;
         background: var(--pink);
         border-radius: 0 2px 2px 0;
     }
@@ -158,30 +172,54 @@ $initials = substr($initials, 0, 2);
     }
 
     .sb-icon {
-        width: 30px; height: 30px;
+        width: 30px;
+        height: 30px;
         border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 0.9rem;
         flex-shrink: 0;
-        background: rgba(255,255,255,0.07);
+        background: rgba(255, 255, 255, 0.07);
         color: var(--sb-text);
         transition: background 0.15s;
     }
 
     .sb-link.active .sb-icon,
     .sb-link:hover .sb-icon {
-        background: rgba(232,23,93,0.25);
+        background: rgba(232, 23, 93, 0.25);
         color: #ff6b9d;
     }
 
-    .icon-pink   { background: linear-gradient(135deg,#e8175d,#9b0d43) !important; color:#fff !important; }
-    .icon-green  { background: linear-gradient(135deg,#10b981,#059669) !important; color:#fff !important; }
-    .icon-blue   { background: linear-gradient(135deg,#3b82f6,#1d4ed8) !important; color:#fff !important; }
-    .icon-orange { background: linear-gradient(135deg,#f97316,#dc2626) !important; color:#fff !important; }
-    .icon-teal   { background: linear-gradient(135deg,#06b6d4,#0891b2) !important; color:#fff !important; }
-    .icon-gray   { background: linear-gradient(135deg,#475569,#334155) !important; color:#fff !important; }
+    .icon-pink {
+        background: linear-gradient(135deg, #e8175d, #9b0d43) !important;
+        color: #fff !important;
+    }
+
+    .icon-green {
+        background: linear-gradient(135deg, #10b981, #059669) !important;
+        color: #fff !important;
+    }
+
+    .icon-blue {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+        color: #fff !important;
+    }
+
+    .icon-orange {
+        background: linear-gradient(135deg, #f97316, #dc2626) !important;
+        color: #fff !important;
+    }
+
+    .icon-teal {
+        background: linear-gradient(135deg, #06b6d4, #0891b2) !important;
+        color: #fff !important;
+    }
+
+    .icon-gray {
+        background: linear-gradient(135deg, #475569, #334155) !important;
+        color: #fff !important;
+    }
 
     .sb-divider {
         border: none;
@@ -191,7 +229,7 @@ $initials = substr($initials, 0, 2);
 
     .sb-badge {
         margin-left: auto;
-        background: rgba(232,23,93,0.25);
+        background: rgba(232, 23, 93, 0.25);
         color: #ff6b9d;
         font-size: 0.62rem;
         font-weight: 700;
@@ -211,7 +249,8 @@ $initials = substr($initials, 0, 2);
     }
 
     .sb-avatar {
-        width: 34px; height: 34px;
+        width: 34px;
+        height: 34px;
         border-radius: 10px;
         background: linear-gradient(135deg, var(--pink), #9b0d43);
         display: flex;
@@ -234,7 +273,10 @@ $initials = substr($initials, 0, 2);
         max-width: 130px;
     }
 
-    .sb-userrole { font-size: 0.66rem; color: var(--sb-text); }
+    .sb-userrole {
+        font-size: 0.66rem;
+        color: var(--sb-text);
+    }
 
     .sb-logout {
         margin-left: auto;
@@ -248,19 +290,21 @@ $initials = substr($initials, 0, 2);
     }
 
     .sb-logout:hover {
-        background: rgba(239,68,68,.2);
+        background: rgba(239, 68, 68, .2);
         color: #fca5a5;
     }
 
     .sb-toggle {
         display: none;
         position: fixed;
-        top: 12px; left: 12px;
+        top: 12px;
+        left: 12px;
         z-index: 1050;
         background: var(--sb-bg);
         border: 1px solid var(--sb-border);
         color: #fff;
-        width: 40px; height: 40px;
+        width: 40px;
+        height: 40px;
         border-radius: 10px;
         align-items: center;
         justify-content: center;
@@ -272,20 +316,34 @@ $initials = substr($initials, 0, 2);
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.6);
+        background: rgba(0, 0, 0, 0.6);
         z-index: 1039;
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s;
     }
 
-    .sb-overlay.open { opacity: 1; pointer-events: auto; }
+    .sb-overlay.open {
+        opacity: 1;
+        pointer-events: auto;
+    }
 
     @media (max-width: 768px) {
-        .sidebar { transform: translateX(-100%); }
-        .sidebar.open { transform: translateX(0); }
-        .sb-toggle { display: flex; }
-        .sb-overlay { display: block; }
+        .sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sb-toggle {
+            display: flex;
+        }
+
+        .sb-overlay {
+            display: block;
+        }
     }
 </style>
 
@@ -346,8 +404,9 @@ $initials = substr($initials, 0, 2);
             Expenses
             <?php
             if (isset($conn)) {
-                $expToday = (int)($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
-                if ($expToday > 0) echo "<span class='sb-badge'>{$expToday}</span>";
+                $expToday = (int) ($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
+                if ($expToday > 0)
+                    echo "<span class='sb-badge'>{$expToday}</span>";
             }
             ?>
         </a>
@@ -380,19 +439,19 @@ $initials = substr($initials, 0, 2);
 </aside>
 
 <script>
-(function () {
-    const toggle  = document.getElementById('sbToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sbOverlay');
+    (function () {
+        const toggle = document.getElementById('sbToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sbOverlay');
 
-    toggle?.addEventListener('click', function () {
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
-    });
+        toggle?.addEventListener('click', function () {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        });
 
-    overlay?.addEventListener('click', function () {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('open');
-    });
-})();
+        overlay?.addEventListener('click', function () {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        });
+    })();
 </script>

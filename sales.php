@@ -2,266 +2,371 @@
 session_start();
 require_once 'backend/db.php';
 
-if (!isset($_SESSION['user_id'])) { header("Location: login.php"); exit(); }
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 
-$activePage = 'sales_history';
-$isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
-$today      = date('Y-m-d');
+$activePage = 'sales';
+$today = date('Y-m-d');
 
-$stats = $conn->query("
-    SELECT
-        COUNT(*) AS total,
-        COALESCE(SUM(parts_total + labor_total), 0) AS all_time,
-        COALESCE(SUM(CASE WHEN sale_date = '$today' THEN parts_total + labor_total ELSE 0 END), 0) AS today_total,
-        COALESCE(SUM(CASE WHEN sale_date >= DATE_FORMAT(NOW(),'%Y-%m-01') THEN parts_total + labor_total ELSE 0 END), 0) AS month_total
-    FROM sales
-")->fetch_assoc();
-
-$salesRows = [];
-$r = $conn->query("SELECT id, sale_date, customer_name, plate_number, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
-if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
+// Fetch all products for the dropdown
+$products = [];
+$r = $conn->query("
+    SELECT p.product_id, p.code, p.description, p.unit, p.selling_price, ps.current_stock
+    FROM products p
+    LEFT JOIN product_stock ps ON p.product_id = ps.product_id
+    ORDER BY p.description ASC
+");
+if ($r)
+    while ($row = $r->fetch_assoc())
+        $products[] = $row;
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales History — Dispeedway</title>
+    <title>New Sale Dispeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
-    <link rel="stylesheet" href="assets/css/sales-history.css">
+    <link rel="stylesheet" href="assets/css/sales.css">
 </head>
+
 <body>
 
-<?php include 'sidebar.php'; ?>
+    <?php include 'sidebar.php'; ?>
 
-<main class="app-main">
+    <main class="app-main">
 
-    <div class="page-header mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div>
-                <h4 style="margin:0;"><i class="bi bi-clock-history me-2"></i>Sales History</h4>
-
-            </div>
-            <a href="sales.php" class="btn-pink"><i class="bi bi-plus-lg me-1"></i>New Sale</a>
-        </div>
-    </div>
-
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        <span class="summary-pill">Total: <strong><?= number_format($stats['total']) ?> sales</strong></span>
-        <span class="summary-pill">Today: <strong>₱<?= number_format($stats['today_total'], 0) ?></strong></span>
-        <span class="summary-pill">This Month: <strong>₱<?= number_format($stats['month_total'], 0) ?></strong></span>
-        <span class="summary-pill">All Time: <strong>₱<?= number_format($stats['all_time'], 0) ?></strong></span>
-    </div>
-
-
-    <div class="filter-bar">
-        <input type="text" id="searchInput" class="form-control" style="max-width:220px;" placeholder="Search customer or plate…">
-        <input type="date" id="dateTo"      class="form-control" style="max-width:150px;">
-        <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterTable()">
-            <i class="bi bi-search me-1"></i>Search
-        </button>
-        <button class="btn-ghost" style="font-size:.82rem;padding:7px 16px;" onclick="resetFilter()">Reset</button>
-        <?php if ($isOwner): ?>
-        <button class="btn-ghost ms-auto" style="font-size:.82rem;padding:7px 16px;" onclick="exportCSV()">
-            <i class="bi bi-download me-1"></i>Export CSV
-        </button>
-        <?php endif; ?>
-    </div>
-
-    <div class="card">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="data-table" id="salesTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Date</th>
-                            <th>Customer</th>
-                            <th>Plate</th>
-                            <th>Parts ₱</th>
-                            <th>Labor ₱</th>
-                            <th>Total ₱</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="salesBody">
-                    <?php if (empty($salesRows)): ?>
-                        <tr>
-                            <td colspan="8" style="text-align:center;padding:30px;color:#7a8499;">
-                                No sales yet. <a href="sales.php">Record one →</a>
-                            </td>
-                        </tr>
-                    <?php else: foreach ($salesRows as $s): ?>
-                        <tr
-                            data-id="<?= $s['id'] ?>"
-                            data-date="<?= $s['sale_date'] ?>"
-                            data-search="<?= strtolower(htmlspecialchars($s['customer_name'] . ' ' . $s['plate_number'])) ?>"
-                        >
-                            <td><span class="badge-gray"><?= $s['id'] ?></span></td>
-                            <td><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
-                            <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
-                            <td><?= htmlspecialchars($s['plate_number']  ?: '—') ?></td>
-                            <td style="color:#93c5fd;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?></td>
-                            <td style="color:#34d399;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?></td>
-                            <td><strong>₱<?= number_format($s['grand_total'], 2) ?></strong></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info" onclick="viewSale(<?= $s['id'] ?>)" title="View">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <?php if ($isOwner): ?>
-                                <button class="btn btn-sm btn-outline-danger ms-1"
-                                    onclick="deleteSale(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['customer_name'] ?: 'Sale #' . $s['id'])) ?>')"
-                                    title="Delete">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; endif; ?>
-                    </tbody>
-                </table>
+        <div class="page-header mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 style="margin:0;"><i class="bi bi-receipt me-2"></i>New Sale</h4>
+                    <p style="margin:0;">Record parts-only, labor-only, or combined transactions</p>
+                </div>
+                <a href="sales-history.php" class="btn-ghost" style="color:#fff;">
+                    <i class="bi bi-clock-history me-1"></i>Sales History
+                </a>
             </div>
         </div>
-    </div>
 
-</main>
-
-<!-- View Sale Modal -->
-<div class="modal fade" id="viewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content modal-dark" style="background:#1c2030;color:#e8ecf4;border:1px solid rgba(255,255,255,0.07);">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-receipt me-2"></i>Sale Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="saleDetailBody" style="background:#1c2030;color:#e8ecf4;">
-                <div style="text-align:center;padding:30px;">
-                    <div class="spinner-border" style="color:#e8175d;"></div>
+        <!-- Sale Header Info -->
+        <div class="sale-card mb-3">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" style="color:#7a8499;">Sale Date</label>
+                    <input type="date" class="form-control" id="saleDate" value="<?= $today ?>">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" style="color:#7a8499;">Customer Name</label>
+                    <input type="text" class="form-control" id="customerName" placeholder="Enter Customer Name">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" style="color:#7a8499;">Plate Number</label>
+                    <input type="text" class="form-control" id="plateNumber" placeholder="Enter Plate Number"
+                        style="text-transform:uppercase;">
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
-
-function filterTable() {
-    const q    = document.getElementById('searchInput').value.toLowerCase().trim();
-    const from = document.getElementById('dateFrom').value;
-    const to   = document.getElementById('dateTo').value;
-
-    document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
-        const d      = tr.dataset.date;
-        const matchQ = !q || tr.dataset.search.includes(q);
-        const matchD = (!from || d >= from) && (!to || d <= to);
-        tr.style.display = matchQ && matchD ? '' : 'none';
-    });
-}
-
-function resetFilter() {
-    ['searchInput','dateFrom','dateTo'].forEach(id => document.getElementById(id).value = '');
-    document.querySelectorAll('#salesBody tr').forEach(tr => tr.style.display = '');
-}
-
-document.getElementById('searchInput').addEventListener('input', filterTable);
-
-function exportCSV() {
-    const rows = [['ID','Date','Customer','Plate','Parts','Labor','Total']];
-    document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
-        if (tr.style.display === 'none') return;
-        const cells = tr.querySelectorAll('td');
-        rows.push([
-            cells[0].textContent.trim(),
-            cells[1].textContent.trim(),
-            cells[2].textContent.trim(),
-            cells[3].textContent.trim(),
-            cells[4].textContent.replace(/[₱,]/g,'').trim(),
-            cells[5].textContent.replace(/[₱,]/g,'').trim(),
-            cells[6].textContent.replace(/[₱,]/g,'').trim(),
-        ]);
-    });
-    const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const a   = document.createElement('a');
-    a.href     = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-    a.download = 'sales_' + new Date().toISOString().slice(0,10) + '.csv';
-    a.click();
-}
-
-async function viewSale(id) {
-    const body = document.getElementById('saleDetailBody');
-    body.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border" style="color:#e8175d;"></div></div>';
-    new bootstrap.Modal(document.getElementById('viewModal')).show();
-
-    const resp = await fetch(`backend/sales.php?action=detail&id=${id}`);
-    const data = await resp.json();
-
-    if (!data.success) {
-        body.innerHTML = `<p style="color:#fca5a5;text-align:center;">${data.message}</p>`;
-        return;
-    }
-
-    const s     = data.sale;
-    const total = parseFloat(s.parts_total) + parseFloat(s.labor_total);
-
-    body.innerHTML = `
-        <div class="row mb-3 g-2" style="color:#e8ecf4;">
-            <div class="col-sm-4"><strong style="color:#fff;">Date:</strong> ${s.sale_date}</div>
-            <div class="col-sm-4"><strong style="color:#fff;">Customer:</strong> ${s.customer_name || '—'}</div>
-            <div class="col-sm-4"><strong style="color:#fff;">Plate:</strong> ${s.plate_number || '—'}</div>
+        <!-- Parts Section -->
+        <div class="sale-card mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 style="margin:0;font-size:.9rem;color:#93c5fd;"><i class="bi bi-box-seam me-2"></i>Parts / Products
+                </h6>
+                <button type="button" class="btn-pink" style="font-size:.8rem;padding:7px 14px;"
+                    onclick="addPartsRow()">
+                    <i class="bi bi-plus-lg me-1"></i>Add Parts Row
+                </button>
+            </div>
+            <div id="partsContainer"></div>
+            <div id="noPartsMsg" style="text-align:center;color:#7a8499;padding:18px 0;font-size:.85rem;">
+                No parts added yet. Click <strong style="color:#e8ecf4;">Add Parts Row</strong> above.
+            </div>
         </div>
-        <div class="table-responsive">
-            <table class="data-table">
-                <thead>
-                    <tr><th>Type</th><th>Item</th><th>Qty</th><th>Unit Price</th><th>Amount</th></tr>
-                </thead>
-                <tbody>
-                    ${data.items.map(i => `<tr>
-                        <td><span class="${i.line_type === 'parts' ? 'badge-blue' : 'badge-green'}">${i.line_type}</span></td>
-                        <td style="color:#e8ecf4;">${i.description || '—'}</td>
-                        <td style="color:#e8ecf4;">${i.quantity}</td>
-                        <td style="color:#e8ecf4;">₱${parseFloat(i.unit_price).toFixed(2)}</td>
-                        <td style="color:#e8ecf4;">₱${parseFloat(i.amount).toFixed(2)}</td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>
+
+        <!-- Labor Section -->
+        <div class="sale-card mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 style="margin:0;font-size:.9rem;color:#34d399;"><i class="bi bi-wrench-adjustable me-2"></i>Labor /
+                    Services</h6>
+                <button type="button" class="btn-pink"
+                    style="font-size:.8rem;padding:7px 14px;background:linear-gradient(135deg,#10b981,#059669);"
+                    onclick="addLaborRow()">
+                    <i class="bi bi-plus-lg me-1"></i>Add Labor Row
+                </button>
+            </div>
+            <div id="laborContainer"></div>
+            <div id="noLaborMsg" style="text-align:center;color:#7a8499;padding:18px 0;font-size:.85rem;">
+                No labor added yet. Click <strong style="color:#e8ecf4;">Add Labor Row</strong> above.
+            </div>
         </div>
-        <div class="d-flex justify-content-end gap-4 mt-3" style="padding-top:12px;border-top:1px  rgba(73, 141, 214, 0.07);">
-            <span>Parts: <strong style="color:#93c5fd;">₱${parseFloat(s.parts_total).toFixed(2)}</strong></span>
-            <span>Labor: <strong style="color:#34d399;">₱${parseFloat(s.labor_total).toFixed(2)}</strong></span>
-            <span style="font-size:1.1rem;">TOTAL: <strong style="color:#e8175d;">₱${total.toFixed(2)}</strong></span>
-        </div>`;
-}
 
-async function deleteSale(id, name) {
-    const confirm = await Swal.fire({
-        title: 'Delete this sale?',
-        text: `"${name}" will be permanently removed.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        confirmButtonText: 'Delete',
-    });
-    if (!confirm.isConfirmed) return;
+        <!-- Totals Bar -->
+        <div class="sale-card mb-4">
+            <div class="totals-bar">
+                <div>
+                    <div class="lbl">Parts Total</div>
+                    <div class="val" id="partsTotal">₱0.00</div>
+                </div>
+                <div>
+                    <div class="lbl">Labor Total</div>
+                    <div class="val" style="color:#34d399;" id="laborTotal">₱0.00</div>
+                </div>
+                <div>
+                    <div class="lbl">Grand Total</div>
+                    <div class="val grand" id="grandTotal">₱0.00</div>
+                </div>
+                <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+                    <button type="button" class="btn-ghost" onclick="clearAll()" style="padding:10px 20px;">
+                        <i class="bi bi-trash me-1"></i>Clear
+                    </button>
+                    <button type="button" class="btn-pink" id="submitBtn" onclick="submitSale()"
+                        style="padding:10px 26px;font-size:.95rem;">
+                        <i class="bi bi-save me-1"></i>Save Sale
+                    </button>
+                </div>
+            </div>
+        </div>
 
-    const fd = new FormData();
-    fd.append('id', id);
-    const resp = await fetch('backend/sales.php?action=delete', { method: 'POST', body: fd });
-    const data = await resp.json();
+    </main>
 
-    if (data.success) {
-        document.querySelector(`#salesBody tr[data-id="${id}"]`)?.remove();
-        Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
-    } else {
-        Swal.fire({ icon: 'error', title: 'Error', text: data.message });
-    }
-}
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        'use strict';
+        const PRODUCTS = <?= json_encode($products) ?>;
+
+        let partsRows = [];
+        let laborRows = [];
+        let rowCounter = 0;
+
+        function peso(n) {
+            return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function buildProductOptions(selectedId) {
+            let opts = '<option value="">— Select Product —</option>';
+            PRODUCTS.forEach(p => {
+                const sel = String(p.product_id) === String(selectedId) ? 'selected' : '';
+                opts += `<option value="${p.product_id}" data-price="${p.selling_price}" data-stock="${p.current_stock}" ${sel}>${p.description} (${p.code}) — Stock: ${p.current_stock ?? 0}</option>`;
+            });
+            return opts;
+        }
+
+        function renderParts() {
+            const c = document.getElementById('partsContainer');
+            const nm = document.getElementById('noPartsMsg');
+            if (!partsRows.length) { c.innerHTML = ''; nm.style.display = ''; recalc(); return; }
+            nm.style.display = 'none';
+            c.innerHTML = partsRows.map((row, idx) => `
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label class="form-label" style="color:#7a8499;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Product</label>
+                    <select class="form-select" onchange="onProductChange(${idx},this)" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8ecf4;border-radius:8px;">
+                        ${buildProductOptions(row.product_id)}
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label" style="color:#7a8499;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Qty</label>
+                    <input type="number" class="form-control" min="1" value="${row.qty}"
+                        oninput="updateParts(${idx},'qty',this.value)"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8ecf4;border-radius:8px;">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label" style="color:#7a8499;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Unit Price (₱)</label>
+                    <input type="number" class="form-control" min="0" step="0.01" value="${row.unit_price}"
+                        oninput="updateParts(${idx},'unit_price',this.value)"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8ecf4;border-radius:8px;">
+                </div>
+                <div class="col-12 col-md-2 d-flex align-items-end justify-content-between">
+                    <div style="font-size:.82rem;color:#93c5fd;font-weight:700;">${peso(row.qty * row.unit_price)}</div>
+                    <button type="button" class="btn-remove" onclick="removePartsRow(${idx})"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+            recalc();
+        }
+
+        function renderLabor() {
+            const c = document.getElementById('laborContainer');
+            const nm = document.getElementById('noLaborMsg');
+            if (!laborRows.length) { c.innerHTML = ''; nm.style.display = ''; recalc(); return; }
+            nm.style.display = 'none';
+            c.innerHTML = laborRows.map((row, idx) => `
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-7">
+                    <label class="form-label" style="color:#7a8499;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Service Description</label>
+                    <input type="text" class="form-control" value="${escAttr(row.description)}"
+                        placeholder="e.g. Oil Change Service"
+                        oninput="updateLabor(${idx},'description',this.value)"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8ecf4;border-radius:8px;">
+                </div>
+                <div class="col-8 col-md-3">
+                    <label class="form-label" style="color:#7a8499;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Amount (₱)</label>
+                    <input type="number" class="form-control" min="0" step="0.01" value="${row.amount}"
+                        oninput="updateLabor(${idx},'amount',this.value)"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#e8ecf4;border-radius:8px;">
+                </div>
+                <div class="col-4 col-md-2 d-flex align-items-end justify-content-end">
+                    <button type="button" class="btn-remove" onclick="removeLaborRow(${idx})"><i class="bi bi-x-lg"></i></button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+            recalc();
+        }
+
+        function escAttr(s) { return (s || '').replace(/"/g, '&quot;'); }
+
+        function addPartsRow() { partsRows.push({ id: ++rowCounter, product_id: '', qty: 1, unit_price: 0 }); renderParts(); }
+        function addLaborRow() { laborRows.push({ id: ++rowCounter, description: '', amount: 0 }); renderLabor(); }
+        function removePartsRow(idx) { partsRows.splice(idx, 1); renderParts(); }
+        function removeLaborRow(idx) { laborRows.splice(idx, 1); renderLabor(); }
+
+        function onProductChange(idx, sel) {
+            const opt = sel.options[sel.selectedIndex];
+            partsRows[idx].product_id = sel.value;
+            partsRows[idx].unit_price = parseFloat(opt.dataset.price || 0);
+            renderParts();
+        }
+
+        function updateParts(idx, field, val) {
+            partsRows[idx][field] = field === 'qty' ? Math.max(1, parseInt(val) || 1) : parseFloat(val) || 0;
+            recalc();
+            // update amount display inline without full re-render
+            document.querySelectorAll('#partsContainer > div')[idx]
+                ?.querySelectorAll('[style*="93c5fd"]')[0]
+                ?.let?.(() => { })
+            renderParts();
+        }
+
+        function updateLabor(idx, field, val) {
+            laborRows[idx][field] = field === 'amount' ? parseFloat(val) || 0 : val;
+            recalc();
+        }
+
+        function recalc() {
+            const ps = partsRows.reduce((s, r) => s + r.qty * r.unit_price, 0);
+            const ls = laborRows.reduce((s, r) => s + r.amount, 0);
+            document.getElementById('partsTotal').textContent = peso(ps);
+            document.getElementById('laborTotal').textContent = peso(ls);
+            document.getElementById('grandTotal').textContent = peso(ps + ls);
+        }
+
+        function clearAll() {
+            partsRows = []; laborRows = [];
+            renderParts(); renderLabor();
+            document.getElementById('customerName').value = '';
+            document.getElementById('plateNumber').value = '';
+            document.getElementById('saleDate').value = '<?= $today ?>';
+            recalc();
+        }
+
+        async function submitSale() {
+            if (!partsRows.length && !laborRows.length) {
+                Swal.fire({ icon: 'warning', title: 'Nothing to save', text: 'Add at least one parts or labor row.' });
+                return;
+            }
+
+            // Only validate parts rows if there are any
+            for (let i = 0; i < partsRows.length; i++) {
+                if (!partsRows[i].product_id) {
+                    Swal.fire({ icon: 'warning', title: 'Incomplete', text: `Parts row ${i + 1}: Please select a product.` });
+                    return;
+                }
+                if (partsRows[i].qty <= 0) {
+                    Swal.fire({ icon: 'warning', title: 'Invalid quantity', text: `Parts row ${i + 1}: Quantity must be at least 1.` });
+                    return;
+                }
+            }
+
+            // Only validate labor rows if there are any
+            for (let i = 0; i < laborRows.length; i++) {
+                if (!laborRows[i].description.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'Incomplete', text: `Labor row ${i + 1}: Please enter a service description.` });
+                    return;
+                }
+                if (laborRows[i].amount <= 0) {
+                    Swal.fire({ icon: 'warning', title: 'Invalid amount', text: `Labor row ${i + 1}: Amount must be greater than 0.` });
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving…';
+
+            const items = [
+                ...partsRows.map(r => ({
+                    type: 'parts',
+                    product_id: parseInt(r.product_id),
+                    description: PRODUCTS.find(p => String(p.product_id) === String(r.product_id))?.description || '',
+                    quantity: r.qty,
+                    unit_price: r.unit_price,
+                    amount: r.qty * r.unit_price,
+                })),
+                ...laborRows.map(r => ({
+                    type: 'labor',
+                    product_id: null,
+                    description: r.description.trim(),
+                    quantity: 1,
+                    unit_price: r.amount,
+                    amount: r.amount,
+                })),
+            ];
+
+            const payload = {
+                sale_date: document.getElementById('saleDate').value,
+                customer_name: document.getElementById('customerName').value.trim(),
+                plate_number: document.getElementById('plateNumber').value.trim().toUpperCase(),
+                items,
+            };
+
+            try {
+                const resp = await fetch('backend/sales.php?action=save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    const lowItems = (data.stock_summary || []).filter(s => s.low_stock);
+                    let html = `Sale #${data.sale_id} recorded successfully.`;
+                    if (lowItems.length) {
+                        html += '<br><small style="color:#f59e0b;">⚠ Low stock: ' +
+                            lowItems.map(s => `${s.description} (${s.stock_left} left)`).join(', ') + '</small>';
+                    }
+                    await Swal.fire({
+                        icon: 'success', title: 'Sale Saved!', html,
+                        confirmButtonText: 'View History',
+                        showCancelButton: true, cancelButtonText: 'New Sale',
+                    }).then(r => r.isConfirmed ? (window.location.href = 'sales-history.php') : clearAll());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Save Failed', text: data.message });
+                }
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Network Error', text: err.message });
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-save me-1"></i>Save Sale';
+            }
+        }
+
+        // Start clean — user picks what they need
+        renderParts();
+        renderLabor();
+    </script>
 </body>
+
 </html>

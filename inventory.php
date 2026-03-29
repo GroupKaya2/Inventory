@@ -15,7 +15,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory — Dspeedway</title>
+    <title>Inventory Dspeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -48,7 +48,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
             </button>
         </li>
         <li class="nav-item">
-            <!-- Fixed: removed duplicate id attribute -->
+            <!--removed duplicate id attribute -->
             <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-reorder" id="tab-reorder-btn">
                 <i class="bi bi-arrow-repeat me-1"></i>Reorder
             </button>
@@ -307,6 +307,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                         <div class="col-md-4">
                             <label class="form-label">Reorder Threshold</label>
                             <input type="number" class="form-input" id="editThresh" min="0">
+                            
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Margin</label>
@@ -315,7 +316,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn-pink" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn-pink" id="submitEdit">Update Product</button>
                 </div>
             </div>

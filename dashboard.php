@@ -284,16 +284,17 @@ $jsProducts = json_encode($topProducts);
         </div>
     </div>
 
-    <!-- Bottom Row: Recent Sales + Low Stock -->
+    <!--Recent Sales + Low Stock -->
     <div class="row g-3">
 
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body p-0">
-                    <div class="p-3 border-bottom" style="border-color:rgba(255,255,255,.07) !important;">
+                    <div class="p-3 border-bottom" style="border-color:rgba(241, 235, 235, 0.07) !important;">
                         <h6 style="margin:0;font-size:.88rem;">
-                            <i class="bi bi-receipt me-2" style="color:#e8175d;"></i>Recent Transactions
+                            <i class="bi bi-receipt me-2" style="color:#fff;"></i>Recent Transactions
                         </h6>
+
                     </div>
                     <div class="table-responsive">
                         <table class="data-table">
