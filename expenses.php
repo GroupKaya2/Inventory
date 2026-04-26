@@ -139,11 +139,12 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
                 <div class="ms-auto d-flex gap-2 flex-wrap">
                     <input type="text" id="expSearch" placeholder="Search…"
                         style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
-                    <select id="expCatFilter">
-                    <option value="" selected disabled hidden>All Categories</option>
-                    <?php foreach ($categories as $c): ?>
-                    <option value="<?= $c ?>"><?= $c ?></option>
-                    <?php endforeach; ?>
+                    <select id="expCatFilter"
+                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
+                        <option value="">All Categories</option>
+                        <?php foreach ($categories as $c): ?>
+                        <option><?= $c ?></option>
+                        <?php endforeach; ?>
                     </select>
                     <button class="btn-ghost" style="font-size:.8rem;padding:6px 14px;" onclick="exportCSV()">
                         <i class="bi bi-download me-1"></i>CSV

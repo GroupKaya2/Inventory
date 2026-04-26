@@ -30,20 +30,4 @@
     box-shadow: 0 0 0 3px rgba(232,23,93,.12);
     background: rgba(255,255,255,.09);
     color: #fff;
-
-}
-
-#expCatFilter {
-    color: #e8ecf4 !important;
-    background: #1c2030;
-}
-
-#expCatFilter option {
-    color: #000; 
-    background: #fff;
-}
-
-.modal-content {
-    background: #1c2030 !important;
-    color: #e8ecf4 !important;
 }
