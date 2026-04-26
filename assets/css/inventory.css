@@ -50,6 +50,10 @@
     border: none;
 }
 
+.modal-content {
+    background: #1c2030;
+}
+
 .inv-tabs .nav-link:hover {
     color: #e8ecf4;
 }
