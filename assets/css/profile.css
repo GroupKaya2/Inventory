@@ -1,0 +1,235 @@
+.settings-layout {
+    display: flex;
+    gap: 20px;
+    max-width: 1060px;
+}
+
+.settings-nav {
+    width: 220px;
+    flex-shrink: 0;
+}
+
+.settings-nav .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    background: none;
+    color: #808080;
+    font-size: .85rem;
+    font-weight: 500;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    margin-bottom: 2px;
+}
+
+.settings-nav .nav-btn:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #e8ecf4;
+}
+
+.settings-nav .nav-btn.active {
+    background: rgba(232, 23, 93, .18);
+    color: #fff;
+}
+
+.settings-nav .nav-btn i {
+    width: 20px;
+    text-align: center;
+}
+
+.nav-section-label {
+    font-size: .6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .7px;
+    color: rgba(122, 132, 153, .5);
+    padding: 12px 14px 4px;
+}
+
+.settings-content {
+    flex: 1;
+}
+
+.settings-panel {
+    display: none;
+}
+
+.settings-panel.active {
+    display: block;
+}
+
+.profile-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #e8175d, #9b0d43);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 6px 20px rgba(232, 23, 93, .35);
+    position: relative;
+}
+
+.profile-avatar .online-dot {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #10b981;
+    border: 3px solid #1c2030;
+}
+
+.user-card {
+    background: rgba(255, 255, 255, .03);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    transition: border-color .15s;
+}
+
+.user-card:hover {
+    border-color: rgba(232, 23, 93, .25);
+}
+
+.user-card .avatar-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: .88rem;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.user-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+
+.btn-edit-user {
+    background: rgba(59, 130, 246, .15);
+    border: 1px solid rgba(59, 130, 246, .3);
+    color: #93c5fd;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.btn-edit-user:hover {
+    background: rgba(59, 130, 246, .3);
+    color: #fff;
+}
+
+.btn-del-user {
+    background: rgba(239, 68, 68, .15);
+    border: 1px solid rgba(239, 68, 68, .3);
+    color: #fca5a5;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.btn-del-user:hover {
+    background: rgba(239, 68, 68, .3);
+    color: #fff;
+}
+
+.toggle-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+}
+
+.toggle-wrap:last-child {
+    border-bottom: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    display: none;
+}
+
+.toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, .15);
+    border-radius: 24px;
+    cursor: pointer;
+    transition: .3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 3px;
+    bottom: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: .3s;
+}
+
+input:checked+.toggle-slider {
+    background: #e8175d;
+}
+
+input:checked+.toggle-slider::before {
+    transform: translateX(20px);
+}
+
+@media (max-width: 768px) {
+    .settings-layout {
+        flex-direction: column;
+    }
+
+    .settings-nav {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .settings-nav .nav-btn {
+        width: auto;
+    }
+
+    .nav-section-label {
+        display: none;
+    }
+}
