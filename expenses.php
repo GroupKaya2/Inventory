@@ -140,7 +140,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
                     <input type="text" id="expSearch" placeholder="Search…"
                         style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
                     <select id="expCatFilter">
-                    <option value="" selected disabled hidden>All Categories</option>
+                    <option value="">All Categories</option>
 
                    <?php foreach ($categories as $c): ?>
                    <option value="<?= $c ?>"><?= $c ?></option>
