@@ -71,7 +71,7 @@ if ($ls) while ($row = $ls->fetch_assoc()) $lowStockItems[] = $row;
 // Recent Sales
 $recentSales = [];
 $rs = $conn->query("
-    SELECT id, sale_date, customer_name, plate_number,
+    SELECT id, sale_date, customer_name, mode_of_payment,
         parts_total, labor_total,
         (parts_total + labor_total) AS grand_total
     FROM sales
@@ -121,12 +121,12 @@ if ($tp) while ($row = $tp->fetch_assoc()) $topProducts[] = $row;
 // Top 5 Customers
 $topCustomers = [];
 $tc = $conn->query("
-    SELECT customer_name, plate_number,
+    SELECT customer_name, mode_of_payment,
         COUNT(*) AS visits,
         SUM(parts_total + labor_total) AS total_spend
     FROM sales
     WHERE customer_name != ''
-    GROUP BY customer_name, plate_number
+    GROUP BY customer_name, mode_of_payment
     ORDER BY total_spend DESC
     LIMIT 5
 ");
@@ -140,7 +140,7 @@ $jsProducts = json_encode($topProducts);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DSPEEDWAY</title>
+    <title>D SPEEDWAY</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -286,13 +286,12 @@ $jsProducts = json_encode($topProducts);
 
     <!--Recent Sales + Low Stock -->
     <div class="row g-3">
-
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body p-0">
                     <div class="p-3 border-bottom" style="border-color:rgba(241, 235, 235, 0.07) !important;">
                         <h6 style="margin:0;font-size:.88rem;">
-                            <i class="bi bi-receipt me-2" style="color:#fff;"></i>Recent Transactions
+                            <i class="bi bi-receipt me-2" style="color:#fff;"> Recent Transactions </i>
                         </h6>
 
                     </div>
@@ -303,7 +302,7 @@ $jsProducts = json_encode($topProducts);
                                     <th>#</th>
                                     <th>Date</th>
                                     <th>Customer</th>
-                                    <th>Plate</th>
+                                    <th>Mode of Payment</th>
                                     <th>Parts ₱</th>
                                     <th>Labor ₱</th>
                                     <th>Total ₱</th>
@@ -321,7 +320,7 @@ $jsProducts = json_encode($topProducts);
                                         <td><span class="badge-gray"><?= $s['id'] ?></span></td>
                                         <td><?= date('M d', strtotime($s['sale_date'])) ?></td>
                                         <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
-                                        <td><?= htmlspecialchars($s['plate_number']  ?: '—') ?></td>
+                                        <td><?= htmlspecialchars($s['mode_of_payment']  ?: '—') ?></td>
                                         <td style="color:#93c5fd;font-weight:600;">₱<?= number_format($s['parts_total'], 0) ?></td>
                                         <td style="color:#34d399;font-weight:600;">₱<?= number_format($s['labor_total'], 0) ?></td>
                                         <td><strong>₱<?= number_format($s['grand_total'], 0) ?></strong></td>

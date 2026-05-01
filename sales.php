@@ -28,7 +28,7 @@ if ($r)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Sale Dispeedway</title>
+    <title>New Sale DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -61,7 +61,7 @@ if ($r)
         <div class="sale-card mb-3">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label" style="color:#7a8499;">Sale Date</label>
+                    <label class="form-label" style="color:#7a8499;">Sales Date</label>
                     <input type="date" class="form-control" id="saleDate" value="<?= $today ?>">
                 </div>
                 <div class="col-md-4">
@@ -69,26 +69,28 @@ if ($r)
                     <input type="text" class="form-control" id="customerName" placeholder="Enter Customer Name">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label" style="color:#7a8499;">Plate Number</label>
-                    <input type="text" class="form-control" id="plateNumber" placeholder="Enter Plate Number"
-                        style="text-transform:uppercase;">
+                    <label class="form-label" style="color:#7a8499;">Mode of Payment</label>
+                    <select class="form-control" id="modeofPayment" name="modeofpayment">
+                        <option value="cash">Cash</option>
+                        <option value="gcash">Gcash</option>
+                    </select>
                 </div>
             </div>
         </div>
 
-        <!-- Parts Section -->
+        <!-- Parts / Products Section -->
         <div class="sale-card mb-3">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 style="margin:0;font-size:.9rem;color:#93c5fd;"><i class="bi bi-box-seam me-2"></i>Parts / Products
                 </h6>
                 <button type="button" class="btn-pink" style="font-size:.8rem;padding:7px 14px;"
                     onclick="addPartsRow()">
-                    <i class="bi bi-plus-lg me-1"></i>Add Parts Row
+                    <i class="bi bi-plus-lg me-1"></i>Add Parts / Products
                 </button>
             </div>
             <div id="partsContainer"></div>
             <div id="noPartsMsg" style="text-align:center;color:#7a8499;padding:18px 0;font-size:.85rem;">
-                No parts added yet. Click <strong style="color:#e8ecf4;">Add Parts Row</strong> above.
+                No parts added yet. Click <strong style="color:#e8ecf4;">Add Parts / Products</strong> above.
             </div>
         </div>
 
@@ -100,12 +102,12 @@ if ($r)
                 <button type="button" class="btn-pink"
                     style="font-size:.8rem;padding:7px 14px;background:linear-gradient(135deg,#10b981,#059669);"
                     onclick="addLaborRow()">
-                    <i class="bi bi-plus-lg me-1"></i>Add Labor Row
+                    <i class="bi bi-plus-lg me-1"></i>Add Labor / Services
                 </button>
             </div>
             <div id="laborContainer"></div>
             <div id="noLaborMsg" style="text-align:center;color:#7a8499;padding:18px 0;font-size:.85rem;">
-                No labor added yet. Click <strong style="color:#e8ecf4;">Add Labor Row</strong> above.
+                No labor added yet. Click <strong style="color:#e8ecf4;">Add Labor / Services</strong> above.
             </div>
         </div>
 
@@ -267,7 +269,7 @@ if ($r)
             partsRows = []; laborRows = [];
             renderParts(); renderLabor();
             document.getElementById('customerName').value = '';
-            document.getElementById('plateNumber').value = '';
+            document.getElementById('modeofPayment').value = '';
             document.getElementById('saleDate').value = '<?= $today ?>';
             recalc();
         }
@@ -304,7 +306,7 @@ if ($r)
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving…';
+            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Saving...';
 
             const items = [
                 ...partsRows.map(r => ({
@@ -328,7 +330,7 @@ if ($r)
             const payload = {
                 sale_date: document.getElementById('saleDate').value,
                 customer_name: document.getElementById('customerName').value.trim(),
-                plate_number: document.getElementById('plateNumber').value.trim().toUpperCase(),
+                mode_of_payment: document.getElementById('modeofPayment').value.trim().toUpperCase(),
                 items,
             };
 

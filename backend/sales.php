@@ -23,7 +23,7 @@ if ($action === 'save') {
 
     $saleDate = trim($input['sale_date'] ?? date('Y-m-d'));
     $custName = trim($input['customer_name'] ?? '');
-    $plateNum = trim($input['plate_number'] ?? '');
+    $modeofPayment = trim($input['mode_of_payment'] ?? '');
     $items = $input['items'] ?? [];
 
     if (empty($items)) {
@@ -46,10 +46,10 @@ if ($action === 'save') {
     try {
         // Insert sale header
         $stmt = $conn->prepare(
-            "INSERT INTO sales (sale_date, customer_name, plate_number, parts_total, labor_total, created_by)
+            "INSERT INTO sales (sale_date, customer_name, mode_of_payment, parts_total, labor_total, created_by)
                 VALUES (?, ?, ?, ?, ?, ?)"
         );
-        $stmt->bind_param('sssddi', $saleDate, $custName, $plateNum, $partsTotal, $laborTotal, $userId);
+        $stmt->bind_param('sssddi', $saleDate, $custName, $modeofPayment, $partsTotal, $laborTotal, $userId);
         $stmt->execute();
         $saleId = $conn->insert_id;
         $stmt->close();
@@ -119,7 +119,7 @@ if ($action === 'save') {
     exit;
 }
 
-// GET sale detaik
+// GET sale detail
 if ($action === 'detail') {
     $id = (int) ($_GET['id'] ?? 0);
     if ($id <= 0) {

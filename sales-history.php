@@ -21,7 +21,7 @@ $stats = $conn->query("
 ")->fetch_assoc();
 
 $salesRows = [];
-$r = $conn->query("SELECT id, sale_date, customer_name, plate_number, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
+$r = $conn->query("SELECT id, sale_date, customer_name, mode_of_payment, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
 if ($r)
     while ($row = $r->fetch_assoc())
         $salesRows[] = $row;
@@ -32,7 +32,7 @@ if ($r)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sales History Dispeedway</title>
+    <title>Sales History DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -92,7 +92,7 @@ if ($r)
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Customer</th>
-                                <th>Plate</th>
+                                <th>Mode of Payment</th>
                                 <th>Parts ₱</th>
                                 <th>Labor ₱</th>
                                 <th>Total ₱</th>
@@ -113,7 +113,7 @@ if ($r)
                                         <td><span class="badge-gray"><?= $s['id'] ?></span></td>
                                         <td><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
                                         <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
-                                        <td><?= htmlspecialchars($s['plate_number'] ?: '—') ?></td>
+                                        <td><?= htmlspecialchars($s['mode_of_payment'] ?: '—') ?></td>
                                         <td style="color:#93c5fd;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?>
                                         </td>
                                         <td style="color:#34d399;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?>
