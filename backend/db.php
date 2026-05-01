@@ -1,5 +1,5 @@
 <?php
-$conn = new mysqli("localhost", "root", "", "login_system");
+$conn = new mysqli("localhost", "root", "", "inventory_db");
 
 if ($conn->connect_error) {
     $is_api = (strpos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false)
