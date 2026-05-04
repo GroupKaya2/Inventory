@@ -20,38 +20,26 @@ $stats = $conn->query("
     FROM sales
 ")->fetch_assoc();
 
-// Include payment_method — falls back to 'cash' if column doesn't exist yet
 $hasPayCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'payment_method'")->num_rows > 0;
 $paySelect = $hasPayCol ? ", payment_method" : ", 'cash' AS payment_method";
 
 $salesRows = [];
-<<<<<<< HEAD
 $r = $conn->query("
     SELECT id, sale_date, customer_name, plate_number,
-           parts_total, labor_total,
-           (parts_total + labor_total) AS grand_total
-           $paySelect
+            parts_total, labor_total,
+            (parts_total + labor_total) AS grand_total
+            $paySelect
     FROM sales
     ORDER BY sale_date DESC, id DESC
 ");
 if ($r) while ($row = $r->fetch_assoc()) $salesRows[] = $row;
-=======
-$r = $conn->query("SELECT id, sale_date, customer_name, mode_of_payment, parts_total, labor_total, (parts_total + labor_total) AS grand_total FROM sales ORDER BY sale_date DESC, id DESC");
-if ($r)
-    while ($row = $r->fetch_assoc())
-        $salesRows[] = $row;
->>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
-    <title>Sales History — Dispeedway</title>
-=======
-    <title>Sales History DSpeedway</title>
->>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
+    <title>Sales History — DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -60,7 +48,6 @@ if ($r)
     <link rel="stylesheet" href="assets/css/app.css">
     <link rel="stylesheet" href="assets/css/sales-history.css">
     <style>
-        /* Payment badges */
         .pay-cash {
             display:inline-flex;align-items:center;gap:4px;
             background:rgba(16,185,129,.15);color:#34d399;
@@ -104,7 +91,6 @@ if ($r)
             placeholder="Search customer or plate…">
         <input type="date" id="dateFrom" class="form-control" style="max-width:150px;">
         <input type="date" id="dateTo"   class="form-control" style="max-width:150px;">
-        <!-- Payment filter -->
         <select id="payFilter" class="form-control" style="max-width:130px;">
             <option value="">All Payments</option>
             <option value="cash">💵 Cash</option>
@@ -141,7 +127,6 @@ if ($r)
                     <tbody id="salesBody">
                         <?php if (empty($salesRows)): ?>
                             <tr>
-<<<<<<< HEAD
                                 <td colspan="9" style="text-align:center;padding:30px;color:#7a8499;">
                                     No sales yet. <a href="sales.php">Record one →</a>
                                 </td>
@@ -185,75 +170,6 @@ if ($r)
                         <?php endforeach; endif; ?>
                     </tbody>
                 </table>
-=======
-                                <th>#</th>
-                                <th>Date</th>
-                                <th>Customer</th>
-                                <th>Mode of Payment</th>
-                                <th>Parts ₱</th>
-                                <th>Labor ₱</th>
-                                <th>Total ₱</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="salesBody">
-                            <?php if (empty($salesRows)): ?>
-                                <tr>
-                                    <td colspan="8" style="text-align:center;padding:30px;color:#7a8499;">
-                                        No sales yet. <a href="sales.php">Record one →</a>
-                                    </td>
-                                </tr>
-                            <?php else:
-                                foreach ($salesRows as $s): ?>
-                                    <tr data-id="<?= $s['id'] ?>" data-date="<?= $s['sale_date'] ?>"
-                                        data-search="<?= strtolower(htmlspecialchars($s['customer_name'] . ' ' . $s['plate_number'])) ?>">
-                                        <td><span class="badge-gray"><?= $s['id'] ?></span></td>
-                                        <td><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
-                                        <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
-                                        <td><?= htmlspecialchars($s['mode_of_payment'] ?: '—') ?></td>
-                                        <td style="color:#93c5fd;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?>
-                                        </td>
-                                        <td style="color:#34d399;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?>
-                                        </td>
-                                        <td><strong>₱<?= number_format($s['grand_total'], 2) ?></strong></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-info" onclick="viewSale(<?= $s['id'] ?>)"
-                                                title="View">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            <?php if ($isOwner): ?>
-                                                <button class="btn btn-sm btn-outline-danger ms-1"
-                                                    onclick="deleteSale(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['customer_name'] ?: 'Sale #' . $s['id'])) ?>')"
-                                                    title="Delete">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- View Sale Modal -->
-    <div class="modal fade" id="viewModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content modal-dark" style="background:#fff;color:#111;border:1px solid #ddd;">
-                <div class="modal-header"
-                    style="background:linear-gradient(135deg,#e8175d,#b0134a);color:#fff;border:none;">
-                    <h5 class="modal-title" style="color:#fff;"><i class="bi bi-receipt me-2"></i>Sale Details</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="saleDetailBody" style="background:#fff;color:#111;">
-                    <div style="text-align:center;padding:30px;">
-                        <div class="spinner-border" style="color:#e8175d;"></div>
-                    </div>
-                </div>
->>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
             </div>
         </div>
     </div>
@@ -283,7 +199,6 @@ if ($r)
 <script>
 const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
-/* ── Filter ── */
 function filterTable() {
     const q    = document.getElementById('searchInput').value.toLowerCase().trim();
     const from = document.getElementById('dateFrom').value;
@@ -308,7 +223,6 @@ function resetFilter() {
 document.getElementById('searchInput').addEventListener('input', filterTable);
 document.getElementById('payFilter').addEventListener('change', filterTable);
 
-/* ── Export CSV ── */
 function exportCSV() {
     const rows = [['ID','Date','Customer','Plate','Parts','Labor','Total','Payment']];
     document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
@@ -322,7 +236,7 @@ function exportCSV() {
             cells[4].textContent.replace(/[₱,]/g,'').trim(),
             cells[5].textContent.replace(/[₱,]/g,'').trim(),
             cells[6].textContent.replace(/[₱,]/g,'').trim(),
-            cells[7].textContent.trim(),   // payment method
+            cells[7].textContent.trim(),
         ]);
     });
     const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -332,7 +246,6 @@ function exportCSV() {
     a.click();
 }
 
-/* ── View Sale Modal ── */
 async function viewSale(id) {
     const body = document.getElementById('saleDetailBody');
     body.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border" style="color:#e8175d;"></div></div>';
@@ -409,7 +322,6 @@ async function viewSale(id) {
         </div>`;
 }
 
-/* ── Delete Sale ── */
 async function deleteSale(id, name) {
     const confirm = await Swal.fire({
         title: 'Delete this sale?',

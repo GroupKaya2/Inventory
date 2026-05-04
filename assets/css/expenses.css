@@ -1,5 +1,3 @@
-
-
 .filter-bar {
     background: #161921;
     border: 1px solid rgba(255,255,255,.07);
@@ -21,10 +19,6 @@
     height: 38px;
     font-size: .82rem;
 }
-.modal-content {
-    background: #1c2030;
-}
-
 
 .modal-content {
     background: #1c2030;
@@ -39,20 +33,13 @@
     background: rgba(255,255,255,.09);
     color: #fff;
 }
-<<<<<<< HEAD
-=======
 
->>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
 #expCatFilter {
     color: #e8ecf4 !important;
     background: #1c2030;
 }
 
 #expCatFilter option {
-<<<<<<< HEAD
     color: #000;
-=======
-    color: #000; 
->>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
     background: #fff;
 }
