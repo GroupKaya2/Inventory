@@ -303,7 +303,7 @@ $initials = substr($initials, 0, 2);
 
 <!-- Add Manager Modal -->
 <div class="modal fade" id="addManagerModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog  modal-lg modal-dark">
         <div class="modal-content modal-dark">
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-person-plus me-2"></i>Add Manager</h5>

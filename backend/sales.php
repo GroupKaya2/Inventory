@@ -25,6 +25,7 @@ if ($action === 'save') {
         exit;
     }
 
+<<<<<<< HEAD
     $saleDate      = trim($input['sale_date']     ?? date('Y-m-d'));
     $custName      = trim($input['customer_name'] ?? '');
     $plateNum      = trim($input['plate_number']  ?? '');
@@ -38,6 +39,12 @@ if ($action === 'save') {
         echo json_encode(['success' => false, 'message' => 'The shop is closed on Sundays.']);
         exit;
     }
+=======
+    $saleDate = trim($input['sale_date'] ?? date('Y-m-d'));
+    $custName = trim($input['customer_name'] ?? '');
+    $modeofPayment = trim($input['mode_of_payment'] ?? '');
+    $items = $input['items'] ?? [];
+>>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
 
     if (empty($items)) {
         echo json_encode(['success' => false, 'message' => 'No items provided.']);
@@ -57,6 +64,7 @@ if ($action === 'save') {
     try {
         /* Insert sale header */
         $stmt = $conn->prepare(
+<<<<<<< HEAD
             "INSERT INTO sales
              (sale_date, customer_name, plate_number, parts_total, labor_total, payment_method, created_by)
              VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -65,6 +73,12 @@ if ($action === 'save') {
             $saleDate, $custName, $plateNum,
             $partsTotal, $laborTotal, $payMethod, $userId
         );
+=======
+            "INSERT INTO sales (sale_date, customer_name, mode_of_payment, parts_total, labor_total, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->bind_param('sssddi', $saleDate, $custName, $modeofPayment, $partsTotal, $laborTotal, $userId);
+>>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
         $stmt->execute();
         $saleId = $conn->insert_id;
         $stmt->close();
@@ -157,9 +171,13 @@ if ($action === 'save') {
     exit;
 }
 
+<<<<<<< HEAD
 /* ══════════════════════════════════════
    GET SALE DETAIL
 ══════════════════════════════════════ */
+=======
+// GET sale detail
+>>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
 if ($action === 'detail') {
     $id = (int) ($_GET['id'] ?? 0);
     if ($id <= 0) { echo json_encode(['success' => false, 'message' => 'Invalid ID']); exit; }

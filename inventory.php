@@ -15,7 +15,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Dspeedway</title>
+    <title>Inventory DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -76,7 +76,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     <div class="d-flex gap-2">
                         <?php if ($isOwner): ?>
                             <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addModal">
-                                <i class="bi bi-plus-lg"></i> Add Part
+                                <i class="bi bi-plus-lg"></i> Add New Product
                             </button>
                         <?php endif; ?>
                         <button class="btn-ghost" id="exportBtn">
@@ -100,7 +100,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                                     <th>Description / Code</th>
                                     <th>Unit</th>
                                     <th>Cost</th>
-                                    <th>Price</th>
+                                    <th>Selling Price</th>
                                     <th>Margin</th>
                                     <th>Stock</th>
                                     <th>Actions</th>

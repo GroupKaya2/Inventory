@@ -26,6 +26,10 @@
 }
 
 
+.modal-content {
+    background: #1c2030;
+}
+
 .filter-bar .form-control::placeholder { color: #7a8499; }
 
 .filter-bar .form-control:focus,
@@ -35,12 +39,20 @@
     background: rgba(255,255,255,.09);
     color: #fff;
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
 #expCatFilter {
     color: #e8ecf4 !important;
     background: #1c2030;
 }
 
 #expCatFilter option {
+<<<<<<< HEAD
     color: #000;
+=======
+    color: #000; 
+>>>>>>> 63a9ed1dafc12f5fbd1850415e3ff94240810ba7
     background: #fff;
 }

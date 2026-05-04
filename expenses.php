@@ -45,7 +45,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expenses — Dispeedway</title>
+    <title>Expenses — DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -67,7 +67,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
                 <h4 style="margin:0;"><i class="bi bi-wallet2 me-2"></i>Expenses Management</h4>
             </div>
             <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                <i class="bi bi-plus-lg me-1"></i>Add Expense
+                <i class="bi bi-plus-lg me-1"></i>Add Expenses
             </button>
         </div>
     </div>
@@ -99,7 +99,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
                 <div>
                     <div class="kpi-label">Records</div>
                     <div class="kpi-value"><?= $stats['count'] ?></div>
-                    <div class="kpi-sub">expense entries</div>
+                    <div class="kpi-sub">expenses entries</div>
                 </div>
             </div>
         </div>
@@ -135,17 +135,17 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
     <div class="card">
         <div class="card-body p-0">
             <div class="p-3 d-flex flex-wrap gap-2 align-items-center" style="border-bottom:1px solid rgba(255,255,255,.07);">
-                <h6 style="margin:0;font-size:.88rem;"><i class="bi bi-table me-2" style="color:#e8175d;"></i>All Expenses</h6>
+                <h6 style="margin:0;font-size:.88rem;"><i class="bi bi-table me-2" style="color:#fff;"> All Expenses </i></h6>
                 <div class="ms-auto d-flex gap-2 flex-wrap">
                     <input type="text" id="expSearch" placeholder="Search…"
                         style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
-                    <select id="expCatFilter"
-                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
-                        <option value="">All Categories</option>
-                        <?php foreach ($categories as $c): ?>
-                        <option><?= $c ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <select id="expCatFilter">
+                    <option value="">All Categories</option>
+
+                   <?php foreach ($categories as $c): ?>
+                   <option value="<?= $c ?>"><?= $c ?></option>
+                   <?php endforeach; ?>
+                   </select>
                     <button class="btn-ghost" style="font-size:.8rem;padding:6px 14px;" onclick="exportCSV()">
                         <i class="bi bi-download me-1"></i>CSV
                     </button>
@@ -200,12 +200,12 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
 
 </main>
 
-<!-- Add Expense Modal -->
+<!-- Add Expenses Modal -->
 <div class="modal fade" id="addExpenseModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog  modal-lg modal-dark">
         <div class="modal-content modal-dark">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add Expense</h5>
+                <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Add Expenses</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
