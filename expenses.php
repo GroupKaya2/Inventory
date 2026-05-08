@@ -47,7 +47,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expenses — DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -136,16 +136,17 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
         <div class="card-body p-0">
             <div class="p-3 d-flex flex-wrap gap-2 align-items-center" style="border-bottom:1px solid rgba(255,255,255,.07);">
                 <h6 style="margin:0;font-size:.88rem;"><i class="bi bi-table me-2" style="color:#fff;"> All Expenses </i></h6>
-                <div class="ms-auto d-flex gap-2 flex-wrap">
-                    <input type="text" id="expSearch" placeholder="Search…"
-                        style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#e8ecf4;border-radius:8px;padding:6px 12px;font-size:.82rem;max-width:160px;">
-                    <select id="expCatFilter">
-                    <option value="">All Categories</option>
-
-                   <?php foreach ($categories as $c): ?>
-                   <option value="<?= $c ?>"><?= $c ?></option>
-                   <?php endforeach; ?>
-                   </select>
+                <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+                    <input type="text" id="expSearch" placeholder="Search description, category…"
+                        style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);color:#e2e8f0;border-radius:8px;padding:6px 12px;font-size:.82rem;width:200px;outline:none;font-family:'Inter',sans-serif;"
+                        onfocus="this.style.borderColor='rgba(74,222,128,.35)'" onblur="this.style.borderColor='rgba(255,255,255,.09)'">
+                    <select id="expCatFilter"
+                        style="background:#161b27;border:1px solid rgba(255,255,255,.09);color:#e2e8f0;border-radius:8px;padding:6px 12px;font-size:.82rem;outline:none;font-family:'Inter',sans-serif;cursor:pointer;">
+                        <option value="">All Categories</option>
+                        <?php foreach ($categories as $c): ?>
+                        <option value="<?= $c ?>"><?= $c ?></option>
+                        <?php endforeach; ?>
+                    </select>
                     <button class="btn-ghost" style="font-size:.8rem;padding:6px 14px;" onclick="exportCSV()">
                         <i class="bi bi-download me-1"></i>CSV
                     </button>
@@ -173,7 +174,7 @@ $catColors  = ['Rent'=>'#e8175d','Salaries'=>'#8b5cf6','Utilities'=>'#3b82f6','S
                         $color = $catColors[$e['category']] ?? '#64748b';
                     ?>
                         <tr data-cat="<?= htmlspecialchars($e['category']) ?>"
-                            data-desc="<?= strtolower(htmlspecialchars($e['description'])) ?>">
+                            data-search="<?= strtolower(htmlspecialchars($e['description'] . ' ' . $e['category'] . ' ' . $e['expense_date'] . ' ' . ($e['creator'] ?? ''))) ?>">
                             <td><span class="badge-gray"><?= $e['id'] ?></span></td>
                             <td><?= date('M d, Y', strtotime($e['expense_date'])) ?></td>
                             <td>
@@ -289,11 +290,11 @@ if (CAT_DATA.length) {
 }
 
 function filterExp() {
-    const q   = document.getElementById('expSearch').value.toLowerCase();
+    const q   = document.getElementById('expSearch').value.toLowerCase().trim();
     const cat = document.getElementById('expCatFilter').value;
     document.querySelectorAll('#expBody tr[data-cat]').forEach(tr => {
         const matchCat  = !cat || tr.dataset.cat === cat;
-        const matchText = !q   || tr.dataset.desc.includes(q) || tr.dataset.cat.toLowerCase().includes(q);
+        const matchText = !q   || tr.dataset.search.includes(q);
         tr.style.display = matchCat && matchText ? '' : 'none';
     });
 }
