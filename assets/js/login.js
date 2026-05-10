@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Add loading state on form submit
     const form = document.querySelector('form');
-    const btn = document.querySelector('.btn-login');
+    const btn  = document.querySelector('.btn-login');
 
     if (form && btn) {
         form.addEventListener('submit', function () {

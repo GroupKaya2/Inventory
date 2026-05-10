@@ -346,7 +346,7 @@ document.getElementById('submitRestock')?.addEventListener('click', async () => 
     btn.textContent = 'Saving…';
 
     try {
-        const res = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
+        const res  = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
         const json = await res.json();
 
         if (json.success) {

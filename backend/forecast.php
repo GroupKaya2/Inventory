@@ -9,7 +9,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Check if required tables exist
-$salesExists = $conn->query("SHOW TABLES LIKE 'sales'")->num_rows > 0;
+$salesExists     = $conn->query("SHOW TABLES LIKE 'sales'")->num_rows > 0;
 $saleItemsExists = $conn->query("SHOW TABLES LIKE 'sale_items'")->num_rows > 0;
 
 // Per-product sales data (last 12 months)
@@ -34,9 +34,7 @@ if ($salesExists && $saleItemsExists) {
         GROUP BY si.product_id, si.description, p.code, c.category_name
         ORDER BY total_qty DESC
     ");
-    if ($r)
-        while ($row = $r->fetch_assoc())
-            $items[] = $row;
+    if ($r) while ($row = $r->fetch_assoc()) $items[] = $row;
 }
 
 // Monthly revenue totals (last 12 months)
@@ -55,14 +53,12 @@ if ($salesExists) {
         GROUP BY month_key, month_label
         ORDER BY month_key ASC
     ");
-    if ($r)
-        while ($row = $r->fetch_assoc())
-            $monthly[] = $row;
+    if ($r) while ($row = $r->fetch_assoc()) $monthly[] = $row;
 }
 
 echo json_encode([
     'success' => true,
-    'items' => $items,
+    'items'   => $items,
     'monthly' => $monthly,
 ]);
 $conn->close();

@@ -2,8 +2,8 @@
 session_start();
 require_once 'backend/db.php';
 
-$result = $conn->query("SELECT COUNT(*) AS cnt FROM users");
-$userCount = (int) ($result->fetch_assoc()['cnt'] ?? 0);
+$result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
+$userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
 
 $isOwner = isset($_SESSION['role']) && $_SESSION['role'] === 'owner';
 
@@ -13,39 +13,26 @@ if ($userCount > 0 && !$isOwner) {
     exit();
 }
 
-$error = $_SESSION['error'] ?? '';
+$error   = $_SESSION['error']   ?? '';
 $success = $_SESSION['success'] ?? '';
 unset($_SESSION['error'], $_SESSION['success']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up — Dispeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/login.css">
     <style>
-        .login-card {
-            height: auto;
-            min-height: 400px;
-        }
-
-        .card-left {
-            padding: 32px 36px;
-        }
-
-        .card-right .welcome-title {
-            font-size: 1.5rem;
-        }
+        .login-card { height: auto; min-height: 400px; }
+        .card-left  { padding: 32px 36px; }
+        .card-right .welcome-title { font-size: 1.5rem; }
     </style>
 </head>
-
 <body>
 
     <div class="page-wrap">

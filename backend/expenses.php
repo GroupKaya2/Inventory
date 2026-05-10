@@ -18,10 +18,10 @@ $userId = (int) $_SESSION['user_id'];
 
 // SAVE expense
 if ($action === 'save') {
-    $date = trim($_POST['expense_date'] ?? '');
-    $cat = trim($_POST['category'] ?? '');
-    $desc = trim($_POST['description'] ?? '');
-    $amount = (float) ($_POST['amount'] ?? 0);
+    $date   = trim($_POST['expense_date'] ?? '');
+    $cat    = trim($_POST['category']     ?? '');
+    $desc   = trim($_POST['description']  ?? '');
+    $amount = (float)($_POST['amount']    ?? 0);
 
     if (!$date || !$cat || !$desc || $amount <= 0) {
         echo json_encode(['success' => false, 'message' => 'All fields are required and amount must be > 0.']);
@@ -42,7 +42,7 @@ if ($action === 'save') {
 
 // DELETE expense
 if ($action === 'delete') {
-    $id = (int) ($_POST['id'] ?? 0);
+    $id = (int)($_POST['id'] ?? 0);
 
     if ($id <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
