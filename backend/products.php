@@ -12,13 +12,57 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
 $userId = (int) $_SESSION['user_id'];
 
-/* FETCH ALL PRODUCTS */
+/* ── Ensure inventory_transactions table exists ── */
+$conn->query("CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        transaction_date DATE NOT NULL,
+        quantity_change INT NOT NULL DEFAULT 0,
+        transaction_type ENUM('initial','restock','sale','adjustment') NOT NULL DEFAULT 'restock',
+        remarks VARCHAR(255) NULL,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX(product_id),
+        INDEX(transaction_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+function getCurrentStock($conn, $productId)
+{
+    // Try product_stock view first
+    $r = $conn->query("SELECT current_stock FROM product_stock WHERE product_id = " . (int) $productId);
+    if ($r && $row = $r->fetch_assoc()) {
+        return (int) $row['current_stock'];
+    }
+    // Fallback: calculate from initial_quantity + transactions
+    $r2 = $conn->query("
+            SELECT
+                COALESCE(p.initial_quantity, 0) + COALESCE(SUM(t.quantity_change), 0) AS stock
+            FROM products p
+            LEFT JOIN inventory_transactions t ON t.product_id = p.product_id
+            WHERE p.product_id = " . (int) $productId . "
+            GROUP BY p.product_id
+        ");
+    if ($r2 && $row2 = $r2->fetch_assoc()) {
+        return (int) $row2['stock'];
+    }
+    return 0;
+}
+
+/* ══════════════════════
+FETCH ALL PRODUCTS
+══════════════════════ */
 if ($action === 'fetch') {
     $result = $conn->query("
             SELECT p.product_id, p.code, p.description, p.unit,
                 p.unit_cost, p.selling_price,
                 (p.selling_price - p.unit_cost) AS margin,
-                ps.current_stock,
+                COALESCE(ps.current_stock,
+                    p.initial_quantity + COALESCE((
+                        SELECT SUM(t.quantity_change)
+                        FROM inventory_transactions t
+                        WHERE t.product_id = p.product_id
+                    ), 0)
+                ) AS current_stock,
                 p.reorder_threshold,
                 c.category_name
             FROM products p
@@ -34,7 +78,9 @@ if ($action === 'fetch') {
     exit;
 }
 
-/* FETCH SINGLE PRODUCT */
+/* ══════════════════════
+FETCH SINGLE PRODUCT
+══════════════════════ */
 if ($action === 'get') {
     $id = (int) ($_GET['id'] ?? 0);
     if ($id <= 0) {
@@ -56,7 +102,9 @@ if ($action === 'get') {
     exit;
 }
 
-/* FETCH CATEGORIES */
+/* ══════════════════════
+FETCH CATEGORIES
+══════════════════════ */
 if ($action === 'categories') {
     $result = $conn->query("SELECT category_id, category_name FROM categories ORDER BY category_name");
     $data = [];
@@ -67,7 +115,9 @@ if ($action === 'categories') {
     exit;
 }
 
-/* ADD PRODUCT (owner only) */
+/* ══════════════════════
+ADD PRODUCT (owner)
+══════════════════════ */
 if ($action === 'add') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only']);
@@ -94,11 +144,12 @@ if ($action === 'add') {
     );
     $stmt->bind_param('isssddii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh);
     if ($stmt->execute()) {
-        // Record initial stock transaction
         $newId = $conn->insert_id;
         if ($qty > 0) {
-            $conn->query("INSERT INTO inventory_transactions (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
-                            VALUES ($newId, CURDATE(), $qty, 'initial', 'Initial stock', $userId)");
+            $today = date('Y-m-d');
+            $conn->query("INSERT INTO inventory_transactions
+                    (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+                    VALUES ($newId, '$today', $qty, 'initial', 'Initial stock', $userId)");
         }
         echo json_encode(['success' => true, 'message' => 'Product added successfully']);
     } else {
@@ -108,7 +159,9 @@ if ($action === 'add') {
     exit;
 }
 
-/* UPDATE PRODUCT (owner only) */
+/* ══════════════════════
+UPDATE PRODUCT (owner)
+══════════════════════ */
 if ($action === 'update') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only']);
@@ -145,7 +198,9 @@ if ($action === 'update') {
     exit;
 }
 
-/* DELETE PRODUCT (owner only) */
+/* ══════════════════════
+DELETE PRODUCT (owner)
+══════════════════════ */
 if ($action === 'delete') {
     if (!$isOwner) {
         echo json_encode(['success' => false, 'message' => 'Owner only']);
@@ -169,62 +224,91 @@ if ($action === 'delete') {
     exit;
 }
 
-/* RESTOCK*/
+/* ══════════════════════════════════
+RESTOCK
+══════════════════════════════════ */
 if ($action === 'restock') {
     $productId = (int) ($_POST['product_id'] ?? 0);
     $qty = (int) ($_POST['quantity'] ?? 0);
     $remarks = trim($_POST['remarks'] ?? 'Restock');
 
-    if ($productId <= 0 || $qty <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid product or quantity.']);
+    if ($productId <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid product ID.']);
+        exit;
+    }
+    if ($qty <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Quantity must be greater than 0.']);
         exit;
     }
 
     // Verify product exists
-    $check = $conn->prepare("SELECT product_id FROM products WHERE product_id = ?");
+    $check = $conn->prepare("SELECT product_id, description FROM products WHERE product_id = ?");
     $check->bind_param('i', $productId);
     $check->execute();
-    if (!$check->get_result()->num_rows) {
+    $prod = $check->get_result()->fetch_assoc();
+    $check->close();
+
+    if (!$prod) {
         echo json_encode(['success' => false, 'message' => 'Product not found.']);
         exit;
     }
-    $check->close();
 
     $today = date('Y-m-d');
+
+    // Insert inventory transaction
     $stmt = $conn->prepare(
-        "INSERT INTO inventory_transactions (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+        "INSERT INTO inventory_transactions
+            (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
             VALUES (?, ?, ?, 'restock', ?, ?)"
     );
     $stmt->bind_param('iissi', $productId, $today, $qty, $remarks, $userId);
-    if ($stmt->execute()) {
-        // Return new stock level
-        $st = $conn->prepare("SELECT current_stock FROM product_stock WHERE product_id = ?");
-        $st->bind_param('i', $productId);
-        $st->execute();
-        $newStock = (int) ($st->get_result()->fetch_assoc()['current_stock'] ?? 0);
-        $st->close();
 
-        echo json_encode(['success' => true, 'message' => 'Restocked successfully.', 'new_stock' => $newStock]);
-    } else {
+    if (!$stmt->execute()) {
         echo json_encode(['success' => false, 'message' => 'Restock failed: ' . $stmt->error]);
+        exit;
     }
     $stmt->close();
+
+    // Also update initial_quantity directly as a safety net
+    // so stock shows correctly even if product_stock view is missing
+    $conn->query("UPDATE products
+            SET initial_quantity = initial_quantity + $qty
+            WHERE product_id = $productId");
+
+    // Get updated stock level
+    $newStock = getCurrentStock($conn, $productId);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Restocked successfully.',
+        'new_stock' => $newStock,
+        'product' => $prod['description'],
+        'qty_added' => $qty,
+    ]);
     exit;
 }
 
-/* REORDER LIST */
+/* ══════════════════════
+REORDER LIST
+══════════════════════ */
 if ($action === 'reorder-list') {
     $result = $conn->query("
             SELECT p.product_id, p.code, p.description,
                 c.category_name,
-                ps.current_stock,
+                COALESCE(ps.current_stock,
+                    p.initial_quantity + COALESCE((
+                        SELECT SUM(t.quantity_change)
+                        FROM inventory_transactions t
+                        WHERE t.product_id = p.product_id
+                    ), 0)
+                ) AS current_stock,
                 p.reorder_threshold,
                 p.unit
             FROM products p
             LEFT JOIN categories c  ON p.category_id = c.category_id
             LEFT JOIN product_stock ps ON p.product_id = ps.product_id
-            WHERE ps.current_stock <= p.reorder_threshold
-            ORDER BY ps.current_stock ASC
+            HAVING current_stock <= p.reorder_threshold
+            ORDER BY current_stock ASC
         ");
     $items = [];
     if ($result)

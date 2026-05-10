@@ -1,7 +1,7 @@
 .filter-bar {
-    background: #161921;
-    border: 1px solid rgba(255,255,255,.07);
-    border-radius: 12px;
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 10px;
     padding: 12px 16px;
     margin-bottom: 14px;
     display: flex;
@@ -12,31 +12,34 @@
 
 .filter-bar .form-control,
 .filter-bar .form-select {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.1);
-    color: #e8ecf4;
-    border-radius: 10px;
-    height: 38px;
-    font-size: .82rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #e2e8f0;
+    border-radius: 8px;
+    height: 36px;
+    font-size: .8rem;
 }
 
 .modal-content {
-    background: #1c2030;
+    background: #161b27;
+    border: 1px solid rgba(255, 255, 255, .08);
 }
 
-.filter-bar .form-control::placeholder { color: #7a8499; }
+.filter-bar .form-control::placeholder {
+    color: #2e3a4e;
+}
 
 .filter-bar .form-control:focus,
 .filter-bar .form-select:focus {
-    border-color: rgba(232,23,93,.5);
-    box-shadow: 0 0 0 3px rgba(232,23,93,.12);
-    background: rgba(255,255,255,.09);
+    border-color: rgba(74, 222, 128, .35);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, .06);
+    background: rgba(74, 222, 128, .03);
     color: #fff;
 }
 
 #expCatFilter {
-    color: #e8ecf4 !important;
-    background: #1c2030;
+    color: #e2e8f0 !important;
+    background: #161b27;
 }
 
 #expCatFilter option {

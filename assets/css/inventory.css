@@ -1,82 +1,83 @@
 .inv-toolbar {
-    background: #161921;
-    border: 1px solid rgba(255, 255, 255, .07);
-    border-radius: 12px;
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 10px;
     padding: 12px 14px;
     margin-bottom: 14px;
 }
 
 .inv-toolbar .form-control,
 .inv-toolbar .form-select {
-    background: rgba(255, 255, 255, .06);
-    border: 1px solid rgba(255, 255, 255, .1);
-    color: #e8ecf4;
-    border-radius: 10px;
-    height: 40px;
-    font-size: .84rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #e2e8f0;
+    border-radius: 8px;
+    height: 38px;
+    font-size: .82rem;
 }
 
 .inv-toolbar .form-control::placeholder {
-    color: #7a8499;
+    color: #2e3a4e;
 }
 
 .inv-toolbar .form-select option {
-    background: #1c2030;
+    background: #1c2336;
 }
 
 .inv-toolbar .form-control:focus,
 .inv-toolbar .form-select:focus {
-    border-color: rgba(232, 23, 93, .5);
-    box-shadow: 0 0 0 3px rgba(232, 23, 93, .12);
-    background: rgba(255, 255, 255, .09);
+    border-color: rgba(74, 222, 128, .35);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, .06);
+    background: rgba(74, 222, 128, .03);
     color: #fff;
 }
 
 .inv-toolbar .input-group-text {
-    background: rgba(255, 255, 255, .06);
-    border: 1px solid rgba(255, 255, 255, .1);
-    color: #7a8499;
-    border-radius: 10px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #4b5a6e;
+    border-radius: 8px;
 }
 
 .inv-tabs .nav-link {
-    color: #7a8499;
+    color: #4b5a6e;
     font-weight: 600;
-    font-size: .83rem;
-    border-radius: 10px 10px 0 0;
-    padding: 9px 18px;
+    font-size: .8rem;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 16px;
     border: none;
 }
 
 .modal-content {
-    background: #1c2030;
+    background: #161b27;
+    border: 1px solid rgba(255, 255, 255, .08);
 }
 
 .inv-tabs .nav-link:hover {
-    color: #e8ecf4;
+    color: #e2e8f0;
 }
 
 .inv-tabs .nav-link.active {
-    background: linear-gradient(135deg, #e8175d, #9b0d43);
-    color: #fff;
-    border: none;
+    background: linear-gradient(135deg, #16a34a, #052e16);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, .25);
 }
 
 .row-low {
-    background: rgba(245, 158, 11, .07) !important;
+    background: rgba(251, 191, 36, .04) !important;
 }
 
 .row-zero {
-    background: rgba(239, 68, 68, .07) !important;
+    background: rgba(248, 113, 113, .04) !important;
 }
 
 .margin-box {
-    background: rgba(255, 255, 255, .06);
-    border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 8px;
-    padding: 9px 13px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 7px;
+    padding: 8px 12px;
     font-weight: 700;
-    font-size: .95rem;
+    font-size: .92rem;
 }
 
 .reorder-row {
@@ -85,8 +86,8 @@
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 12px 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
 }
 
 .reorder-row:last-child {

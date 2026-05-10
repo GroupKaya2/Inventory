@@ -8,8 +8,8 @@ $action = $_POST['action'] ?? $_GET['action'] ?? '';
 // LOGIN
 if ($action === 'login') {
 
-    $email    = trim($_POST['email']    ?? '');
-    $password =      $_POST['password'] ?? '';
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
     if ($email === '' || $password === '') {
         $_SESSION['error'] = "Email and password are required.";
@@ -37,9 +37,9 @@ if ($action === 'login') {
         session_regenerate_id(true);
 
         $_SESSION['user_id'] = (int) $user['id'];
-        $_SESSION['user']    = $user['name'];
-        $_SESSION['email']   = base64_encode($user['email']);
-        $_SESSION['role']    = $user['role'];
+        $_SESSION['user'] = $user['name'];
+        $_SESSION['email'] = base64_encode($user['email']);
+        $_SESSION['role'] = $user['role'];
 
         header("Location: ../dashboard.php");
         exit();
@@ -56,8 +56,14 @@ if ($action === 'logout') {
     $_SESSION = [];
     if (ini_get("session.use_cookies")) {
         $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $p["path"], $p["domain"], $p["secure"], $p["httponly"]
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $p["path"],
+            $p["domain"],
+            $p["secure"],
+            $p["httponly"]
         );
     }
     session_destroy();

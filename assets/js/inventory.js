@@ -349,35 +349,23 @@ document.getElementById('submitRestock')?.addEventListener('click', async () => 
         const res = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
         const json = await res.json();
 
-        // Fallback: if backend has no restock action yet, update stock locally via update
-        if (!json.success && json.message === 'Unknown action') {
-            // Find product and increment qty via update
-            const p = allProducts.find(x => x.product_id == id);
-            if (p) {
-                const fd2 = new FormData();
-                fd2.append('product_id', p.product_id);
-                fd2.append('category_id', p.category_id || 1);
-                fd2.append('description', p.description);
-                fd2.append('unit', p.unit);
-                fd2.append('code', p.code || '');
-                fd2.append('unit_cost', p.unit_cost);
-                fd2.append('selling_price', p.selling_price);
-                fd2.append('initial_quantity', parseInt(p.current_stock) + qty);
-                fd2.append('reorder_threshold', p.reorder_threshold);
-                await fetch(`${API}?action=update`, { method: 'POST', body: fd2 });
-            }
+        if (json.success) {
             bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
-            Swal.fire({ icon: 'success', title: 'Restocked!', timer: 1400, showConfirmButton: false });
+            await Swal.fire({
+                icon: 'success',
+                title: 'Restocked!',
+                html: `<b>${json.product}</b><br>+${json.qty_added} units added<br>New stock: <b>${json.new_stock}</b>`,
+                timer: 2000,
+                showConfirmButton: false,
+            });
             await loadProducts();
-        } else if (json.success) {
-            bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
-            Swal.fire({ icon: 'success', title: 'Restocked!', timer: 1400, showConfirmButton: false });
-            await loadProducts();
+            // Refresh reorder tab if it was already loaded
+            reorderLoaded = false;
         } else {
-            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+            Swal.fire({ icon: 'error', title: 'Restock Failed', text: json.message });
         }
     } catch (e) {
-        Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+        Swal.fire({ icon: 'error', title: 'Network Error', text: e.message });
     } finally {
         btn.disabled = false;
         btn.textContent = 'Record Restock';

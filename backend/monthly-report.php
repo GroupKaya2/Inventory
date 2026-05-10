@@ -76,7 +76,7 @@ while ($cursor <= $endStamp) {
             'labor' => $labor,
             'gross' => $gross,
             'expenses' => $exp,
-            'expense_items' => $expItems,   // ← list with descriptions
+            'expense_items' => $expItems,
             'net' => $net,
             'txn_count' => $s ? (int) $s['txn_count'] : 0,
             'has_data' => $s !== null,

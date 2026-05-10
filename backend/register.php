@@ -2,9 +2,9 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
-$name     = trim($_POST['name']     ?? '');
-$email    = trim($_POST['email']    ?? '');
-$password =      $_POST['password'] ?? '';
+$name = trim($_POST['name'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$password = $_POST['password'] ?? '';
 
 if ($name === '' || $email === '' || $password === '') {
     $_SESSION['error'] = "All fields are required.";
@@ -34,8 +34,8 @@ if (strlen($password) < 6) {
 }
 
 // Determine role
-$result    = $conn->query("SELECT COUNT(*) AS cnt FROM users");
-$userCount = (int)($result->fetch_assoc()['cnt'] ?? 0);
+$result = $conn->query("SELECT COUNT(*) AS cnt FROM users");
+$userCount = (int) ($result->fetch_assoc()['cnt'] ?? 0);
 
 $isOwnerSession = isset($_SESSION['role']) && $_SESSION['role'] === 'owner';
 
