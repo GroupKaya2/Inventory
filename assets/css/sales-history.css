@@ -1,38 +1,67 @@
 .filter-bar {
     background: #111827;
-    border: 1px solid rgba(255,255,255,.06);
+    border: 1px solid rgba(255, 255, 255, .06);
     border-radius: 10px;
     padding: 12px 16px;
     margin-bottom: 14px;
-    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
 }
+
 .filter-bar .form-control,
 .filter-bar .form-select {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
     color: #e2e8f0;
-    border-radius: 8px; height: 36px; font-size: .8rem;
+    border-radius: 8px;
+    height: 36px;
+    font-size: .8rem;
 }
-.filter-bar .form-control::placeholder { color: #2e3a4e; }
+
+.filter-bar .form-control::placeholder {
+    color: #2e3a4e;
+}
+
 .filter-bar .form-control:focus,
 .filter-bar .form-select:focus {
-    border-color: rgba(74,222,128,.35);
-    box-shadow: 0 0 0 3px rgba(74,222,128,.06);
-    background: rgba(74,222,128,.03); color: #fff;
+    border-color: rgba(74, 222, 128, .35);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, .06);
+    background: rgba(74, 222, 128, .03);
+    color: #fff;
 }
+
 .summary-pill {
-    display:inline-flex;align-items:center;gap:5px;
-    background:rgba(255,255,255,.04);
-    border:1px solid rgba(255,255,255,.07);
-    border-radius:7px;padding:5px 11px;
-    font-size:.78rem;color:#94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .07);
+    border-radius: 7px;
+    padding: 5px 11px;
+    font-size: .78rem;
+    color: #94a3b8;
 }
-.summary-pill strong { color:#4ade80; }
+
+.summary-pill strong {
+    color: #4ade80;
+}
 
 /* ── Responsive ── */
 @media (max-width:576px) {
-    .filter-bar { flex-direction:column; }
+    .filter-bar {
+        flex-direction: column;
+    }
+
     .filter-bar .form-control,
-    .filter-bar .form-select { width:100%!important;max-width:unset!important; }
-    .summary-pill { font-size:.72rem;padding:4px 8px; }
+    .filter-bar .form-select {
+        width: 100% !important;
+        max-width: unset !important;
+    }
+
+    .summary-pill {
+        font-size: .72rem;
+        padding: 4px 8px;
+    }
 }

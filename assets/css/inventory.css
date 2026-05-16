@@ -1,58 +1,118 @@
 .inv-toolbar {
     background: #111827;
-    border: 1px solid rgba(255,255,255,.06);
+    border: 1px solid rgba(255, 255, 255, .06);
     border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 14px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
 }
+
 .inv-toolbar .form-control,
 .inv-toolbar .form-select {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    color: #e2e8f0; border-radius: 8px; height: 38px; font-size: .82rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #e2e8f0;
+    border-radius: 8px;
+    height: 38px;
+    font-size: .82rem;
 }
-.inv-toolbar .form-control::placeholder { color: #2e3a4e; }
-.inv-toolbar .form-select option { background: #1c2336; }
+
+.inv-toolbar .form-control::placeholder {
+    color: #2e3a4e;
+}
+
+.inv-toolbar .form-select option {
+    background: #1c2336;
+}
+
 .inv-toolbar .form-control:focus,
 .inv-toolbar .form-select:focus {
-    border-color: rgba(74,222,128,.35);
-    box-shadow: 0 0 0 3px rgba(74,222,128,.06);
-    background: rgba(74,222,128,.03); color: #fff;
+    border-color: rgba(74, 222, 128, .35);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, .06);
+    background: rgba(74, 222, 128, .03);
+    color: #fff;
 }
+
 .inv-toolbar .input-group-text {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    color: #4b5a6e; border-radius: 8px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    color: #4b5a6e;
+    border-radius: 8px;
 }
+
 .inv-tabs .nav-link {
-    color: #4b5a6e; font-weight: 600; font-size: .8rem;
-    border-radius: 8px 8px 0 0; padding: 8px 16px; border: none;
+    color: #4b5a6e;
+    font-weight: 600;
+    font-size: .8rem;
+    border-radius: 8px 8px 0 0;
+    padding: 8px 16px;
+    border: none;
 }
-.modal-content { background: #161b27; border:1px solid rgba(255,255,255,.08); }
-.inv-tabs .nav-link:hover { color: #e2e8f0; }
+
+.modal-content {
+    background: #161b27;
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.inv-tabs .nav-link:hover {
+    color: #e2e8f0;
+}
+
 .inv-tabs .nav-link.active {
-    background: linear-gradient(135deg,#16a34a,#052e16);
-    color: #4ade80; border: 1px solid rgba(74,222,128,.25);
+    background: linear-gradient(135deg, #16a34a, #052e16);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, .25);
 }
-.row-low  { background: rgba(251,191,36,.04)!important; }
-.row-zero { background: rgba(248,113,113,.04)!important; }
+
+.row-low {
+    background: rgba(251, 191, 36, .04) !important;
+}
+
+.row-zero {
+    background: rgba(248, 113, 113, .04) !important;
+}
+
 .margin-box {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 7px; padding: 8px 12px;
-    font-weight: 700; font-size: .92rem;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 7px;
+    padding: 8px 12px;
+    font-weight: 700;
+    font-size: .92rem;
 }
+
 .reorder-row {
-    display:flex;align-items:center;justify-content:space-between;
-    flex-wrap:wrap;gap:8px;padding:11px 14px;
-    border-bottom:1px solid rgba(255,255,255,.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 11px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
 }
-.reorder-row:last-child { border-bottom:none; }
+
+.reorder-row:last-child {
+    border-bottom: none;
+}
 
 /* ── Responsive ── */
 @media (max-width:576px) {
-    .inv-toolbar .d-flex { flex-direction:column; }
+    .inv-toolbar .d-flex {
+        flex-direction: column;
+    }
+
     .inv-toolbar .flex-grow-1,
-    .inv-toolbar select { width:100%!important;min-width:unset!important; }
-    .inv-tabs .nav-link { padding:7px 10px;font-size:.75rem; }
-    .reorder-row { flex-direction:column;align-items:flex-start; }
+    .inv-toolbar select {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    .inv-tabs .nav-link {
+        padding: 7px 10px;
+        font-size: .75rem;
+    }
+
+    .reorder-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }

@@ -53,6 +53,11 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                 <i class="bi bi-arrow-repeat me-1"></i>Reorder
             </button>
         </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ledger" id="tab-ledger-btn">
+                <i class="bi bi-journal-text me-1"></i>Stock Ledger
+            </button>
+        </li>
     </ul>
 
     <div class="tab-content">
@@ -189,6 +194,104 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     <p id="reorderEmpty" style="display:none;text-align:center;padding:30px;color:#7a8499;">
                         ✅ All stock levels are healthy!
                     </p>
+                </div>
+            </div>
+        </div>
+
+        <!--STOCK LEDGER TAB-->
+        <div class="tab-pane fade" id="tab-ledger">
+            <div class="card">
+                <div class="card-body">
+
+                    <!-- Controls -->
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                        <div>
+                            <label class="form-label mb-1">Month</label>
+                            <select class="form-input form-select" id="ledgerMonth" style="min-width:130px;">
+                                <?php
+                                $mNames = ['January','February','March','April','May','June',
+                                        'July','August','September','October','November','December'];
+                                for ($i = 1; $i <= 12; $i++) {
+                                    $sel = ($i == (int)date('n')) ? 'selected' : '';
+                                    echo "<option value=\"$i\" $sel>{$mNames[$i-1]}</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label mb-1">Year</label>
+                            <select class="form-input form-select" id="ledgerYear" style="min-width:100px;">
+                                <?php
+                                $cy = (int)date('Y');
+                                for ($y = $cy; $y >= $cy - 3; $y--) {
+                                    $s = ($y === $cy) ? 'selected' : '';
+                                    echo "<option value=\"$y\" $s>$y</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <div class="mt-auto">
+                            <button class="btn-pink" onclick="loadLedger()" style="padding:8px 18px;">
+                                <i class="bi bi-search me-1"></i>Load Ledger
+                            </button>
+                        </div>
+                        <div class="mt-auto ms-auto">
+                            <button class="btn-ghost" id="ledgerExportBtn" onclick="exportLedgerCSV()" style="display:none;padding:8px 16px;">
+                                <i class="bi bi-download me-1"></i>Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="ledgerHeading" style="display:none;margin-bottom:14px;">
+                        <div style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#fff;" id="ledgerTitle"></div>
+                        <div style="font-size:.76rem;color:#4b5a6e;margin-top:2px;">
+                            Beginning Stock → Restocks (+) → Used for repairs (−) → Ending Stock
+                        </div>
+                    </div>
+
+                    <div id="ledgerLoading" style="display:none;text-align:center;padding:40px;">
+                        <div class="spinner-border" style="color:#4ade80;"></div>
+                        <p style="color:#4b5a6e;margin-top:12px;font-size:.84rem;">Loading ledger…</p>
+                    </div>
+                    <div id="ledgerEmpty" style="display:none;text-align:center;padding:40px;color:#4b5a6e;">
+                        <i class="bi bi-journal-x" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+                        No stock activity found for this period.
+                    </div>
+
+                    <div id="ledgerTableWrap" style="display:none;">
+                        <div class="table-responsive">
+                            <table class="data-table" id="ledgerTable">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Product</th>
+                                        <th>Unit</th>
+                                        <th style="text-align:center;color:#60a5fa;">
+                                            <i class="bi bi-box-seam me-1"></i>Beginning<br>Stock
+                                        </th>
+                                        <th style="text-align:center;color:#4ade80;">
+                                            <i class="bi bi-plus-circle me-1"></i>Bought /<br>Restocked
+                                        </th>
+                                        <th style="text-align:center;color:#f87171;">
+                                            <i class="bi bi-tools me-1"></i>Used for<br>Repairs
+                                        </th>
+                                        <th style="text-align:center;color:#fbbf24;">
+                                            <i class="bi bi-boxes me-1"></i>Ending<br>Stock
+                                        </th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledgerBody"></tbody>
+                            </table>
+                        </div>
+
+                        <!-- Monthly totals -->
+                        <div id="ledgerTotals" style="margin-top:16px;padding:14px 18px;
+                            background:rgba(74,222,128,.04);border:1px solid rgba(74,222,128,.12);
+                            border-radius:9px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;">
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>

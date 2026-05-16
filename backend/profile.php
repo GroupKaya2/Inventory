@@ -9,12 +9,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
-$userId  = (int) $_SESSION['user_id'];
-$action  = $_POST['action'] ?? '';
+$userId = (int) $_SESSION['user_id'];
+$action = $_POST['action'] ?? '';
 
 // UPDATE OWN PROFILE
 if ($action === 'update_profile') {
-    $name  = strip_tags(trim($_POST['name']  ?? ''));
+    $name = strip_tags(trim($_POST['name'] ?? ''));
     $email = trim($_POST['email'] ?? '');
 
     if (!$name || !$email) {
@@ -47,7 +47,7 @@ if ($action === 'update_profile') {
     $stmt->bind_param('ssi', $name, $email, $userId);
 
     if ($stmt->execute()) {
-        $_SESSION['user']  = $name;
+        $_SESSION['user'] = $name;
         $_SESSION['email'] = base64_encode($email);
         echo json_encode(['success' => true, 'message' => 'Profile updated.']);
     } else {
@@ -60,7 +60,7 @@ if ($action === 'update_profile') {
 // CHANGE OWN PASSWORD
 if ($action === 'change_password') {
     $current = $_POST['current'] ?? '';
-    $newPass = $_POST['new']     ?? '';
+    $newPass = $_POST['new'] ?? '';
 
     if (!$current || !$newPass) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
@@ -84,7 +84,7 @@ if ($action === 'change_password') {
     }
 
     $newHash = password_hash($newPass, PASSWORD_BCRYPT, ['cost' => 12]);
-    $stmt    = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
     $stmt->bind_param('si', $newHash, $userId);
 
     if ($stmt->execute()) {
@@ -107,7 +107,9 @@ if ($action === 'get_users') {
     $fields = $hasCreatedAt ? 'id, name, email, role, created_at' : 'id, name, email, role';
     $r = $conn->query("SELECT $fields FROM users ORDER BY role DESC, name ASC");
     $users = [];
-    if ($r) while ($row = $r->fetch_assoc()) $users[] = $row;
+    if ($r)
+        while ($row = $r->fetch_assoc())
+            $users[] = $row;
 
     echo json_encode(['success' => true, 'users' => $users]);
     exit;
@@ -120,7 +122,7 @@ if ($action === 'update_user') {
         exit;
     }
 
-    $targetId = (int)($_POST['user_id'] ?? 0);
+    $targetId = (int) ($_POST['user_id'] ?? 0);
     if ($targetId <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid user ID.']);
         exit;
@@ -144,13 +146,13 @@ if ($action === 'update_user') {
         exit;
     }
 
-    $newEmail    = trim($_POST['new_email']    ?? '');
-    $newName     = strip_tags(trim($_POST['new_name'] ?? ''));
+    $newEmail = trim($_POST['new_email'] ?? '');
+    $newName = strip_tags(trim($_POST['new_name'] ?? ''));
     $newPassword = $_POST['new_password'] ?? '';
 
     $updates = [];
-    $types   = '';
-    $params  = [];
+    $types = '';
+    $params = [];
 
     // Update name if provided
     if ($newName !== '') {
@@ -159,8 +161,8 @@ if ($action === 'update_user') {
             exit;
         }
         $updates[] = 'name = ?';
-        $types    .= 's';
-        $params[]  = $newName;
+        $types .= 's';
+        $params[] = $newName;
     }
 
     // Update email if provided
@@ -182,8 +184,8 @@ if ($action === 'update_user') {
         $dup->close();
 
         $updates[] = 'email = ?';
-        $types    .= 's';
-        $params[]  = $newEmail;
+        $types .= 's';
+        $params[] = $newEmail;
     }
 
     // Update password if provided
@@ -192,10 +194,10 @@ if ($action === 'update_user') {
             echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
             exit;
         }
-        $hashed    = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+        $hashed = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
         $updates[] = 'password = ?';
-        $types    .= 's';
-        $params[]  = $hashed;
+        $types .= 's';
+        $params[] = $hashed;
     }
 
     if (empty($updates)) {
@@ -203,17 +205,19 @@ if ($action === 'update_user') {
         exit;
     }
 
-    $types   .= 'i';
+    $types .= 'i';
     $params[] = $targetId;
-    $sql      = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
-    $stmt     = $conn->prepare($sql);
+    $sql = "UPDATE users SET " . implode(', ', $updates) . " WHERE id = ?";
+    $stmt = $conn->prepare($sql);
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
         // If owner edited their own email/name, update session too
         if ($targetId === $userId) {
-            if ($newName  !== '') $_SESSION['user']  = $newName;
-            if ($newEmail !== '') $_SESSION['email'] = base64_encode($newEmail);
+            if ($newName !== '')
+                $_SESSION['user'] = $newName;
+            if ($newEmail !== '')
+                $_SESSION['email'] = base64_encode($newEmail);
         }
         echo json_encode(['success' => true, 'message' => 'User updated successfully.']);
     } else {
@@ -230,7 +234,7 @@ if ($action === 'delete_user') {
         exit;
     }
 
-    $targetId = (int)($_POST['user_id'] ?? 0);
+    $targetId = (int) ($_POST['user_id'] ?? 0);
     if ($targetId <= 0 || $targetId === $userId) {
         echo json_encode(['success' => false, 'message' => 'Cannot delete this user.']);
         exit;

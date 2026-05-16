@@ -5,8 +5,14 @@ if (isset($_SESSION['user_id'])) {
     $_SESSION = [];
     if (ini_get("session.use_cookies")) {
         $p = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $p["path"], $p["domain"], $p["secure"], $p["httponly"]
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $p["path"],
+            $p["domain"],
+            $p["secure"],
+            $p["httponly"]
         );
     }
     session_destroy();
@@ -18,15 +24,19 @@ unset($_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/login.css">
 </head>
+
 <body>
 
     <div class="page-wrap">
@@ -57,7 +67,8 @@ unset($_SESSION['error']);
                     <div class="field-group">
                         <label>Password</label>
                         <div class="input-wrap">
-                            <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+                            <input type="password" name="password" placeholder="Password" required
+                                autocomplete="current-password">
                             <i class="bi bi-lock field-icon"></i>
                         </div>
                     </div>
@@ -87,4 +98,5 @@ unset($_SESSION['error']);
 
     <script src="assets/js/login.js"></script>
 </body>
+
 </html>

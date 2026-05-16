@@ -346,7 +346,7 @@ document.getElementById('submitRestock')?.addEventListener('click', async () => 
     btn.textContent = 'Saving…';
 
     try {
-        const res  = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
+        const res = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
         const json = await res.json();
 
         if (json.success) {
@@ -529,3 +529,229 @@ async function loadReorder() {
 
 loadCategories();
 loadProducts();
+/* ══════════════════════════════════════
+   STOCK LEDGER TAB
+══════════════════════════════════════ */
+let ledgerData = null;
+
+document.getElementById('tab-ledger-btn')?.addEventListener('click', () => {
+    // Auto-load when tab is first opened
+    if (!ledgerData) loadLedger();
+});
+
+async function loadLedger() {
+    const month = document.getElementById('ledgerMonth')?.value;
+    const year = document.getElementById('ledgerYear')?.value;
+
+    // Show loading, hide others
+    document.getElementById('ledgerLoading').style.display = '';
+    document.getElementById('ledgerEmpty').style.display = 'none';
+    document.getElementById('ledgerTableWrap').style.display = 'none';
+    document.getElementById('ledgerHeading').style.display = 'none';
+    document.getElementById('ledgerExportBtn').style.display = 'none';
+
+    try {
+        const res = await fetch(`backend/products.php?action=stock-ledger&month=${month}&year=${year}`);
+        const json = await res.json();
+        document.getElementById('ledgerLoading').style.display = 'none';
+
+        if (!json.success) {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message }); return;
+        }
+
+        ledgerData = json;
+
+        if (!json.ledger || json.ledger.length === 0) {
+            document.getElementById('ledgerEmpty').style.display = ''; return;
+        }
+
+        renderLedger(json);
+
+    } catch (err) {
+        document.getElementById('ledgerLoading').style.display = 'none';
+        Swal.fire({ icon: 'error', title: 'Network Error', text: err.message });
+    }
+}
+
+function renderLedger(json) {
+    // Heading
+    document.getElementById('ledgerTitle').textContent = 'Stock Ledger — ' + json.month_name;
+    document.getElementById('ledgerHeading').style.display = '';
+
+    const tbody = document.getElementById('ledgerBody');
+    tbody.innerHTML = '';
+
+    let totalBegin = 0, totalAdded = 0, totalUsed = 0, totalEnd = 0;
+
+    json.ledger.forEach(item => {
+        totalBegin += item.begin_stock;
+        totalAdded += item.added;
+        totalUsed += item.used;
+        totalEnd += item.end_stock;
+
+        // Build transaction detail tooltip
+        const txnHtml = item.transactions.length > 0
+            ? item.transactions.map(t => {
+                const sign = t.quantity_change > 0 ? '+' : '';
+                const color = t.quantity_change > 0 ? '#4ade80' : '#f87171';
+                const icon = t.quantity_change > 0 ? '▲' : '▼';
+                const tLabel = t.transaction_type === 'sale' ? 'Sale'
+                    : t.transaction_type === 'restock' ? 'Restock'
+                        : t.transaction_type === 'initial' ? 'Initial'
+                            : t.transaction_type === 'adjustment' ? 'Adjustment'
+                                : t.transaction_type;
+                return `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;
+                    border-bottom:1px solid rgba(255,255,255,.04);font-size:.75rem;">
+                    <span style="color:#4b5a6e;white-space:nowrap;min-width:78px;">${t.transaction_date}</span>
+                    <span style="background:rgba(255,255,255,.05);border-radius:4px;padding:1px 6px;
+                        font-size:.68rem;color:#94a3b8;">${tLabel}</span>
+                    <span style="color:${color};font-weight:700;white-space:nowrap;">${icon} ${sign}${t.quantity_change}</span>
+                    ${t.remarks ? `<span style="color:#4b5a6e;font-size:.7rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px;" title="${t.remarks}">${t.remarks}</span>` : ''}
+                </div>`;
+            }).join('')
+            : `<div style="font-size:.76rem;color:#2e3a4e;padding:6px 0;font-style:italic;">No transactions this month</div>`;
+
+        // Ending stock color
+        const endColor = item.end_stock <= 0 ? '#f87171'
+            : item.end_stock <= 5 ? '#fbbf24'
+                : '#4ade80';
+
+        // Formula string
+        const formula = `${item.begin_stock} + ${item.added} − ${item.used} = ${item.end_stock}`;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="color:#94a3b8;font-size:.78rem;">${item.category || '—'}</td>
+            <td>
+                <div style="font-weight:600;color:#e2e8f0;">${item.description}</div>
+                <div style="font-size:.7rem;color:#4b5a6e;margin-top:2px;font-family:monospace;">${formula}</div>
+            </td>
+            <td style="color:#64748b;font-size:.78rem;">${item.unit}</td>
+            <td style="text-align:center;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#60a5fa;">
+                    ${item.begin_stock}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#4ade80;">
+                    ${item.added > 0 ? '+' + item.added : '—'}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#f87171;">
+                    ${item.used > 0 ? '−' + item.used : '—'}
+                </span>
+            </td>
+            <td style="text-align:center;">
+                <span style="font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:800;color:${endColor};">
+                    ${item.end_stock}
+                </span>
+                ${item.end_stock <= 0
+                ? `<div style="font-size:.65rem;color:#f87171;">OUT OF STOCK</div>`
+                : item.end_stock <= 5
+                    ? `<div style="font-size:.65rem;color:#fbbf24;">LOW STOCK</div>`
+                    : ''}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-secondary"
+                    onclick="toggleLedgerDetail(this)"
+                    style="font-size:.72rem;padding:3px 8px;"
+                    data-txn='${JSON.stringify(item.transactions).replace(/'/g, "&#39;")}'>
+                    <i class="bi bi-list-ul me-1"></i>${item.transactions.length} txn${item.transactions.length !== 1 ? 's' : ''}
+                </button>
+                <div class="ledger-detail-panel" style="display:none;margin-top:8px;
+                    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+                    border-radius:8px;padding:10px 12px;min-width:340px;">
+                    ${txnHtml}
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // Totals row
+    const tf = document.createElement('tr');
+    tf.style.cssText = 'background:rgba(74,222,128,.04);border-top:2px solid rgba(74,222,128,.2);';
+    tf.innerHTML = `
+        <td colspan="3" style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:#4ade80;font-size:.8rem;letter-spacing:.4px;text-transform:uppercase;">
+            Monthly Totals
+        </td>
+        <td style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1rem;color:#60a5fa;">${totalBegin}</td>
+        <td style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1rem;color:#4ade80;">+${totalAdded}</td>
+        <td style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1rem;color:#f87171;">−${totalUsed}</td>
+        <td style="text-align:center;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:1.1rem;color:#fff;">${totalEnd}</td>
+        <td></td>
+    `;
+    tbody.appendChild(tf);
+
+    // Summary bar
+    document.getElementById('ledgerTotals').innerHTML = `
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4b5a6e;">
+            ${json.month_name} Summary
+        </div>
+        <div>
+            <div style="font-size:.68rem;color:#4b5a6e;">Total Beginning Stock</div>
+            <div style="font-size:1.1rem;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#60a5fa;">${totalBegin} units</div>
+        </div>
+        <div style="color:#4b5a6e;font-size:1.2rem;">+</div>
+        <div>
+            <div style="font-size:.68rem;color:#4b5a6e;">Total Restocked (Bought)</div>
+            <div style="font-size:1.1rem;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#4ade80;">+${totalAdded} units</div>
+        </div>
+        <div style="color:#4b5a6e;font-size:1.2rem;">−</div>
+        <div>
+            <div style="font-size:.68rem;color:#4b5a6e;">Total Used for Repairs</div>
+            <div style="font-size:1.1rem;font-family:'Space Grotesk',sans-serif;font-weight:700;color:#f87171;">−${totalUsed} units</div>
+        </div>
+        <div style="color:#4b5a6e;font-size:1.2rem;">=</div>
+        <div>
+            <div style="font-size:.68rem;color:#4b5a6e;">Ending Stock (→ June Beginning)</div>
+            <div style="font-size:1.3rem;font-family:'Space Grotesk',sans-serif;font-weight:800;color:#fff;">${totalEnd} units</div>
+        </div>
+    `;
+
+    document.getElementById('ledgerTableWrap').style.display = '';
+    document.getElementById('ledgerExportBtn').style.display = '';
+}
+
+function toggleLedgerDetail(btn) {
+    const panel = btn.nextElementSibling;
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : '';
+    btn.innerHTML = isOpen
+        ? `<i class="bi bi-list-ul me-1"></i>${btn.textContent.trim()}`
+        : `<i class="bi bi-chevron-up me-1"></i>Hide`;
+}
+
+function exportLedgerCSV() {
+    if (!ledgerData || !ledgerData.ledger) return;
+    const rows = [
+        ['Stock Ledger — ' + ledgerData.month_name],
+        [],
+        ['Category', 'Product', 'Unit', 'Beginning Stock', 'Bought / Restocked', 'Used for Repairs', 'Ending Stock', 'Formula'],
+    ];
+    ledgerData.ledger.forEach(item => {
+        rows.push([
+            item.category,
+            item.description,
+            item.unit,
+            item.begin_stock,
+            item.added,
+            item.used,
+            item.end_stock,
+            `${item.begin_stock} + ${item.added} - ${item.used} = ${item.end_stock}`,
+        ]);
+    });
+    const totals = ledgerData.ledger.reduce((a, i) => {
+        a.b += i.begin_stock; a.a += i.added; a.u += i.used; a.e += i.end_stock; return a;
+    }, { b: 0, a: 0, u: 0, e: 0 });
+    rows.push([]);
+    rows.push(['TOTALS', '', '', totals.b, totals.a, totals.u, totals.e,
+        `${totals.b} + ${totals.a} - ${totals.u} = ${totals.e}`]);
+
+    const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+    a.download = `stock_ledger_${ledgerData.year}_${String(ledgerData.month).padStart(2, '0')}.csv`;
+    a.click();
+}

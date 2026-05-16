@@ -1,80 +1,152 @@
 .sale-card {
     background: #111827;
-    border: 1px solid rgba(255,255,255,.06);
+    border: 1px solid rgba(255, 255, 255, .06);
     border-radius: 10px;
     padding: 20px;
     margin-bottom: 16px;
 }
+
 .sale-card .form-control,
 .sale-card .form-select {
-    background: rgba(255,255,255,.04);
-    border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
     color: #e2e8f0;
     border-radius: 8px;
     height: 40px;
     font-size: .83rem;
     font-family: 'Inter', sans-serif;
 }
-.sale-card .form-control::placeholder { color: #2e3a4e; }
-.sale-card .form-select option { background: #1c2336; color: #e2e8f0; }
+
+.sale-card .form-control::placeholder {
+    color: #2e3a4e;
+}
+
+.sale-card .form-select option {
+    background: #1c2336;
+    color: #e2e8f0;
+}
+
 .sale-card .form-control:focus,
 .sale-card .form-select:focus {
-    border-color: rgba(74,222,128,.35);
-    box-shadow: 0 0 0 3px rgba(74,222,128,.06);
-    background: rgba(74,222,128,.03);
+    border-color: rgba(74, 222, 128, .35);
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, .06);
+    background: rgba(74, 222, 128, .03);
     color: #fff;
 }
+
 .sale-card .form-label {
-    font-size: .65rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .6px;
-    color: #4b5a6e; margin-bottom: 5px;
+    font-size: .65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: #4b5a6e;
+    margin-bottom: 5px;
 }
+
 .item-row {
     display: grid;
     grid-template-columns: 1fr 80px 120px 42px;
-    gap: 10px; align-items: end; margin-bottom: 10px;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 10px;
 }
-@media(max-width:600px){ .item-row { grid-template-columns:1fr 1fr; } }
+
+@media(max-width:600px) {
+    .item-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
 
 .btn-remove {
-    width: 40px; height: 40px;
-    background: rgba(248,113,113,.08);
-    border: 1px solid rgba(248,113,113,.2);
+    width: 40px;
+    height: 40px;
+    background: rgba(248, 113, 113, .08);
+    border: 1px solid rgba(248, 113, 113, .2);
     color: #f87171;
     border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
 }
-.btn-remove:hover { background: rgba(248,113,113,.18); color: #fff; }
+
+.btn-remove:hover {
+    background: rgba(248, 113, 113, .18);
+    color: #fff;
+}
 
 .totals-bar {
-    display:flex;flex-wrap:wrap;gap:20px;
-    padding-top:14px;margin-top:12px;
-    border-top:1px solid rgba(255,255,255,.06);
-    align-items:center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding-top: 14px;
+    margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+    align-items: center;
 }
-.totals-bar .lbl {
-    font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#4b5a6e;
-}
-.totals-bar .val {
-    font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;color:#fff;
-}
-.totals-bar .val.grand { font-size:1.25rem;color:#4ade80; }
 
-.print-area { display:none; }
+.totals-bar .lbl {
+    font-size: .65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #4b5a6e;
+}
+
+.totals-bar .val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.totals-bar .val.grand {
+    font-size: 1.25rem;
+    color: #4ade80;
+}
+
+.print-area {
+    display: none;
+}
+
 @media print {
-    body * { visibility:hidden; }
-    .print-area,.print-area * { visibility:visible; }
+    body * {
+        visibility: hidden;
+    }
+
+    .print-area,
+    .print-area * {
+        visibility: visible;
+    }
+
     .print-area {
-        display:block!important;position:absolute;left:0;top:0;
-        background:#fff;color:#000;padding:24px;
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        background: #fff;
+        color: #000;
+        padding: 24px;
     }
 }
 
 /* ── Responsive ── */
 @media (max-width:576px) {
-    .sale-card { padding:14px; }
-    .totals-bar { gap:12px; }
-    .totals-bar .val.grand { font-size:1.1rem; }
-    .pay-toggle label { padding:9px 10px;font-size:.8rem; }
+    .sale-card {
+        padding: 14px;
+    }
+
+    .totals-bar {
+        gap: 12px;
+    }
+
+    .totals-bar .val.grand {
+        font-size: 1.1rem;
+    }
+
+    .pay-toggle label {
+        padding: 9px 10px;
+        font-size: .8rem;
+    }
 }
