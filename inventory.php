@@ -140,6 +140,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                             <table class="data-table">
                                 <thead>
                                     <tr>
+                                        <th>#</th>
                                         <th>Part</th>
                                         <th>Code</th>
                                         <th>Avg Weekly Usage</th>
@@ -155,6 +156,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                             <table class="data-table">
                                 <thead>
                                     <tr>
+                                        <th>#</th>
                                         <th>Part</th>
                                         <th>Code</th>
                                         <th>Avg Monthly Usage</th>

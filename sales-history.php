@@ -30,7 +30,7 @@ $expStats = $conn->query("
     FROM expenses
 ")->fetch_assoc();
 
-// Expenses grouped by date for joining
+// Expenses grouped by date for modal use
 $expByDate = [];
 $re = $conn->query("
     SELECT expense_date,
@@ -46,6 +46,19 @@ if ($re)
             'descriptions' => $row['descriptions'],
         ];
     }
+
+// All individual expense rows for the separate expenses table
+$expenseRows = [];
+$re2 = $conn->query("
+    SELECT id, expense_date, category, description, amount
+    FROM expenses
+    ORDER BY expense_date DESC, id DESC
+");
+if ($re2)
+    while ($row = $re2->fetch_assoc())
+        $expenseRows[] = $row;
+
+$totalExpenses = array_sum(array_column($expenseRows, 'amount'));
 
 $hasPayCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'payment_method'")->num_rows > 0;
 $paySelect = $hasPayCol ? ", payment_method" : ", 'cash' AS payment_method";
@@ -284,8 +297,6 @@ if ($r)
                                 <th>Parts ₱</th>
                                 <th>Labor ₱</th>
                                 <th>Gross Total ₱</th>
-                                <th>Expenses ₱</th>
-                                <th>Net ₱</th>
                                 <th>Payment</th>
                                 <th>Actions</th>
                             </tr>
@@ -298,19 +309,15 @@ if ($r)
                                     </td>
                                 </tr>
                             <?php else:
+                                $rowNum = 0;
                                 foreach ($salesRows as $s):
+                                    $rowNum++;
                                     $pm = $s['payment_method'] ?? 'cash';
                                     $gross = (float) $s['grand_total'];
-                                    $expDate = $expByDate[$s['sale_date']] ?? null;
-                                    $expAmt = $expDate ? $expDate['total'] : 0;
-                                    $expDesc = $expDate ? $expDate['descriptions'] : '';
-                                    $net = $gross - $expAmt;
-                                    $netCls = $net > 0 ? 'net-positive' : ($net < 0 ? 'net-negative' : 'net-zero');
                                     ?>
                                     <tr data-id="<?= $s['id'] ?>" data-date="<?= $s['sale_date'] ?>" data-pay="<?= $pm ?>"
-                                        data-exp="<?= $expAmt ?>" data-net="<?= $net ?>"
                                         data-search="<?= strtolower(htmlspecialchars($s['customer_name'] . ' ' . $s['plate_number'])) ?>">
-                                        <td><span class="badge-gray"><?= $s['id'] ?></span></td>
+                                        <td><span class="badge-gray row-num"><?= $rowNum ?></span></td>
                                         <td style="white-space:nowrap;"><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
                                         <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
                                         <td><?= htmlspecialchars($s['plate_number'] ?: '—') ?></td>
@@ -319,19 +326,6 @@ if ($r)
                                         <td style="color:#4ade80;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?>
                                         </td>
                                         <td style="font-weight:700;">₱<?= number_format($gross, 2) ?></td>
-                                        <td>
-                                            <?php if ($expAmt > 0): ?>
-                                                <span class="exp-cell">−₱<?= number_format($expAmt, 2) ?></span>
-                                                <?php if ($expDesc): ?>
-                                                    <span class="exp-desc-tip" title="<?= htmlspecialchars($expDesc) ?>">
-                                                        <?= htmlspecialchars($expDesc) ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                            <?php else: ?>
-                                                <span style="color:#2e3a4e;">—</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="<?= $netCls ?>">₱<?= number_format($net, 2) ?></td>
                                         <td>
                                             <?php if ($pm === 'gcash'): ?>
                                                 <span class="pay-gcash"><i class="bi bi-phone-fill"></i> GCash</span>
@@ -355,6 +349,80 @@ if ($r)
                                         </td>
                                     </tr>
                                 <?php endforeach; endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ EXPENSES TABLE ══ -->
+        <div class="page-header mt-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 style="margin:0;"><i class="bi bi-wallet2 me-2" style="color:#f87171;"></i>Expenses History</h4>
+                    <p style="margin:0;">All recorded expenses — separate from sales</p>
+                </div>
+                <span class="summary-pill">
+                    <i class="bi bi-wallet2 me-1" style="color:#f87171;"></i>
+                    Total: <strong style="color:#f87171;">₱<?= number_format($totalExpenses, 2) ?></strong>
+                </span>
+            </div>
+        </div>
+
+        <!-- Expense filter bar -->
+        <div class="filter-bar" id="expFilterBar">
+            <input type="text" id="expSearchInput" class="form-control" style="max-width:200px;"
+                placeholder="Description or category…">
+            <input type="date" id="expDateFrom" class="form-control" style="max-width:145px;">
+            <input type="date" id="expDateTo" class="form-control" style="max-width:145px;">
+            <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterExpenses()">
+                <i class="bi bi-search me-1"></i>Search
+            </button>
+            <button class="btn-ghost" style="font-size:.82rem;padding:7px 16px;"
+                onclick="resetExpenses()">Reset</button>
+            <?php if ($isOwner): ?>
+                <button class="btn-ghost ms-auto" style="font-size:.82rem;padding:7px 16px;" onclick="exportExpensesCSV()">
+                    <i class="bi bi-download me-1"></i>Export CSV
+                </button>
+            <?php endif; ?>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="data-table" id="expensesTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Description</th>
+                                <th>Amount ₱</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expensesBody">
+                            <?php if (empty($expenseRows)): ?>
+                                <tr>
+                                    <td colspan="5" style="text-align:center;padding:30px;color:#64748b;">
+                                        No expenses recorded yet.
+                                    </td>
+                                </tr>
+                            <?php else: ?>
+                                <?php $expRowNum = 0;
+                                foreach ($expenseRows as $e):
+                                    $expRowNum++; ?>
+                                    <tr data-date="<?= $e['expense_date'] ?>"
+                                        data-search="<?= strtolower(htmlspecialchars($e['description'] . ' ' . $e['category'])) ?>">
+                                        <td><span class="badge-gray row-num"><?= $expRowNum ?></span></td>
+                                        <td style="white-space:nowrap;"><?= date('M d, Y', strtotime($e['expense_date'])) ?>
+                                        </td>
+                                        <td><span class="badge-red"><?= htmlspecialchars($e['category'] ?: 'Other') ?></span>
+                                        </td>
+                                        <td><?= htmlspecialchars($e['description']) ?></td>
+                                        <td class="exp-cell">−₱<?= number_format($e['amount'], 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
@@ -391,6 +459,18 @@ if ($r)
         // Expenses by date from PHP — available in JS for modal
         const EXP_BY_DATE = <?= json_encode($expByDate, JSON_UNESCAPED_UNICODE) ?>;
 
+        // ── Re-number visible rows ──
+        function renumberRows(tbodyId) {
+            let n = 0;
+            document.querySelectorAll(`#${tbodyId} tr[data-date]`).forEach(tr => {
+                if (tr.style.display !== 'none') {
+                    n++;
+                    const badge = tr.querySelector('.row-num');
+                    if (badge) badge.textContent = n;
+                }
+            });
+        }
+
         function filterTable() {
             const q = document.getElementById('searchInput').value.toLowerCase().trim();
             const from = document.getElementById('dateFrom').value;
@@ -404,12 +484,14 @@ if ($r)
                 const matchP = !pay || tr.dataset.pay === pay;
                 tr.style.display = matchQ && matchD && matchP ? '' : 'none';
             });
+            renumberRows('salesBody');
         }
 
         function resetFilter() {
             ['searchInput', 'dateFrom', 'dateTo'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('payFilter').value = '';
             document.querySelectorAll('#salesBody tr').forEach(tr => tr.style.display = '');
+            renumberRows('salesBody');
         }
 
         document.getElementById('searchInput').addEventListener('input', filterTable);
@@ -603,10 +685,54 @@ if ($r)
 
             if (data.success) {
                 document.querySelector(`#salesBody tr[data-id="${id}"]`)?.remove();
+                renumberRows('salesBody');
                 Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
             } else {
                 Swal.fire({ icon: 'error', title: 'Error', text: data.message });
             }
+        }
+
+        // ── Expenses table filter ──
+        function filterExpenses() {
+            const q = document.getElementById('expSearchInput').value.toLowerCase().trim();
+            const from = document.getElementById('expDateFrom').value;
+            const to = document.getElementById('expDateTo').value;
+
+            document.querySelectorAll('#expensesBody tr[data-date]').forEach(tr => {
+                const d = tr.dataset.date;
+                const matchQ = !q || tr.dataset.search.includes(q);
+                const matchD = (!from || d >= from) && (!to || d <= to);
+                tr.style.display = matchQ && matchD ? '' : 'none';
+            });
+            renumberRows('expensesBody');
+        }
+
+        function resetExpenses() {
+            ['expSearchInput', 'expDateFrom', 'expDateTo'].forEach(id => document.getElementById(id).value = '');
+            document.querySelectorAll('#expensesBody tr').forEach(tr => tr.style.display = '');
+            renumberRows('expensesBody');
+        }
+
+        document.getElementById('expSearchInput').addEventListener('input', filterExpenses);
+
+        function exportExpensesCSV() {
+            const rows = [['ID', 'Date', 'Category', 'Description', 'Amount (₱)']];
+            document.querySelectorAll('#expensesBody tr[data-date]').forEach(tr => {
+                if (tr.style.display === 'none') return;
+                const cells = tr.querySelectorAll('td');
+                rows.push([
+                    cells[0].textContent.trim(),
+                    cells[1].textContent.trim(),
+                    cells[2].textContent.trim(),
+                    cells[3].textContent.trim(),
+                    cells[4].textContent.replace(/[₱,−]/g, '').trim(),
+                ]);
+            });
+            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+            const a = document.createElement('a');
+            a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+            a.download = 'expenses_history_' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.click();
         }
     </script>
 </body>

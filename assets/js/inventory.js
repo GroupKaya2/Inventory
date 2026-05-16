@@ -54,9 +54,9 @@ function renderTable(products) {
         return;
     }
 
-    tbody.innerHTML = products.map(p => `
+    tbody.innerHTML = products.map((p, idx) => `
             <tr data-id="${p.product_id}">
-                <td><span class="badge-gray">${p.product_id}</span></td>
+                <td><span class="badge-gray">${idx + 1}</span></td>
                 <td>${p.category_name || '—'}</td>
                 <td>
                     <div style="font-weight:600;">${p.description}</div>
@@ -415,10 +415,11 @@ async function loadForecast() {
         // Weekly table
         const wBody = document.getElementById('weeklyBody');
         if (wBody) {
-            wBody.innerHTML = items.length ? items.map(i => {
+            wBody.innerHTML = items.length ? items.map((i, idx) => {
                 const avgWeekly = i.sale_weeks > 0 ? (i.total_qty / i.sale_weeks).toFixed(1) : 0;
                 const next4 = (parseFloat(avgWeekly) * 4).toFixed(0);
                 return `<tr>
+                        <td><span class="badge-gray">${idx + 1}</span></td>
                         <td>${i.description}</td>
                         <td>${i.code || '—'}</td>
                         <td>${avgWeekly}</td>
@@ -431,17 +432,18 @@ async function loadForecast() {
         // Monthly table
         const mBody = document.getElementById('monthlyBody');
         if (mBody) {
-            mBody.innerHTML = items.length ? items.map(i => {
+            mBody.innerHTML = items.length ? items.map((i, idx) => {
                 const avgMonthly = i.sale_months > 0 ? (i.total_qty / i.sale_months).toFixed(1) : 0;
                 const next3 = (parseFloat(avgMonthly) * 3).toFixed(0);
                 return `<tr>
+                        <td><span class="badge-gray">${idx + 1}</span></td>
                         <td>${i.description}</td>
                         <td>${i.code || '—'}</td>
                         <td>${avgMonthly}</td>
                         <td><strong>${next3}</strong></td>
                         <td>${i.sale_months} mos</td>
                     </tr>`;
-            }).join('') : `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
+            }).join('') : `<tr><td colspan="6" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
         }
 
         // Seasonal chart
@@ -498,12 +500,12 @@ async function loadReorder() {
         list.style.display = '';
         list.innerHTML = `<table class="data-table">
                 <thead><tr>
-                    <th>ID</th><th>Category</th><th>Description</th><th>Code</th>
+                    <th>#</th><th>Category</th><th>Description</th><th>Code</th>
                     <th>Stock</th><th>Threshold</th><th>Unit</th><th>Action</th>
                 </tr></thead>
                 <tbody>
-                ${json.items.map(p => `<tr>
-                    <td>${p.product_id}</td>
+                ${json.items.map((p, idx) => `<tr>
+                    <td>${idx + 1}</td>
                     <td>${p.category_name || '—'}</td>
                     <td>${p.description}</td>
                     <td>${p.code || '—'}</td>

@@ -190,12 +190,14 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                                     </td>
                                 </tr>
                             <?php else:
+                                $expNum = 0;
                                 foreach ($expenses as $e):
+                                    $expNum++;
                                     $color = $catColors[$e['category']] ?? '#64748b';
                                     ?>
                                     <tr data-cat="<?= htmlspecialchars($e['category']) ?>"
                                         data-search="<?= strtolower(htmlspecialchars($e['description'] . ' ' . $e['category'] . ' ' . $e['expense_date'] . ' ' . ($e['creator'] ?? ''))) ?>">
-                                        <td><span class="badge-gray"><?= $e['id'] ?></span></td>
+                                        <td><span class="badge-gray row-num"><?= $expNum ?></span></td>
                                         <td><?= date('M d, Y', strtotime($e['expense_date'])) ?></td>
                                         <td>
                                             <span
@@ -319,6 +321,18 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                 const matchCat = !cat || tr.dataset.cat === cat;
                 const matchText = !q || tr.dataset.search.includes(q);
                 tr.style.display = matchCat && matchText ? '' : 'none';
+            });
+            renumberExpenses();
+        }
+
+        function renumberExpenses() {
+            let n = 0;
+            document.querySelectorAll('#expBody tr[data-cat]').forEach(tr => {
+                if (tr.style.display !== 'none') {
+                    n++;
+                    const badge = tr.querySelector('.row-num');
+                    if (badge) badge.textContent = n;
+                }
             });
         }
         document.getElementById('expSearch').addEventListener('input', filterExp);

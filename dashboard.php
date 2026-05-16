@@ -431,7 +431,7 @@ $lowStockCount = count($lowStockAlert);
                             style="width:<?= min(abs($monthMargin), 100) ?>%"></div>
                     </div>
                     <small class="<?= $monthMargin >= 0 ? 'text-profit' : 'text-loss' ?>" style="font-size:.7rem;">
-                        <?= $monthMargin >= 0 ? '+' : '' ?>    <?= number_format($monthMargin, 1) ?>% margin
+                        <?= $monthMargin >= 0 ? '+' : '' ?>     <?= number_format($monthMargin, 1) ?>% margin
                     </small>
                 </div>
             <?php endif; ?>
@@ -634,10 +634,12 @@ $lowStockCount = count($lowStockAlert);
                                             </td>
                                         </tr>
                                     <?php else:
+                                        $recentNum = 0;
                                         foreach ($recentSales as $s):
+                                            $recentNum++;
                                             $pm = $s['payment_method'] ?? 'cash'; ?>
                                             <tr>
-                                                <td><span class="badge-gray"><?= $s['id'] ?></span></td>
+                                                <td><span class="badge-gray"><?= $recentNum ?></span></td>
                                                 <td><?= date('M d', strtotime($s['sale_date'])) ?></td>
                                                 <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
                                                 <td>
@@ -681,16 +683,19 @@ $lowStockCount = count($lowStockAlert);
                                 border-left:3px solid <?= $critical ? '#f87171' : '#fbbf24' ?>;">
                                         <div>
                                             <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;">
-                                                <?= htmlspecialchars($item['description']) ?></div>
+                                                <?= htmlspecialchars($item['description']) ?>
+                                            </div>
                                             <div style="font-size:.68rem;color:#4b5a6e;">
-                                                <?= htmlspecialchars($item['category_name'] ?? '') ?></div>
+                                                <?= htmlspecialchars($item['category_name'] ?? '') ?>
+                                            </div>
                                         </div>
                                         <div style="text-align:right;">
                                             <span
                                                 class="<?= $critical ? 'badge-red' : 'badge-yellow' ?>"><?= $item['current_stock'] ?>
                                                 left</span>
                                             <div style="font-size:.63rem;color:#4b5a6e;margin-top:2px;">Min:
-                                                <?= $item['reorder_threshold'] ?></div>
+                                                <?= $item['reorder_threshold'] ?>
+                                            </div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>

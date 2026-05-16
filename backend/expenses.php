@@ -8,8 +8,10 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+$userId = (int) $_SESSION['user_id'];
 
-// GET expenses by date
+// GET expenses by date — available to all logged-in users
 if ($action === 'by_date') {
     $date = trim($_GET['date'] ?? $_POST['date'] ?? '');
     if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
@@ -25,13 +27,11 @@ if ($action === 'by_date') {
     exit;
 }
 
+// All other actions require owner role
 if (($_SESSION['role'] ?? 'manager') !== 'owner') {
     echo json_encode(['success' => false, 'message' => 'Owner only.']);
     exit;
 }
-
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
-$userId = (int) $_SESSION['user_id'];
 
 // SAVE expense
 if ($action === 'save') {
@@ -79,4 +79,3 @@ if ($action === 'delete') {
 }
 
 echo json_encode(['success' => false, 'message' => 'Unknown action.']);
-
