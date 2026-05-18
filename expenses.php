@@ -76,14 +76,12 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                 <div>
                     <h4 style="margin:0;"><i class="bi bi-wallet2 me-2"></i>Expenses<?= $isOwner ? ' Management' : '' ?></h4>
                     <?php if (!$isOwner): ?>
-                        <p style="margin:4px 0 0;font-size:.8rem;color:#64748b;">View only — contact owner to add or remove entries</p>
+                        <p style="margin:4px 0 0;font-size:.8rem;color:#64748b;">You can add expenses. Only the owner can delete them.</p>
                     <?php endif; ?>
                 </div>
-                <?php if ($isOwner): ?>
-                    <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                        <i class="bi bi-plus-lg me-1"></i>Add Expenses
-                    </button>
-                <?php endif; ?>
+                <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                    <i class="bi bi-plus-lg me-1"></i>Add Expenses
+                </button>
             </div>
         </div>
 
@@ -228,7 +226,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
 
     </main>
 
-    <?php if ($isOwner): ?>
+
     <!-- Add Expenses Modal -->
     <div class="modal fade" id="addExpenseModal" tabindex="-1">
         <div class="modal-dialog  modal-lg modal-dark">
@@ -270,8 +268,8 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
             </div>
         </div>
     </div>
-    <?php endif; ?>
 
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
@@ -344,7 +342,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
         document.getElementById('expSearch').addEventListener('input', filterExp);
         document.getElementById('expCatFilter').addEventListener('change', filterExp);
 
-        if (IS_OWNER) document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
+        document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
             const date = document.getElementById('expDate').value;
             const cat = document.getElementById('expCategory').value;
             const desc = document.getElementById('expDesc').value.trim();

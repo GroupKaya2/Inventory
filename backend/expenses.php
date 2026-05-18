@@ -29,12 +29,8 @@ if ($action === 'by_date') {
 
 $isOwner = (($_SESSION['role'] ?? 'manager') === 'owner');
 
-// SAVE expense (owner only)
+// SAVE expense (owner and manager)
 if ($action === 'save') {
-    if (!$isOwner) {
-        echo json_encode(['success' => false, 'message' => 'Only the owner can add expenses here.']);
-        exit;
-    }
     $date = trim($_POST['expense_date'] ?? '');
     $cat = trim($_POST['category'] ?? '');
     $desc = trim($_POST['description'] ?? '');
