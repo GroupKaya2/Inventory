@@ -572,32 +572,21 @@ $initials = substr($initials, 0, 2);
     </a>
 
     <hr class="sb-divider" data-sb-divider>
-    <div class="sb-section" data-sb-section>
-        Finance
-        <?php if (!$isOwner): ?>
-            <span style="font-size:.48rem;color:#f87171;margin-left:4px;" aria-label="Owner only">● Owner Only</span>
-        <?php endif; ?>
-    </div>
+    <div class="sb-section" data-sb-section>Finance</div>
 
-    <?php if ($isOwner): ?>
-        <a href="expenses.php" class="sb-link <?= $activePage === 'expenses' ? 'active' : '' ?>"
-            data-sb-label="expenses finance budget">
-            <span class="sb-icon icon-red" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
-            <span class="sb-link-text">Expenses</span>
-            <?php
-            if (isset($conn)) {
-                $expToday = (int) ($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
-                if ($expToday > 0)
-                    echo "<span class='sb-badge' aria-label='{$expToday} expenses today'>{$expToday}</span>";
+    <a href="expenses.php" class="sb-link <?= $activePage === 'expenses' ? 'active' : '' ?>"
+        data-sb-label="expenses finance budget">
+        <span class="sb-icon icon-red" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
+        <span class="sb-link-text">Expenses</span>
+        <?php
+        if (isset($conn)) {
+            $expToday = (int) ($conn->query("SELECT COUNT(*) AS c FROM expenses WHERE expense_date = CURDATE()")->fetch_assoc()['c'] ?? 0);
+            if ($expToday > 0) {
+                echo "<span class='sb-badge' aria-label='{$expToday} expenses today'>{$expToday}</span>";
             }
-            ?>
-        </a>
-    <?php else: ?>
-        <span class="sb-link locked" aria-disabled="true" data-sb-label="expenses finance">
-            <span class="sb-icon" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
-            <span class="sb-link-text">Expenses</span>
-        </span>
-    <?php endif; ?>
+        }
+        ?>
+    </a>
 
     <hr class="sb-divider" data-sb-divider>
     <div class="sb-section" data-sb-section>Account</div>

@@ -599,9 +599,10 @@ function renderLedger(json) {
                 const icon = t.quantity_change > 0 ? '▲' : '▼';
                 const tLabel = t.transaction_type === 'sale' ? 'Sale'
                     : t.transaction_type === 'restock' ? 'Restock'
-                        : t.transaction_type === 'initial' ? 'Initial'
-                            : t.transaction_type === 'adjustment' ? 'Adjustment'
-                                : t.transaction_type;
+                        : t.transaction_type === 'purchase' ? 'Purchase'
+                            : t.transaction_type === 'initial' ? 'Initial'
+                                : t.transaction_type === 'adjustment' ? 'Adjustment'
+                                    : t.transaction_type;
                 return `<div style="display:flex;gap:8px;align-items:center;padding:4px 0;
                     border-bottom:1px solid rgba(255,255,255,.04);font-size:.75rem;">
                     <span style="color:#4b5a6e;white-space:nowrap;min-width:78px;">${t.transaction_date}</span>
@@ -658,7 +659,7 @@ function renderLedger(json) {
                 <button class="btn btn-sm btn-outline-secondary"
                     onclick="toggleLedgerDetail(this)"
                     style="font-size:.72rem;padding:3px 8px;"
-                    data-txn='${JSON.stringify(item.transactions).replace(/'/g, "&#39;")}'>
+                    data-txn-count="${item.transactions.length}">
                     <i class="bi bi-list-ul me-1"></i>${item.transactions.length} txn${item.transactions.length !== 1 ? 's' : ''}
                 </button>
                 <div class="ledger-detail-panel" style="display:none;margin-top:8px;
@@ -707,7 +708,7 @@ function renderLedger(json) {
         </div>
         <div style="color:#4b5a6e;font-size:1.2rem;">=</div>
         <div>
-            <div style="font-size:.68rem;color:#4b5a6e;">Ending Stock (→ June Beginning)</div>
+            <div style="font-size:.68rem;color:#4b5a6e;">Ending Stock</div>
             <div style="font-size:1.3rem;font-family:'Space Grotesk',sans-serif;font-weight:800;color:#fff;">${totalEnd} units</div>
         </div>
     `;
@@ -718,10 +719,13 @@ function renderLedger(json) {
 
 function toggleLedgerDetail(btn) {
     const panel = btn.nextElementSibling;
+    if (!panel) return;
     const isOpen = panel.style.display !== 'none';
-    panel.style.display = isOpen ? 'none' : '';
+    const txnCount = btn.dataset.txnCount || '0';
+    const txnLabel = txnCount === '1' ? 'txn' : 'txns';
+    panel.style.display = isOpen ? 'none' : 'block';
     btn.innerHTML = isOpen
-        ? `<i class="bi bi-list-ul me-1"></i>${btn.textContent.trim()}`
+        ? `<i class="bi bi-list-ul me-1"></i>${txnCount} ${txnLabel}`
         : `<i class="bi bi-chevron-up me-1"></i>Hide`;
 }
 

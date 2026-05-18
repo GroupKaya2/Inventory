@@ -6,12 +6,8 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-if (($_SESSION['role'] ?? 'manager') !== 'owner') {
-    header("Location: dashboard.php");
-    exit();
-}
-
 $activePage = 'expenses';
+$isOwner = (($_SESSION['role'] ?? 'manager') === 'owner');
 
 $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -78,11 +74,16 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
         <div class="page-header mb-4">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h4 style="margin:0;"><i class="bi bi-wallet2 me-2"></i>Expenses Management</h4>
+                    <h4 style="margin:0;"><i class="bi bi-wallet2 me-2"></i>Expenses<?= $isOwner ? ' Management' : '' ?></h4>
+                    <?php if (!$isOwner): ?>
+                        <p style="margin:4px 0 0;font-size:.8rem;color:#64748b;">View only — contact owner to add or remove entries</p>
+                    <?php endif; ?>
                 </div>
-                <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
-                    <i class="bi bi-plus-lg me-1"></i>Add Expenses
-                </button>
+                <?php if ($isOwner): ?>
+                    <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+                        <i class="bi bi-plus-lg me-1"></i>Add Expenses
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -179,13 +180,13 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                                 <th>Description</th>
                                 <th>Amount</th>
                                 <th>Added By</th>
-                                <th>Actions</th>
+                                <?php if ($isOwner): ?><th>Actions</th><?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="expBody">
                             <?php if (empty($expenses)): ?>
                                 <tr>
-                                    <td colspan="7" style="text-align:center;padding:30px;color:#7a8499;">
+                                    <td colspan="<?= $isOwner ? 7 : 6 ?>" style="text-align:center;padding:30px;color:#7a8499;">
                                         No expenses recorded yet.
                                     </td>
                                 </tr>
@@ -209,12 +210,14 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                                         <td style="color:#fca5a5;font-weight:700;">₱<?= number_format($e['amount'], 2) ?></td>
                                         <td style="color:#7a8499;font-size:.75rem;">
                                             <?= htmlspecialchars($e['creator'] ?? '—') ?></td>
+                                        <?php if ($isOwner): ?>
                                         <td>
                                             <button class="btn btn-sm btn-outline-danger"
                                                 onclick="deleteExpense(<?= $e['id'] ?>, '<?= htmlspecialchars(addslashes($e['description'])) ?>')">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; endif; ?>
                         </tbody>
@@ -225,6 +228,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
 
     </main>
 
+    <?php if ($isOwner): ?>
     <!-- Add Expenses Modal -->
     <div class="modal fade" id="addExpenseModal" tabindex="-1">
         <div class="modal-dialog  modal-lg modal-dark">
@@ -266,9 +270,11 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
         const CAT_DATA = <?= json_encode($catRows) ?>;
         const PALETTE = ['#e8175d', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#64748b', '#f97316'];
 
@@ -338,7 +344,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
         document.getElementById('expSearch').addEventListener('input', filterExp);
         document.getElementById('expCatFilter').addEventListener('change', filterExp);
 
-        document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
+        if (IS_OWNER) document.getElementById('saveExpenseBtn').addEventListener('click', async function () {
             const date = document.getElementById('expDate').value;
             const cat = document.getElementById('expCategory').value;
             const desc = document.getElementById('expDesc').value.trim();
@@ -374,6 +380,10 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
         });
 
         async function deleteExpense(id, desc) {
+            if (!IS_OWNER) {
+                Swal.fire({ icon: 'info', title: 'View only', text: 'Only the owner can delete expenses.' });
+                return;
+            }
             const confirm = await Swal.fire({
                 title: 'Delete expense?', text: `"${desc}"`, icon: 'warning',
                 showCancelButton: true, confirmButtonColor: '#dc2626', confirmButtonText: 'Delete',

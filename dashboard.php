@@ -62,14 +62,20 @@ for ($i = 11; $i >= 0; $i--) {
 $top10products = [];
 $r = $conn->query("
         SELECT
-            COALESCE(NULLIF(TRIM(p.description),''), NULLIF(TRIM(si.description),''), 'Unknown Product') AS description,
+            COALESCE(
+                NULLIF(TRIM(p.description),''),
+                NULLIF(TRIM(si.description),''),
+                CONCAT('Product #', si.product_id)
+            ) AS description,
             COALESCE(p.code,'') AS code,
             SUM(si.quantity) AS qty_sold,
             SUM(si.amount)   AS revenue
         FROM sale_items si
-        LEFT JOIN products p ON si.product_id = p.product_id
+        INNER JOIN products p ON si.product_id = p.product_id
         WHERE si.line_type = 'parts'
-        GROUP BY p.product_id, COALESCE(NULLIF(TRIM(p.description),''), NULLIF(TRIM(si.description),''), 'Unknown Product')
+          AND si.product_id IS NOT NULL
+          AND TRIM(COALESCE(p.description, si.description, '')) != ''
+        GROUP BY si.product_id, p.description
         ORDER BY qty_sold DESC
         LIMIT 10
     ");
@@ -154,7 +160,7 @@ $lowStockCount = count($lowStockAlert);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — DSpeedway</title>
+    <title>Dashboard DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -163,7 +169,7 @@ $lowStockCount = count($lowStockAlert);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="assets/css/app.css">
     <style>
-        /* ── Chart containers ── */
+        /*Chart containers */
         .chart-wrap {
             background: #111827;
             border: 1px solid rgba(255, 255, 255, .06);
@@ -431,7 +437,7 @@ $lowStockCount = count($lowStockAlert);
                             style="width:<?= min(abs($monthMargin), 100) ?>%"></div>
                     </div>
                     <small class="<?= $monthMargin >= 0 ? 'text-profit' : 'text-loss' ?>" style="font-size:.7rem;">
-                        <?= $monthMargin >= 0 ? '+' : '' ?>     <?= number_format($monthMargin, 1) ?>% margin
+                        <?= $monthMargin >= 0 ? '+' : '' ?>    <?= number_format($monthMargin, 1) ?>% margin
                     </small>
                 </div>
             <?php endif; ?>
@@ -519,7 +525,7 @@ $lowStockCount = count($lowStockAlert);
                         </div>
                     </div>
                     <div class="clegend">
-                        <span><span class="cleg-sq" style="background:#7F77DD;"></span>Units sold</span>
+                        <span><span class="cleg-sq" style="background:#7F77DD;"></span>Qty Sold / Revenue</span>
                     </div>
                     <?php if (empty($top10products)): ?>
                         <div style="text-align:center;color:#4b5a6e;padding:40px 0;font-size:.85rem;">
@@ -683,19 +689,16 @@ $lowStockCount = count($lowStockAlert);
                                 border-left:3px solid <?= $critical ? '#f87171' : '#fbbf24' ?>;">
                                         <div>
                                             <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;">
-                                                <?= htmlspecialchars($item['description']) ?>
-                                            </div>
+                                                <?= htmlspecialchars($item['description']) ?></div>
                                             <div style="font-size:.68rem;color:#4b5a6e;">
-                                                <?= htmlspecialchars($item['category_name'] ?? '') ?>
-                                            </div>
+                                                <?= htmlspecialchars($item['category_name'] ?? '') ?></div>
                                         </div>
                                         <div style="text-align:right;">
                                             <span
                                                 class="<?= $critical ? 'badge-red' : 'badge-yellow' ?>"><?= $item['current_stock'] ?>
                                                 left</span>
                                             <div style="font-size:.63rem;color:#4b5a6e;margin-top:2px;">Min:
-                                                <?= $item['reorder_threshold'] ?>
-                                            </div>
+                                                <?= $item['reorder_threshold'] ?></div>
                                         </div>
                                     </div>
                                 <?php endforeach; ?>
@@ -755,9 +758,7 @@ $lowStockCount = count($lowStockAlert);
 
         function peso(v) { return '₱' + parseFloat(v || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 0 }); }
 
-        // ══════════════════════════════════
-        // CHART 1 & 2: Trend (toggleable)
-        // ══════════════════════════════════
+        // CHART 1 & 2: Trend
         let trendChart = null;
         let trendMode = 'daily';
 
@@ -829,9 +830,8 @@ $lowStockCount = count($lowStockAlert);
 
         buildTrend(DAILY);
 
-        // ══════════════════════════════════
+
         // CHART 3: Top Products (toggleable)
-        // ══════════════════════════════════
         let productsChart = null;
         let productsMode = 'qty';
 
@@ -843,7 +843,7 @@ $lowStockCount = count($lowStockAlert);
             const sorted = [...PRODUCTS].sort((a, b) =>
                 mode === 'qty' ? b.qty_sold - a.qty_sold : b.revenue - a.revenue
             );
-            const labels = sorted.map(p => (p.description && p.description.trim()) ? p.description.trim() : ('Product #' + (sorted.indexOf(p) + 1)));
+            const labels = sorted.map((p, i) => (p.description && p.description.trim()) ? p.description.trim() : ('Product #' + (i + 1)));
             const values = sorted.map(p => mode === 'qty' ? parseFloat(p.qty_sold) : parseFloat(p.revenue));
             const barColors = sorted.map((_, i) => {
                 const palette = ['#7F77DD', '#6366f1', '#8b5cf6', '#a78bfa', '#818cf8', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95', '#7e22ce'];
@@ -855,7 +855,7 @@ $lowStockCount = count($lowStockAlert);
                 data: {
                     labels,
                     datasets: [{
-                        label: mode === 'qty' ? 'Units sold' : 'Revenue',
+                        label: mode === 'qty' ? 'Units Sold' : 'Revenue',
                         data: values,
                         backgroundColor: barColors,
                         borderRadius: 4, borderSkipped: false,
@@ -870,9 +870,9 @@ $lowStockCount = count($lowStockAlert);
                         tooltip: {
                             ...TOOLTIP,
                             callbacks: {
-                                title: c => sorted[c[0].dataIndex]?.description || '',
+                                title: c => labels[c[0].dataIndex] || '',
                                 label: c => mode === 'qty'
-                                    ? '  Sold: ' + Math.round(c.parsed.x) + ' pcs'
+                                    ? '  Qty Sold: ' + Math.round(c.parsed.x) + ' pcs'
                                     : '  Revenue: ' + peso(c.parsed.x)
                             }
                         }
@@ -907,9 +907,7 @@ $lowStockCount = count($lowStockAlert);
 
         buildProducts('qty');
 
-        // ══════════════════════════════════
         // CHART 4: Donut — Parts vs Labor
-        // ══════════════════════════════════
         (function () {
             const ctx = document.getElementById('donutChart')?.getContext('2d');
             if (!ctx) return;
@@ -945,9 +943,7 @@ $lowStockCount = count($lowStockAlert);
             });
         })();
 
-        // ══════════════════════════════════
         // CHART 5: Stock Levels
-        // ══════════════════════════════════
         (function () {
             const ctx = document.getElementById('stockChart')?.getContext('2d');
             if (!ctx || !STOCKS.length) return;

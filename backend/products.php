@@ -1,10 +1,17 @@
 <?php
 session_start();
-header('Content-Type: application/json');
+error_reporting(0);
+ini_set('display_errors', 0);
 require_once __DIR__ . '/db.php';
+header('Content-Type: application/json');
+
+function json_out($data) {
+    echo json_encode($data);
+    exit;
+}
 
 if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Not logged in']);
+    json_out(['success' => false, 'message' => 'Not logged in']);
     exit;
 }
 
@@ -63,7 +70,7 @@ if ($action === 'fetch') {
     if ($result)
         while ($row = $result->fetch_assoc())
             $data[] = $row;
-    echo json_encode(['success' => true, 'data' => $data]);
+    json_out(['success' => true, 'data' => $data]);
     exit;
 }
 
@@ -73,7 +80,7 @@ FETCH SINGLE PRODUCT
 if ($action === 'get') {
     $id = (int) ($_GET['id'] ?? 0);
     if ($id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid ID']);
+        json_out(['success' => false, 'message' => 'Invalid ID']);
         exit;
     }
 
@@ -84,10 +91,10 @@ if ($action === 'get') {
     $stmt->close();
 
     if (!$row) {
-        echo json_encode(['success' => false, 'message' => 'Product not found']);
+        json_out(['success' => false, 'message' => 'Product not found']);
         exit;
     }
-    echo json_encode(['success' => true, 'data' => $row]);
+    json_out(['success' => true, 'data' => $row]);
     exit;
 }
 
@@ -100,7 +107,7 @@ if ($action === 'categories') {
     if ($result)
         while ($row = $result->fetch_assoc())
             $data[] = $row;
-    echo json_encode(['success' => true, 'data' => $data]);
+    json_out(['success' => true, 'data' => $data]);
     exit;
 }
 
@@ -109,7 +116,7 @@ ADD PRODUCT (owner)
 ══════════════════════ */
 if ($action === 'add') {
     if (!$isOwner) {
-        echo json_encode(['success' => false, 'message' => 'Owner only']);
+        json_out(['success' => false, 'message' => 'Owner only']);
         exit;
     }
 
@@ -123,7 +130,7 @@ if ($action === 'add') {
     $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
 
     if (!$catId || !$desc || !$unit) {
-        echo json_encode(['success' => false, 'message' => 'Required fields missing']);
+        json_out(['success' => false, 'message' => 'Required fields missing']);
         exit;
     }
 
@@ -140,9 +147,9 @@ if ($action === 'add') {
                     (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
                     VALUES ($newId, '$today', $qty, 'initial', 'Initial stock', $userId)");
         }
-        echo json_encode(['success' => true, 'message' => 'Product added successfully']);
+        json_out(['success' => true, 'message' => 'Product added successfully']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
+        json_out(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
     }
     $stmt->close();
     exit;
@@ -153,7 +160,7 @@ UPDATE PRODUCT (owner)
 ══════════════════════ */
 if ($action === 'update') {
     if (!$isOwner) {
-        echo json_encode(['success' => false, 'message' => 'Owner only']);
+        json_out(['success' => false, 'message' => 'Owner only']);
         exit;
     }
 
@@ -168,7 +175,7 @@ if ($action === 'update') {
     $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
 
     if (!$id || !$catId || !$desc || !$unit) {
-        echo json_encode(['success' => false, 'message' => 'Missing fields']);
+        json_out(['success' => false, 'message' => 'Missing fields']);
         exit;
     }
 
@@ -179,9 +186,9 @@ if ($action === 'update') {
     );
     $stmt->bind_param('isssddiii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Updated successfully']);
+        json_out(['success' => true, 'message' => 'Updated successfully']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
+        json_out(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
     }
     $stmt->close();
     exit;
@@ -192,22 +199,22 @@ DELETE PRODUCT (owner)
 ══════════════════════ */
 if ($action === 'delete') {
     if (!$isOwner) {
-        echo json_encode(['success' => false, 'message' => 'Owner only']);
+        json_out(['success' => false, 'message' => 'Owner only']);
         exit;
     }
 
     $id = (int) ($_POST['id'] ?? 0);
     if ($id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid ID']);
+        json_out(['success' => false, 'message' => 'Invalid ID']);
         exit;
     }
 
     $stmt = $conn->prepare("DELETE FROM products WHERE product_id = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Deleted successfully']);
+        json_out(['success' => true, 'message' => 'Deleted successfully']);
     } else {
-        echo json_encode(['success' => false, 'message' => 'Delete failed: ' . $stmt->error]);
+        json_out(['success' => false, 'message' => 'Delete failed: ' . $stmt->error]);
     }
     $stmt->close();
     exit;
@@ -222,11 +229,11 @@ if ($action === 'restock') {
     $remarks = trim($_POST['remarks'] ?? 'Restock');
 
     if ($productId <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid product ID.']);
+        json_out(['success' => false, 'message' => 'Invalid product ID.']);
         exit;
     }
     if ($qty <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Quantity must be greater than 0.']);
+        json_out(['success' => false, 'message' => 'Quantity must be greater than 0.']);
         exit;
     }
 
@@ -238,7 +245,7 @@ if ($action === 'restock') {
     $check->close();
 
     if (!$prod) {
-        echo json_encode(['success' => false, 'message' => 'Product not found.']);
+        json_out(['success' => false, 'message' => 'Product not found.']);
         exit;
     }
 
@@ -253,7 +260,7 @@ if ($action === 'restock') {
     $stmt->bind_param('iissi', $productId, $today, $qty, $remarks, $userId);
 
     if (!$stmt->execute()) {
-        echo json_encode(['success' => false, 'message' => 'Restock failed: ' . $stmt->error]);
+        json_out(['success' => false, 'message' => 'Restock failed: ' . $stmt->error]);
         exit;
     }
     $stmt->close();
@@ -265,14 +272,13 @@ if ($action === 'restock') {
     // Get updated stock level
     $newStock = getCurrentStock($conn, $productId);
 
-    echo json_encode([
+    json_out([
         'success' => true,
         'message' => 'Restocked successfully.',
         'new_stock' => $newStock,
         'product' => $prod['description'],
         'qty_added' => $qty,
     ]);
-    exit;
 }
 
 /* ══════════════════════
@@ -307,11 +313,9 @@ if ($action === 'reorder-list') {
     if ($result)
         while ($row = $result->fetch_assoc())
             $items[] = $row;
-    echo json_encode(['success' => true, 'items' => $items]);
+    json_out(['success' => true, 'items' => $items]);
     exit;
 }
-
-echo json_encode(['success' => false, 'message' => 'Unknown action.']);
 
 /*STOCK LEDGER — monthly in/out per product*/
 if ($action === 'stock-ledger') {
@@ -320,7 +324,7 @@ if ($action === 'stock-ledger') {
 
     $monthStart = sprintf('%04d-%02d-01', $year, $month);
     $monthEnd = date('Y-m-t', strtotime($monthStart));
-    $prevEnd = date('Y-m-d', strtotime($monthStart . ' -1 day'));
+    $txnPk = inventory_txn_pk_column($conn);
 
     // Get all products
     $products = [];
@@ -328,9 +332,12 @@ if ($action === 'stock-ledger') {
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
             ORDER BY c.category_name, p.description");
-    if ($rp)
-        while ($row = $rp->fetch_assoc())
-            $products[] = $row;
+    if (!$rp) {
+        json_out(['success' => false, 'message' => 'Could not load products: ' . $conn->error]);
+    }
+    while ($row = $rp->fetch_assoc()) {
+        $products[] = $row;
+    }
 
     $ledger = [];
 
@@ -343,10 +350,13 @@ if ($action === 'stock-ledger') {
                 FROM inventory_transactions
                 WHERE product_id = $pid AND transaction_date < '$monthStart'
             ");
+        if (!$r1) {
+            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
+        }
         $preChange = (int) ($r1->fetch_assoc()['pre_change'] ?? 0);
         $beginStock = (int) $p['initial_quantity'] + $preChange;
 
-        // Restocked (bought) this month — positive changes = restock/initial/adjustment+
+        // Restocked (bought) this month — positive changes
         $r2 = $conn->query("
                 SELECT COALESCE(SUM(quantity_change), 0) AS added
                 FROM inventory_transactions
@@ -354,6 +364,9 @@ if ($action === 'stock-ledger') {
                 AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
                 AND quantity_change > 0
             ");
+        if (!$r2) {
+            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
+        }
         $added = (int) ($r2->fetch_assoc()['added'] ?? 0);
 
         // Used (sales/deductions) this month — negative changes
@@ -364,7 +377,10 @@ if ($action === 'stock-ledger') {
                 AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
                 AND quantity_change < 0
             ");
-        $deducted = (int) ($r3->fetch_assoc()['deducted'] ?? 0); // negative number
+        if (!$r3) {
+            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
+        }
+        $deducted = (int) ($r3->fetch_assoc()['deducted'] ?? 0);
         $used = abs($deducted);
 
         // Ending stock
@@ -376,16 +392,20 @@ if ($action === 'stock-ledger') {
                 FROM inventory_transactions
                 WHERE product_id = $pid
                 AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
-                ORDER BY transaction_date ASC, id ASC
+                ORDER BY transaction_date ASC, {$txnPk} ASC
             ");
+        if (!$r4) {
+            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
+        }
         $txns = [];
-        if ($r4)
-            while ($row = $r4->fetch_assoc())
-                $txns[] = $row;
+        while ($row = $r4->fetch_assoc()) {
+            $txns[] = $row;
+        }
 
         // Only include products that had any activity OR have stock
-        if ($beginStock == 0 && $added == 0 && $used == 0)
+        if ($beginStock == 0 && $added == 0 && $used == 0) {
             continue;
+        }
 
         $ledger[] = [
             'product_id' => $pid,
@@ -400,12 +420,13 @@ if ($action === 'stock-ledger') {
         ];
     }
 
-    echo json_encode([
+    json_out([
         'success' => true,
         'year' => $year,
         'month' => $month,
         'month_name' => date('F Y', strtotime($monthStart)),
         'ledger' => $ledger,
     ]);
-    exit;
 }
+
+json_out(['success' => false, 'message' => 'Unknown action.']);

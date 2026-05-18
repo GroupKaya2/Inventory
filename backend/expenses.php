@@ -27,14 +27,14 @@ if ($action === 'by_date') {
     exit;
 }
 
-// All other actions require owner role
-if (($_SESSION['role'] ?? 'manager') !== 'owner') {
-    echo json_encode(['success' => false, 'message' => 'Owner only.']);
-    exit;
-}
+$isOwner = (($_SESSION['role'] ?? 'manager') === 'owner');
 
-// SAVE expense
+// SAVE expense (owner only)
 if ($action === 'save') {
+    if (!$isOwner) {
+        echo json_encode(['success' => false, 'message' => 'Only the owner can add expenses here.']);
+        exit;
+    }
     $date = trim($_POST['expense_date'] ?? '');
     $cat = trim($_POST['category'] ?? '');
     $desc = trim($_POST['description'] ?? '');
@@ -57,8 +57,12 @@ if ($action === 'save') {
     exit;
 }
 
-// DELETE expense
+// DELETE expense (owner only)
 if ($action === 'delete') {
+    if (!$isOwner) {
+        echo json_encode(['success' => false, 'message' => 'Only the owner can delete expenses.']);
+        exit;
+    }
     $id = (int) ($_POST['id'] ?? 0);
 
     if ($id <= 0) {
