@@ -126,50 +126,58 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 
         <!-- FORECAST TAB -->
         <div class="tab-pane fade" id="tab-forecast">
+
+            <!-- Formula legend card -->
             <div class="card mb-3">
                 <div class="card-header-pink">
-                    <i class="bi bi-graph-up me-1"></i> Weekly & Monthly Parts Forecast
+                    <i class="bi bi-calculator me-1"></i> Forecasting Method — Moving Average + Safety Stock
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding:14px 18px;">
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;" id="forecastConstants">
+                        <span class="summary-pill"><i class="bi bi-clock me-1"></i>Lead Time: <strong id="fcLeadTime">5 days</strong></span>
+                        <span class="summary-pill"><i class="bi bi-shield me-1"></i>Safety Stock: <strong id="fcSafetyStock">3 units</strong></span>
+                        <span class="summary-pill"><i class="bi bi-calendar3 me-1"></i>Based on: <strong id="fcMonths">last 3 months</strong></span>
+                    </div>
+                    <div style="margin-top:12px;font-size:.75rem;color:#64748b;display:flex;flex-wrap:wrap;gap:16px;">
+                        <span>📐 <strong style="color:#94a3b8;">Avg Used/Month</strong> = Total (3 months) ÷ 3</span>
+                        <span>📦 <strong style="color:#94a3b8;">Forecast Needed</strong> = Avg Used/Month</span>
+                        <span>⏱ <strong style="color:#94a3b8;">Usage during Lead Time</strong> = (Avg ÷ 30) × 5 days</span>
+                        <span>🔴 <strong style="color:#94a3b8;">Reorder Point</strong> = Usage during Lead Time + Safety Stock</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main forecast table -->
+            <div class="card mb-3">
+                <div class="card-header-pink">
+                    <i class="bi bi-graph-up me-1"></i> Parts Demand Forecast (Next Month)
+                </div>
+                <div class="card-body p-0">
                     <div id="forecastLoading" style="text-align:center;padding:30px;">
-                        <div class="spinner-border" style="color:#e8175d;"></div>
+                        <div class="spinner-border" style="color:#4ade80;"></div>
                     </div>
                     <div id="forecastContent" style="display:none;">
-                        <p class="section-title mb-3">Next 4 Weeks Forecast</p>
-                        <div class="table-responsive mb-4">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Part</th>
-                                        <th>Code</th>
-                                        <th>Avg Weekly Usage</th>
-                                        <th>Next 4 Weeks</th>
-                                        <th>Data Points</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="weeklyBody"></tbody>
-                            </table>
-                        </div>
-                        <p class="section-title mb-3">Next 3 Months Forecast</p>
+                        <!-- Month usage breakdown pills -->
+                        <div style="padding:12px 16px 0;" id="forecastMonthBadges"></div>
                         <div class="table-responsive">
-                            <table class="data-table">
+                            <table class="data-table" id="forecastTable">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
-                                        <th>Part</th>
-                                        <th>Code</th>
-                                        <th>Avg Monthly Usage</th>
-                                        <th>Next 3 Months</th>
-                                        <th>Months of Data</th>
+                                        <th>Part Name</th>
+                                        <th style="text-align:center;">Avg Used/Month</th>
+                                        <th style="text-align:center;">Forecast Needed</th>
+                                        <th style="text-align:center;">Reorder Point</th>
+                                        <th>Status</th>
                                     </tr>
                                 </thead>
-                                <tbody id="monthlyBody"></tbody>
+                                <tbody id="forecastBody"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Seasonal revenue chart -->
             <div class="card">
                 <div class="card-header-pink">
                     <i class="bi bi-calendar3 me-1"></i> Seasonal Demand — Last 12 Months

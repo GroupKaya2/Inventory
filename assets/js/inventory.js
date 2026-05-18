@@ -403,50 +403,75 @@ document.getElementById('tab-forecast-btn')?.addEventListener('click', () => {
 
 async function loadForecast() {
     try {
-        const res = await fetch(FCAST);
+        const res  = await fetch(FCAST);
         const json = await res.json();
 
         document.getElementById('forecastLoading').style.display = 'none';
         document.getElementById('forecastContent').style.display = '';
 
-        const items = json.items || [];
-        const monthly = json.monthly || [];
+        const items     = json.items    || [];
+        const monthly   = json.monthly  || [];
+        const constants = json.constants || {};
 
-        // Weekly table
-        const wBody = document.getElementById('weeklyBody');
-        if (wBody) {
-            wBody.innerHTML = items.length ? items.map((i, idx) => {
-                const avgWeekly = i.sale_weeks > 0 ? (i.total_qty / i.sale_weeks).toFixed(1) : 0;
-                const next4 = (parseFloat(avgWeekly) * 4).toFixed(0);
-                return `<tr>
-                        <td><span class="badge-gray">${idx + 1}</span></td>
-                        <td>${i.description}</td>
-                        <td>${i.code || '—'}</td>
-                        <td>${avgWeekly}</td>
-                        <td><strong>${next4}</strong></td>
-                        <td>${i.sale_weeks} wks</td>
+        // ── Update legend pills ───────────────────────────────────────────────
+        const leadEl = document.getElementById('fcLeadTime');
+        const safeEl = document.getElementById('fcSafetyStock');
+        if (leadEl) leadEl.textContent = (constants.lead_time_days ?? 5) + ' days';
+        if (safeEl) safeEl.textContent = (constants.safety_stock ?? 3) + ' units';
+
+        // ── Month labels (used for data-period badge only) ─────────────────────
+        const monthLabels = constants.months_used || [];
+        const fmt = (ym) => {
+            if (!ym) return '—';
+            const [y, m] = ym.split('-');
+            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return names[parseInt(m) - 1] + ' ' + y;
+        };
+
+        // ── Status badge helper ───────────────────────────────────────────────
+        const statusBadge = (s) => {
+            const map = {
+                'OUT_OF_STOCK': ['badge-red',    '⛔ OUT OF STOCK'],
+                'REORDER_NOW':  ['badge-red',    '🔴 REORDER NOW'],
+                'LOW_STOCK':    ['badge-yellow',  '🟡 LOW STOCK'],
+                'SUFFICIENT':   ['badge-green',   '🟢 SUFFICIENT'],
+            };
+            const [cls, lbl] = map[s] || ['badge-gray', s];
+            return `<span class="${cls}">${lbl}</span>`;
+        };
+
+        // ── Build forecast table ──────────────────────────────────────────────
+        const fBody = document.getElementById('forecastBody');
+        if (fBody) {
+            if (!items.length) {
+                fBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:24px;">
+                    No inventory data found. Add products and record sales to generate forecasts.
+                </td></tr>`;
+            } else {
+                fBody.innerHTML = items.map((item) => {
+                    const rowClass = item.status === 'OUT_OF_STOCK' || item.status === 'REORDER_NOW'
+                        ? 'row-zero' : item.status === 'LOW_STOCK' ? 'row-low' : '';
+                    return `<tr class="${rowClass}">
+                        <td style="font-weight:600;color:#e2e8f0;">${item.description}</td>
+                        <td style="text-align:center;color:#60a5fa;font-weight:600;">${item.avg_monthly}</td>
+                        <td style="text-align:center;color:#4ade80;font-weight:700;">${item.forecast_needed} pcs</td>
+                        <td style="text-align:center;color:#f87171;font-weight:700;">${item.reorder_point}</td>
+                        <td>${statusBadge(item.status)}</td>
                     </tr>`;
-            }).join('') : `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
+                }).join('');
+            }
         }
 
-        // Monthly table
-        const mBody = document.getElementById('monthlyBody');
-        if (mBody) {
-            mBody.innerHTML = items.length ? items.map((i, idx) => {
-                const avgMonthly = i.sale_months > 0 ? (i.total_qty / i.sale_months).toFixed(1) : 0;
-                const next3 = (parseFloat(avgMonthly) * 3).toFixed(0);
-                return `<tr>
-                        <td><span class="badge-gray">${idx + 1}</span></td>
-                        <td>${i.description}</td>
-                        <td>${i.code || '—'}</td>
-                        <td>${avgMonthly}</td>
-                        <td><strong>${next3}</strong></td>
-                        <td>${i.sale_months} mos</td>
-                    </tr>`;
-            }).join('') : `<tr><td colspan="6" style="text-align:center;color:#7a8499;padding:20px;">No sales data yet.</td></tr>`;
+        // ── Month badges (data period info) ──────────────────────────────────
+        const badgeWrap = document.getElementById('forecastMonthBadges');
+        if (badgeWrap && monthLabels.length) {
+            badgeWrap.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                <span style="font-size:.7rem;color:#64748b;align-self:center;">Data period:</span>
+                ${monthLabels.map(m => `<span class="summary-pill">${fmt(m)}</span>`).join('')}
+            </div>`;
         }
 
-        // Seasonal chart
+        // ── Seasonal revenue chart ────────────────────────────────────────────
         if (monthly.length && document.getElementById('seasonalChart')) {
             const ctx = document.getElementById('seasonalChart').getContext('2d');
             new Chart(ctx, {
@@ -454,8 +479,8 @@ async function loadForecast() {
                 data: {
                     labels: monthly.map(m => m.month_label),
                     datasets: [
-                        { label: 'Parts ₱', data: monthly.map(m => m.parts_total), backgroundColor: 'rgba(59,130,246,.7)' },
-                        { label: 'Labor ₱', data: monthly.map(m => m.labor_total), backgroundColor: 'rgba(52,211,153,.7)' },
+                        { label: 'Parts ₱', data: monthly.map(m => m.parts_total), backgroundColor: 'rgba(96,165,250,.7)' },
+                        { label: 'Labor ₱', data: monthly.map(m => m.labor_total), backgroundColor: 'rgba(74,222,128,.7)' },
                     ]
                 },
                 options: {
