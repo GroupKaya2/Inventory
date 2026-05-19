@@ -631,6 +631,31 @@ $savedExpTotal = array_sum(array_column($savedExpenses, 'amount'));
         renderLabor();
         renderExp();
         recalc();
+
+        // Client-side Sunday guard
+        function guardSunday(dateInput) {
+            if (!dateInput.value) return;
+            const date = new Date(dateInput.value);
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek === 7) { // Sunday
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Shop is Closed on Sundays',
+                    text: 'Please select a different date.',
+                    confirmButtonColor: '#e8175d'
+                }).then(() => {
+                    dateInput.value = '<?= $today ?>';
+                });
+            }
+        }
+
+        // Check on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('saleDate');
+            if (dateInput) {
+                guardSunday(dateInput);
+            }
+        });
     </script>
 </body>
 

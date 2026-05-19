@@ -339,6 +339,10 @@ if ($r)
                                                 title="View details">
                                                 <i class="bi bi-eye"></i>
                                             </button>
+                                            <button class="btn btn-sm btn-outline-success ms-1"
+                                                onclick="printReceipt(<?= $s['id'] ?>)" title="Print Receipt">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
                                             <?php if ($isOwner): ?>
                                                 <button class="btn btn-sm btn-outline-danger ms-1"
                                                     onclick="deleteSale(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['customer_name'] ?: 'Sale #' . $s['id'])) ?>')"
@@ -663,6 +667,49 @@ if ($r)
 
             } catch (err) {
                 body.innerHTML = `<p style="color:#fca5a5;text-align:center;">Error: ${err.message}</p>`;
+            }
+        }
+
+        async function printReceipt(id) {
+            try {
+                const resp = await fetch(`backend/receipt.php?action=generate&id=${id}`);
+                const data = await resp.json();
+
+                if (!data.success) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+                    return;
+                }
+
+                // Create a new window for printing
+                const printWindow = window.open('', '_blank', 'width=400,height=600');
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Receipt #${id}</title>
+                        <style>
+                            body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                            @media print {
+                                body { margin: 0; }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${data.receipt_html}
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                window.onafterprint = function() {
+                                    window.close();
+                                };
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Error', text: err.message });
             }
         }
 

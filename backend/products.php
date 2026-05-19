@@ -3,6 +3,7 @@ session_start();
 error_reporting(0);
 ini_set('display_errors', 0);
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/audit.php';
 header('Content-Type: application/json');
 
 function json_out($data) {
@@ -141,12 +142,18 @@ if ($action === 'add') {
     $stmt->bind_param('isssddii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh);
     if ($stmt->execute()) {
         $newId = $conn->insert_id;
-        if ($qty > 0) {
-            $today = date('Y-m-d');
-            $conn->query("INSERT INTO inventory_transactions
-                    (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
-                    VALUES ($newId, '$today', $qty, 'initial', 'Initial stock', $userId)");
-        }
+        // Log audit entry
+        $newValues = json_encode([
+            'category_id' => $catId,
+            'description' => $desc,
+            'unit' => $unit,
+            'code' => $code,
+            'unit_cost' => $cost,
+            'selling_price' => $price,
+            'initial_quantity' => $qty,
+            'reorder_threshold' => $thresh
+        ]);
+        logAudit($conn, $userId, 'INSERT', 'products', $newId, null, $newValues);
         json_out(['success' => true, 'message' => 'Product added successfully']);
     } else {
         json_out(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
@@ -179,6 +186,13 @@ if ($action === 'update') {
         exit;
     }
 
+    // Fetch old values for audit log
+    $oldStmt = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
+    $oldStmt->bind_param('i', $id);
+    $oldStmt->execute();
+    $oldResult = $oldStmt->get_result()->fetch_assoc();
+    $oldStmt->close();
+
     $stmt = $conn->prepare(
         "UPDATE products SET category_id=?, description=?, unit=?, code=?,
             unit_cost=?, selling_price=?, initial_quantity=?, reorder_threshold=?
@@ -186,6 +200,19 @@ if ($action === 'update') {
     );
     $stmt->bind_param('isssddiii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $id);
     if ($stmt->execute()) {
+        // Log audit entry
+        $oldValues = json_encode($oldResult);
+        $newValues = json_encode([
+            'category_id' => $catId,
+            'description' => $desc,
+            'unit' => $unit,
+            'code' => $code,
+            'unit_cost' => $cost,
+            'selling_price' => $price,
+            'initial_quantity' => $qty,
+            'reorder_threshold' => $thresh
+        ]);
+        logAudit($conn, $userId, 'UPDATE', 'products', $id, $oldValues, $newValues);
         json_out(['success' => true, 'message' => 'Updated successfully']);
     } else {
         json_out(['success' => false, 'message' => 'SQL Error: ' . $stmt->error]);
@@ -209,9 +236,19 @@ if ($action === 'delete') {
         exit;
     }
 
+    // Fetch old values for audit log before deletion
+    $oldStmt = $conn->prepare("SELECT * FROM products WHERE product_id = ?");
+    $oldStmt->bind_param('i', $id);
+    $oldStmt->execute();
+    $oldResult = $oldStmt->get_result()->fetch_assoc();
+    $oldStmt->close();
+
     $stmt = $conn->prepare("DELETE FROM products WHERE product_id = ?");
     $stmt->bind_param('i', $id);
     if ($stmt->execute()) {
+        // Log audit entry
+        $oldValues = json_encode($oldResult);
+        logAudit($conn, $userId, 'DELETE', 'products', $id, $oldValues, null);
         json_out(['success' => true, 'message' => 'Deleted successfully']);
     } else {
         json_out(['success' => false, 'message' => 'Delete failed: ' . $stmt->error]);

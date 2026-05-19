@@ -511,6 +511,10 @@ $initials = substr($initials, 0, 2);
                         <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
                         Manage accounts
                     </button>
+                    <button class="ac-nav-item" onclick="showPanel('audit',this)">
+                        <span class="nav-icon"><i class="bi bi-journal-text"></i></span>
+                        Audit Log
+                    </button>
                     <button class="ac-nav-item" onclick="showPanel('danger',this)">
                         <span class="nav-icon" style="background:rgba(248,113,113,.1);color:#f87171;"><i
                                 class="bi bi-exclamation-triangle-fill"></i></span>
@@ -762,6 +766,44 @@ $initials = substr($initials, 0, 2);
                             </button>
                         </div>
                     </div>
+
+                    <!-- AUDIT LOG -->
+                    <div class="ac-panel" id="panel-audit">
+                        <div class="ac-right-title">Audit Log</div>
+                        <div class="ac-right-sub">Track all edits and deletions in the system.</div>
+                        
+                        <div class="d-flex gap-2 mb-3">
+                            <button class="btn-pink" onclick="loadAuditLog()" style="font-size:.82rem;padding:7px 16px;">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                            </button>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>User</th>
+                                                <th>Action</th>
+                                                <th>Table</th>
+                                                <th>Record ID</th>
+                                                <th>IP Address</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="auditLogBody">
+                                            <tr>
+                                                <td colspan="6" style="text-align:center;padding:30px;color:#7a8499;">
+                                                    Loading audit log…
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 <?php endif; ?>
 
             </div>
@@ -834,11 +876,69 @@ $initials = substr($initials, 0, 2);
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let auditLogLoaded = false;
+
         function showPanel(id, btn) {
             document.querySelectorAll('.ac-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.ac-nav-item').forEach(b => b.classList.remove('active'));
             document.getElementById('panel-' + id)?.classList.add('active');
             btn?.classList.add('active');
+            
+            // Load audit log when panel is shown
+            if (id === 'audit' && !auditLogLoaded) {
+                loadAuditLog();
+            }
+        }
+
+        async function loadAuditLog() {
+            const tbody = document.getElementById('auditLogBody');
+            if (!tbody) return;
+
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;">
+                <div class="spinner-border" style="color:#e8175d;"></div>
+            </td></tr>`;
+
+            try {
+                const res = await fetch('backend/audit-log.php?action=fetch&limit=50');
+                const json = await res.json();
+
+                if (!json.success) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#fca5a5;">
+                        ⚠ ${json.message || 'Failed to load audit log.'}</td></tr>`;
+                    return;
+                }
+
+                const entries = json.data || [];
+                if (!entries.length) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#7a8499;">
+                        No audit log entries found.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = entries.map((e, idx) => {
+                    const actionBadge = e.action_type === 'INSERT' 
+                        ? '<span class="badge-green">INSERT</span>'
+                        : e.action_type === 'UPDATE' 
+                        ? '<span class="badge-yellow">UPDATE</span>'
+                        : e.action_type === 'DELETE'
+                        ? '<span class="badge-red">DELETE</span>'
+                        : `<span class="badge-gray">${e.action_type}</span>`;
+                    
+                    return `<tr>
+                        <td>${new Date(e.created_at).toLocaleString()}</td>
+                        <td>${e.username || 'Unknown'}</td>
+                        <td>${actionBadge}</td>
+                        <td style="font-weight:600;">${e.table_name}</td>
+                        <td>${e.record_id}</td>
+                        <td style="font-size:.75rem;color:#64748b;">${e.ip_address || 'N/A'}</td>
+                    </tr>`;
+                }).join('');
+
+                auditLogLoaded = true;
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:#fca5a5;">
+                    ⚠ Network error. (${err.message})</td></tr>`;
+            }
         }
 
         async function saveProfile() {

@@ -17,7 +17,7 @@ $today = date('Y-m-d');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Sales Report — DSpeedway</title>
+    <title>Weekly Sales Report  DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -349,10 +349,7 @@ $today = date('Y-m-d');
                     <i class="bi bi-download me-1"></i>Export CSV
                 </button>
             <?php endif; ?>
-            <div class="rpt-hint">
-                <strong>How it works:</strong> The table lists Mon–Sat for the week that contains your date.
-                <strong>Weekly Total</strong> sums that row only. <strong>Monthly Total</strong> is for the full calendar month.
-            </div>
+
         </div>
 
         <div id="stateLoading" class="state-box" style="display:none;">

@@ -28,7 +28,7 @@ unset($_SESSION['error']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login — DSpeedway</title>
+    <title>Login DSpeedway</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
@@ -78,6 +78,10 @@ unset($_SESSION['error']);
 
                 <p class="signup-link">
                     Don't have an account? <a href="signup.php">Sign Up</a>
+                </p>
+
+                <p class="forgot-link">
+                    <a href="forgot-password.php">Forgot Password?</a>
                 </p>
             </div>
 

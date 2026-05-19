@@ -2,6 +2,7 @@
 session_start();
 header('Content-Type: application/json');
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/audit.php';
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Not logged in']);
@@ -220,6 +221,13 @@ if ($action === 'delete') {
         $today = date('Y-m-d');
         $reverseRemark = "Sale #$id deleted";
 
+        // Fetch old values for audit log before deletion
+        $oldStmt = $conn->prepare("SELECT * FROM sales WHERE id = ?");
+        $oldStmt->bind_param('i', $id);
+        $oldStmt->execute();
+        $oldResult = $oldStmt->get_result()->fetch_assoc();
+        $oldStmt->close();
+
         $rows = $conn->query(
             "SELECT product_id, quantity FROM sale_items
                 WHERE sale_id = $id AND line_type = 'parts' AND product_id IS NOT NULL"
@@ -237,6 +245,11 @@ if ($action === 'delete') {
         $conn->query("DELETE FROM sale_items WHERE sale_id = $id");
         $conn->query("DELETE FROM sales WHERE id = $id");
         $conn->commit();
+        
+        // Log audit entry
+        $oldValues = json_encode($oldResult);
+        logAudit($conn, $userId, 'DELETE', 'sales', $id, $oldValues, null);
+        
         echo json_encode(['success' => true, 'message' => 'Sale deleted.']);
     } catch (Exception $e) {
         $conn->rollback();

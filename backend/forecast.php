@@ -1,7 +1,11 @@
 <?php
 session_start();
-header('Content-Type: application/json');
+error_reporting(0);
+ini_set('display_errors', 0);
+ob_start(); // capture any stray output so JSON is never corrupted
 require_once __DIR__ . '/db.php';
+ob_clean(); // discard any output db.php may have produced
+header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);

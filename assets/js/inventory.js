@@ -390,116 +390,9 @@ exportBtn?.addEventListener('click', () => {
     const csv = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
     const a = document.createElement('a');
     a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-    a.download = 'inventory_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.download = 'stock_ledger_' + new Date().toISOString().slice(0, 10) + '.csv';
     a.click();
 });
-
-/*  FORECASTING TAB */
-let forecastLoaded = false;
-
-document.getElementById('tab-forecast-btn')?.addEventListener('click', () => {
-    if (!forecastLoaded) loadForecast();
-});
-
-async function loadForecast() {
-    try {
-        const res  = await fetch(FCAST);
-        const json = await res.json();
-
-        document.getElementById('forecastLoading').style.display = 'none';
-        document.getElementById('forecastContent').style.display = '';
-
-        const items     = json.items    || [];
-        const monthly   = json.monthly  || [];
-        const constants = json.constants || {};
-
-        // ── Update legend pills ───────────────────────────────────────────────
-        const leadEl = document.getElementById('fcLeadTime');
-        const safeEl = document.getElementById('fcSafetyStock');
-        if (leadEl) leadEl.textContent = (constants.lead_time_days ?? 5) + ' days';
-        if (safeEl) safeEl.textContent = (constants.safety_stock ?? 3) + ' units';
-
-        // ── Month labels (used for data-period badge only) ─────────────────────
-        const monthLabels = constants.months_used || [];
-        const fmt = (ym) => {
-            if (!ym) return '—';
-            const [y, m] = ym.split('-');
-            const names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return names[parseInt(m) - 1] + ' ' + y;
-        };
-
-        // ── Status badge helper ───────────────────────────────────────────────
-        const statusBadge = (s) => {
-            const map = {
-                'OUT_OF_STOCK': ['badge-red',    '⛔ OUT OF STOCK'],
-                'REORDER_NOW':  ['badge-red',    '🔴 REORDER NOW'],
-                'LOW_STOCK':    ['badge-yellow',  '🟡 LOW STOCK'],
-                'SUFFICIENT':   ['badge-green',   '🟢 SUFFICIENT'],
-            };
-            const [cls, lbl] = map[s] || ['badge-gray', s];
-            return `<span class="${cls}">${lbl}</span>`;
-        };
-
-        // ── Build forecast table ──────────────────────────────────────────────
-        const fBody = document.getElementById('forecastBody');
-        if (fBody) {
-            if (!items.length) {
-                fBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#7a8499;padding:24px;">
-                    No inventory data found. Add products and record sales to generate forecasts.
-                </td></tr>`;
-            } else {
-                fBody.innerHTML = items.map((item) => {
-                    const rowClass = item.status === 'OUT_OF_STOCK' || item.status === 'REORDER_NOW'
-                        ? 'row-zero' : item.status === 'LOW_STOCK' ? 'row-low' : '';
-                    return `<tr class="${rowClass}">
-                        <td style="font-weight:600;color:#e2e8f0;">${item.description}</td>
-                        <td style="text-align:center;color:#60a5fa;font-weight:600;">${item.avg_monthly}</td>
-                        <td style="text-align:center;color:#4ade80;font-weight:700;">${item.forecast_needed} pcs</td>
-                        <td style="text-align:center;color:#f87171;font-weight:700;">${item.reorder_point}</td>
-                        <td>${statusBadge(item.status)}</td>
-                    </tr>`;
-                }).join('');
-            }
-        }
-
-        // ── Month badges (data period info) ──────────────────────────────────
-        const badgeWrap = document.getElementById('forecastMonthBadges');
-        if (badgeWrap && monthLabels.length) {
-            badgeWrap.innerHTML = `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-                <span style="font-size:.7rem;color:#64748b;align-self:center;">Data period:</span>
-                ${monthLabels.map(m => `<span class="summary-pill">${fmt(m)}</span>`).join('')}
-            </div>`;
-        }
-
-        // ── Seasonal revenue chart ────────────────────────────────────────────
-        if (monthly.length && document.getElementById('seasonalChart')) {
-            const ctx = document.getElementById('seasonalChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: monthly.map(m => m.month_label),
-                    datasets: [
-                        { label: 'Parts ₱', data: monthly.map(m => m.parts_total), backgroundColor: 'rgba(96,165,250,.7)' },
-                        { label: 'Labor ₱', data: monthly.map(m => m.labor_total), backgroundColor: 'rgba(74,222,128,.7)' },
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { labels: { color: '#e2e8f0' } } },
-                    scales: {
-                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.05)' } },
-                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,.05)' } }
-                    }
-                }
-            });
-        }
-
-        forecastLoaded = true;
-    } catch (e) {
-        document.getElementById('forecastLoading').innerHTML =
-            `<p style="color:#fca5a5;">Failed to load forecast data. (${e.message})</p>`;
-    }
-}
 
 /*  REORDER TAB*/
 let reorderLoaded = false;
@@ -785,4 +678,163 @@ function exportLedgerCSV() {
     a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
     a.download = `stock_ledger_${ledgerData.year}_${String(ledgerData.month).padStart(2, '0')}.csv`;
     a.click();
+}
+
+/* ══════════════════════════════════════
+   CATEGORY MANAGEMENT
+══════════════════════════════════════ */
+let categoriesTabLoaded = false;
+
+document.getElementById('tab-categories-btn')?.addEventListener('click', () => {
+    if (!categoriesTabLoaded && IS_OWNER) loadCategoriesManagement();
+});
+
+async function loadCategoriesManagement() {
+    const tbody = document.getElementById('categoriesBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:30px;">
+        <div class="spinner-border" style="color:#e8175d;"></div>
+    </td></tr>`;
+
+    try {
+        const res = await fetch('backend/categories.php?action=fetch');
+        const json = await res.json();
+
+        if (!json.success) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#fca5a5;">
+                ⚠ ${json.message || 'Failed to load categories.'}</td></tr>`;
+            return;
+        }
+
+        const categories = json.data || [];
+        if (!categories.length) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#7a8499;">
+                No categories found. Add one to get started.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = categories.map((c, idx) => `
+            <tr>
+                <td><span class="badge-gray">${idx + 1}</span></td>
+                <td style="font-weight:600;color:#e2e8f0;">${c.category_name}</td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="openEditCategory(${c.category_id}, '${escHtml(c.category_name)}')"
+                            title="Edit"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteCategory(${c.category_id}, '${escHtml(c.category_name)}')"
+                            title="Delete"><i class="bi bi-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+
+        categoriesTabLoaded = true;
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:#fca5a5;">
+            ⚠ Network error. (${err.message})</td></tr>`;
+    }
+}
+
+document.getElementById('submitAddCategory')?.addEventListener('click', async () => {
+    const name = document.getElementById('addCategoryName')?.value.trim();
+    if (!name) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Category name is required.' });
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('action', 'add');
+    fd.append('category_name', name);
+
+    try {
+        const res = await fetch('backend/categories.php', { method: 'POST', body: fd });
+        const json = await res.json();
+
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'))?.hide();
+            document.getElementById('addCategoryName').value = '';
+            Swal.fire({ icon: 'success', title: 'Added!', timer: 1200, showConfirmButton: false });
+            categoriesTabLoaded = false;
+            loadCategoriesManagement();
+            loadCategories(); // Refresh category dropdowns in product forms
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network Error', text: e.message });
+    }
+});
+
+function openEditCategory(id, name) {
+    document.getElementById('editCategoryId').value = id;
+    document.getElementById('editCategoryName').value = name;
+    new bootstrap.Modal(document.getElementById('editCategoryModal')).show();
+}
+
+document.getElementById('submitEditCategory')?.addEventListener('click', async () => {
+    const id = document.getElementById('editCategoryId')?.value;
+    const name = document.getElementById('editCategoryName')?.value.trim();
+
+    if (!id || !name) {
+        Swal.fire({ icon: 'warning', title: 'Required', text: 'Category name is required.' });
+        return;
+    }
+
+    const fd = new FormData();
+    fd.append('action', 'update');
+    fd.append('category_id', id);
+    fd.append('category_name', name);
+
+    try {
+        const res = await fetch('backend/categories.php', { method: 'POST', body: fd });
+        const json = await res.json();
+
+        if (json.success) {
+            bootstrap.Modal.getInstance(document.getElementById('editCategoryModal'))?.hide();
+            Swal.fire({ icon: 'success', title: 'Updated!', timer: 1200, showConfirmButton: false });
+            categoriesTabLoaded = false;
+            loadCategoriesManagement();
+            loadCategories(); // Refresh category dropdowns
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network Error', text: e.message });
+    }
+});
+
+async function deleteCategory(id, name) {
+    const result = await Swal.fire({
+        title: 'Delete this category?',
+        text: `"${name}" will be permanently removed.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Delete',
+        cancelButtonText: 'Cancel',
+    });
+    if (!result.isConfirmed) return;
+
+    const fd = new FormData();
+    fd.append('action', 'delete');
+    fd.append('category_id', id);
+
+    try {
+        const res = await fetch('backend/categories.php', { method: 'POST', body: fd });
+        const json = await res.json();
+
+        if (json.success) {
+            Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
+            categoriesTabLoaded = false;
+            loadCategoriesManagement();
+            loadCategories(); // Refresh category dropdowns
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+        }
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Network Error', text: e.message });
+    }
 }
