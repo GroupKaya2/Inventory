@@ -30,14 +30,12 @@ function getCurrentStock($conn, $productId)
     if ($r && $row = $r->fetch_assoc()) {
         return (int) $row['current_stock'];
     }
-    // Fallback: calculate from initial_quantity + transactions
+    // Fallback: calculate from transactions only (single source of truth)
     $r2 = $conn->query("
             SELECT
-                COALESCE(p.initial_quantity, 0) + COALESCE(SUM(t.quantity_change), 0) AS stock
-            FROM products p
-            LEFT JOIN inventory_transactions t ON t.product_id = p.product_id
-            WHERE p.product_id = " . (int) $productId . "
-            GROUP BY p.product_id
+                COALESCE(SUM(t.quantity_change), 0) AS stock
+            FROM inventory_transactions t
+            WHERE t.product_id = " . (int) $productId . "
         ");
     if ($r2 && $row2 = $r2->fetch_assoc()) {
         return (int) $row2['stock'];
@@ -54,7 +52,7 @@ if ($action === 'fetch') {
                 p.unit_cost, p.selling_price,
                 (p.selling_price - p.unit_cost) AS margin,
                 COALESCE(ps.current_stock,
-                    p.initial_quantity + COALESCE((
+                    COALESCE((
                         SELECT SUM(t.quantity_change)
                         FROM inventory_transactions t
                         WHERE t.product_id = p.product_id
@@ -142,6 +140,21 @@ if ($action === 'add') {
     $stmt->bind_param('isssddii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh);
     if ($stmt->execute()) {
         $newId = $conn->insert_id;
+
+        // Create initial inventory transaction as the single source of truth
+        // Use type='initial' so the ledger can distinguish it from restocks
+        if ($qty > 0) {
+            $today = date('Y-m-d');
+            $itStmt = $conn->prepare(
+                "INSERT INTO inventory_transactions
+                    (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+                    VALUES (?, ?, ?, 'initial', 'Initial stock', ?)"
+            );
+            $itStmt->bind_param('iisi', $newId, $today, $qty, $userId);
+            $itStmt->execute();
+            $itStmt->close();
+        }
+
         // Log audit entry
         $newValues = json_encode([
             'category_id' => $catId,
@@ -326,7 +339,7 @@ if ($action === 'reorder-list') {
             SELECT p.product_id, p.code, p.description,
                 COALESCE(c.category_name,'') AS category_name,
                 COALESCE(ps.current_stock,
-                    p.initial_quantity + COALESCE((
+                    COALESCE((
                         SELECT SUM(t.quantity_change)
                         FROM inventory_transactions t
                         WHERE t.product_id = p.product_id
@@ -338,7 +351,7 @@ if ($action === 'reorder-list') {
             LEFT JOIN categories c ON p.category_id = c.category_id
             LEFT JOIN product_stock ps ON p.product_id = ps.product_id
             WHERE COALESCE(ps.current_stock,
-                    p.initial_quantity + COALESCE((
+                    COALESCE((
                         SELECT SUM(t2.quantity_change)
                         FROM inventory_transactions t2
                         WHERE t2.product_id = p.product_id
@@ -352,118 +365,6 @@ if ($action === 'reorder-list') {
             $items[] = $row;
     json_out(['success' => true, 'items' => $items]);
     exit;
-}
-
-/*STOCK LEDGER — monthly in/out per product*/
-if ($action === 'stock-ledger') {
-    $year = max(2020, min(2100, (int) ($_GET['year'] ?? date('Y'))));
-    $month = max(1, min(12, (int) ($_GET['month'] ?? date('n'))));
-
-    $monthStart = sprintf('%04d-%02d-01', $year, $month);
-    $monthEnd = date('Y-m-t', strtotime($monthStart));
-    $txnPk = inventory_txn_pk_column($conn);
-
-    // Get all products
-    $products = [];
-    $rp = $conn->query("SELECT p.product_id, p.description, p.unit, p.initial_quantity, c.category_name
-            FROM products p
-            LEFT JOIN categories c ON p.category_id = c.category_id
-            ORDER BY c.category_name, p.description");
-    if (!$rp) {
-        json_out(['success' => false, 'message' => 'Could not load products: ' . $conn->error]);
-    }
-    while ($row = $rp->fetch_assoc()) {
-        $products[] = $row;
-    }
-
-    $ledger = [];
-
-    foreach ($products as $p) {
-        $pid = (int) $p['product_id'];
-
-        // Beginning stock = initial_qty + all transactions BEFORE this month
-        $r1 = $conn->query("
-                SELECT COALESCE(SUM(quantity_change), 0) AS pre_change
-                FROM inventory_transactions
-                WHERE product_id = $pid AND transaction_date < '$monthStart'
-            ");
-        if (!$r1) {
-            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
-        }
-        $preChange = (int) ($r1->fetch_assoc()['pre_change'] ?? 0);
-        $beginStock = (int) $p['initial_quantity'] + $preChange;
-
-        // Restocked (bought) this month — positive changes
-        $r2 = $conn->query("
-                SELECT COALESCE(SUM(quantity_change), 0) AS added
-                FROM inventory_transactions
-                WHERE product_id = $pid
-                AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
-                AND quantity_change > 0
-            ");
-        if (!$r2) {
-            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
-        }
-        $added = (int) ($r2->fetch_assoc()['added'] ?? 0);
-
-        // Used (sales/deductions) this month — negative changes
-        $r3 = $conn->query("
-                SELECT COALESCE(SUM(quantity_change), 0) AS deducted
-                FROM inventory_transactions
-                WHERE product_id = $pid
-                AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
-                AND quantity_change < 0
-            ");
-        if (!$r3) {
-            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
-        }
-        $deducted = (int) ($r3->fetch_assoc()['deducted'] ?? 0);
-        $used = abs($deducted);
-
-        // Ending stock
-        $endStock = $beginStock + $added - $used;
-
-        // Transaction details for this month
-        $r4 = $conn->query("
-                SELECT transaction_date, quantity_change, transaction_type, remarks
-                FROM inventory_transactions
-                WHERE product_id = $pid
-                AND transaction_date BETWEEN '$monthStart' AND '$monthEnd'
-                ORDER BY transaction_date ASC, {$txnPk} ASC
-            ");
-        if (!$r4) {
-            json_out(['success' => false, 'message' => 'Ledger query failed: ' . $conn->error]);
-        }
-        $txns = [];
-        while ($row = $r4->fetch_assoc()) {
-            $txns[] = $row;
-        }
-
-        // Only include products that had any activity OR have stock
-        if ($beginStock == 0 && $added == 0 && $used == 0) {
-            continue;
-        }
-
-        $ledger[] = [
-            'product_id' => $pid,
-            'description' => $p['description'],
-            'unit' => $p['unit'],
-            'category' => $p['category_name'] ?? '',
-            'begin_stock' => $beginStock,
-            'added' => $added,
-            'used' => $used,
-            'end_stock' => $endStock,
-            'transactions' => $txns,
-        ];
-    }
-
-    json_out([
-        'success' => true,
-        'year' => $year,
-        'month' => $month,
-        'month_name' => date('F Y', strtotime($monthStart)),
-        'ledger' => $ledger,
-    ]);
 }
 
 json_out(['success' => false, 'message' => 'Unknown action.']);

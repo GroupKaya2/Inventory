@@ -73,20 +73,19 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
 $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method
     ENUM('cash','gcash') NOT NULL DEFAULT 'cash'");
 
-// product_stock view
+// product_stock view — single source of truth: inventory_transactions only
+// The 'initial' transaction inserted on product creation carries the opening qty.
 $conn->query("CREATE OR REPLACE VIEW product_stock AS
     SELECT
         p.product_id,
         p.description,
         p.reorder_threshold,
         c.category_name,
-        COALESCE(p.initial_quantity, 0)
-            + COALESCE(SUM(t.quantity_change), 0) AS current_stock
+        COALESCE(SUM(t.quantity_change), 0) AS current_stock
     FROM products p
     LEFT JOIN categories c ON p.category_id = c.category_id
     LEFT JOIN inventory_transactions t ON t.product_id = p.product_id
-    GROUP BY p.product_id, p.description, p.reorder_threshold,
-            p.initial_quantity, c.category_name
+    GROUP BY p.product_id, p.description, p.reorder_threshold, c.category_name
 ");
 
 // password_reset_tokens table
