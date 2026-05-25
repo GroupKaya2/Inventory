@@ -502,7 +502,7 @@ if ($r)
         document.getElementById('payFilter').addEventListener('change', filterTable);
 
         function exportCSV() {
-            const rows = [['ID', 'Date', 'Customer', 'Plate', 'Parts (₱)', 'Labor (₱)', 'Gross Total (₱)', 'Payment']];
+            const rows = [['ID', 'Date', 'Customer', 'Plate', 'Parts (₱)', 'Labor (₱)', 'Gross Total (₱)', 'Expenses (₱)', 'Net (₱)', 'Payment']];
             document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
                 if (tr.style.display === 'none') return;
                 const cells = tr.querySelectorAll('td');
@@ -514,7 +514,9 @@ if ($r)
                     cells[4].textContent.replace(/[₱,]/g, '').trim(),
                     cells[5].textContent.replace(/[₱,]/g, '').trim(),
                     cells[6].textContent.replace(/[₱,]/g, '').trim(),
-                    cells[7].textContent.trim(),
+                    (tr.dataset.exp || '0'),
+                    (tr.dataset.net || '0'),
+                    cells[9].textContent.trim(),
                 ]);
             });
             const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
