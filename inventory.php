@@ -155,12 +155,6 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                         <span class="summary-pill"><i class="bi bi-shield me-1"></i>Safety Stock: <strong id="fcSafetyStock">3 units</strong></span>
                         <span class="summary-pill"><i class="bi bi-calendar3 me-1"></i>Based on: <strong id="fcMonths">last 3 months</strong></span>
                     </div>
-                    <div style="margin-top:12px;font-size:.75rem;color:#64748b;display:flex;flex-wrap:wrap;gap:16px;">
-                        <span>📐 <strong style="color:#94a3b8;">Avg Used/Month</strong> = Total (3 months) ÷ 3</span>
-                        <span>📦 <strong style="color:#94a3b8;">Forecast Needed</strong> = Avg Used/Month</span>
-                        <span>⏱ <strong style="color:#94a3b8;">Usage during Lead Time</strong> = (Avg ÷ 30) × 5 days</span>
-                        <span>🔴 <strong style="color:#94a3b8;">Reorder Point</strong> = Usage during Lead Time + Safety Stock</span>
-                    </div>
                 </div>
             </div>
 

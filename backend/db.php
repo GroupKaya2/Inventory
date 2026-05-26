@@ -45,7 +45,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS inventory_transactions (
     INDEX idx_date    (transaction_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-/** Primary key column name for inventory_transactions (id vs transaction_id). */
+
 function inventory_txn_pk_column(mysqli $conn): string
 {
     static $col = null;
@@ -57,7 +57,7 @@ function inventory_txn_pk_column(mysqli $conn): string
     return $col;
 }
 
-// expenses (safe fallback)
+// expenses
 $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     id           INT AUTO_INCREMENT PRIMARY KEY,
     expense_date DATE NOT NULL,
@@ -73,8 +73,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
 $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method
     ENUM('cash','gcash') NOT NULL DEFAULT 'cash'");
 
-// product_stock view — single source of truth: inventory_transactions only
-// The 'initial' transaction inserted on product creation carries the opening qty.
+$conn->query("SET SESSION sql_mode = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'");
 $conn->query("CREATE OR REPLACE VIEW product_stock AS
     SELECT
         p.product_id,

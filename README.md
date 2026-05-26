@@ -30,5 +30,5 @@ Tech Stack
 - Libraries: SweetAlert2, Bootstrap Icons, Chart.js,
 
 Roles
-Owner   | Full access — includes user management, delete operations, backups, and audit logs 
-Manager | Can record sales and expenses; cannot delete or manage users 
+Owner   | Full access — includes user management, delete operations, backups, and audit logs
+Manager | Can record sales and expenses; cannot delete or manage users
