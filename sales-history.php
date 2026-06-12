@@ -415,7 +415,7 @@ if ($r)
                                 <?php $expRowNum = 0;
                                 foreach ($expenseRows as $e):
                                     $expRowNum++; ?>
-                                    <tr data-date="<?= $e['expense_date'] ?>"
+                                    <tr data-date="<?= $e['expense_date'] ?>" data-id="<?= $e['id'] ?>"
                                         data-search="<?= strtolower(htmlspecialchars($e['description'] . ' ' . $e['category'])) ?>">
                                         <td><span class="badge-gray row-num"><?= $expRowNum ?></span></td>
                                         <td style="white-space:nowrap;"><?= date('M d, Y', strtotime($e['expense_date'])) ?>
@@ -460,6 +460,30 @@ if ($r)
         'use strict';
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
+        // Clean PHP data for CSV export — no HTML scraping needed
+        const SALES_DATA = <?= json_encode(array_map(function($s) {
+            return [
+                'id'             => $s['id'],
+                'sale_date'      => $s['sale_date'],
+                'customer_name'  => $s['customer_name'] ?: '',
+                'plate_number'   => $s['plate_number'] ?: '',
+                'parts_total'    => number_format((float)$s['parts_total'], 2, '.', ''),
+                'labor_total'    => number_format((float)$s['labor_total'], 2, '.', ''),
+                'grand_total'    => number_format((float)$s['grand_total'], 2, '.', ''),
+                'payment_method' => $s['payment_method'] ?? 'cash',
+            ];
+        }, $salesRows), JSON_UNESCAPED_UNICODE) ?>;
+
+        const EXPENSES_DATA = <?= json_encode(array_map(function($e) {
+            return [
+                'id'           => $e['id'],
+                'expense_date' => $e['expense_date'],
+                'category'     => $e['category'] ?: 'Other',
+                'description'  => $e['description'],
+                'amount'       => number_format((float)$e['amount'], 2, '.', ''),
+            ];
+        }, $expenseRows), JSON_UNESCAPED_UNICODE) ?>;
+
         // Expenses by date from PHP — available in JS for modal
         const EXP_BY_DATE = <?= json_encode($expByDate, JSON_UNESCAPED_UNICODE) ?>;
 
@@ -502,27 +526,28 @@ if ($r)
         document.getElementById('payFilter').addEventListener('change', filterTable);
 
         function exportCSV() {
-            const rows = [['ID', 'Date', 'Customer', 'Plate', 'Parts (₱)', 'Labor (₱)', 'Gross Total (₱)', 'Expenses (₱)', 'Net (₱)', 'Payment']];
+            // Collect which sale IDs are currently visible (respects filters)
+            const visibleIds = new Set();
             document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
-                if (tr.style.display === 'none') return;
-                const cells = tr.querySelectorAll('td');
-                rows.push([
-                    cells[0].textContent.trim(),
-                    cells[1].textContent.trim(),
-                    cells[2].textContent.trim(),
-                    cells[3].textContent.trim(),
-                    cells[4].textContent.replace(/[₱,]/g, '').trim(),
-                    cells[5].textContent.replace(/[₱,]/g, '').trim(),
-                    cells[6].textContent.replace(/[₱,]/g, '').trim(),
-                    (tr.dataset.exp || '0'),
-                    (tr.dataset.net || '0'),
-                    cells[9].textContent.trim(),
-                ]);
+                if (tr.style.display !== 'none') visibleIds.add(String(tr.dataset.id));
             });
-            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+            const rows = [['ID','Date','Customer','Plate No.','Parts (PHP)','Labor (PHP)','Gross Total (PHP)','Payment']];
+            SALES_DATA.forEach(s => {
+                if (!visibleIds.has(String(s.id))) return;
+                rows.push([s.id, s.sale_date, s.customer_name, s.plate_number,
+                    s.parts_total, s.labor_total, s.grand_total, s.payment_method.toUpperCase()]);
+            });
+
+            if (rows.length <= 1) {
+                Swal.fire({ icon: 'info', title: 'Nothing to export', text: 'No visible rows match the current filter.' });
+                return;
+            }
+
+            const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
             const a = document.createElement('a');
             a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-            a.download = 'sales_history_' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.download = 'DSpeedway_Sales_' + new Date().toISOString().slice(0, 10) + '.csv';
             a.click();
         }
 
@@ -763,22 +788,27 @@ if ($r)
         document.getElementById('expSearchInput').addEventListener('input', filterExpenses);
 
         function exportExpensesCSV() {
-            const rows = [['ID', 'Date', 'Category', 'Description', 'Amount (₱)']];
+            // Collect which expense IDs are currently visible
+            const visibleIds = new Set();
             document.querySelectorAll('#expensesBody tr[data-date]').forEach(tr => {
-                if (tr.style.display === 'none') return;
-                const cells = tr.querySelectorAll('td');
-                rows.push([
-                    cells[0].textContent.trim(),
-                    cells[1].textContent.trim(),
-                    cells[2].textContent.trim(),
-                    cells[3].textContent.trim(),
-                    cells[4].textContent.replace(/[₱,−]/g, '').trim(),
-                ]);
+                if (tr.style.display !== 'none') visibleIds.add(String(tr.dataset.id));
             });
-            const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+            const rows = [['ID','Date','Category','Description','Amount (PHP)']];
+            EXPENSES_DATA.forEach(e => {
+                if (!visibleIds.has(String(e.id))) return;
+                rows.push([e.id, e.expense_date, e.category, e.description, e.amount]);
+            });
+
+            if (rows.length <= 1) {
+                Swal.fire({ icon: 'info', title: 'Nothing to export', text: 'No visible rows match the current filter.' });
+                return;
+            }
+
+            const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
             const a = document.createElement('a');
             a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-            a.download = 'expenses_history_' + new Date().toISOString().slice(0, 10) + '.csv';
+            a.download = 'DSpeedway_Expenses_' + new Date().toISOString().slice(0, 10) + '.csv';
             a.click();
         }
     </script>

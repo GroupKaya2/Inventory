@@ -38,8 +38,9 @@ if ($action === 'save') {
         exit;
     }
 
-    if (empty($items)) {
-        echo json_encode(['success' => false, 'message' => 'No items provided.']);
+    // Allow saving expenses without parts or labor
+    if (empty($items) && empty($expenses)) {
+        echo json_encode(['success' => false, 'message' => 'Please add at least one item or expense.']);
         exit;
     }
 
