@@ -8,131 +8,81 @@ use PHPMailer\PHPMailer\Exception;
 
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (!file_exists($autoload)) {
-    echo json_encode(['success' => false, 'message' => 'PHPMailer not installed. Run: composer require phpmailer/phpmailer']);
+    echo json_encode(['success' => false, 'message' => 'PHPMailer not installed.']);
     exit;
 }
 require_once $autoload;
 
-// Load SMTP credentials from .env
+
 $envFile = __DIR__ . '/../.env';
 $env = file_exists($envFile) ? parse_ini_file($envFile, false, INI_SCANNER_RAW) : [];
 
 $smtpHost = $env['SMTP_HOST'] ?? 'smtp.gmail.com';
-$smtpPort = (int)($env['SMTP_PORT'] ?? 587);
+$smtpPort = (int) ($env['SMTP_PORT'] ?? 587);
 $smtpUser = $env['SMTP_USER'] ?? '';
 $smtpPass = $env['SMTP_PASS'] ?? '';
 $smtpFrom = $env['SMTP_FROM'] ?? $smtpUser;
-$appName  = 'DSpeedway';
+$appName = 'DSpeedway';
 
-// Guard: block requests if SMTP is still unconfigured
-if (
-    empty($smtpUser) ||
-    str_contains($smtpUser, 'your-gmail') ||
-    empty($smtpPass) ||
-    str_contains($smtpPass, 'xxxx')
-) {
-    // Only block on actual send — verify/reset actions don't need SMTP
-    $needsSmtp = in_array($_GET['action'] ?? $_POST['action'] ?? '', ['request']);
-    if ($needsSmtp) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Email is not configured. Please set SMTP_USER and SMTP_PASS in your .env file.'
-        ]);
-        exit;
-    }
-}
-
-function sendMail(
-    string $toEmail, string $toName, string $subject, string $body,
-    string $smtpHost, int $smtpPort, string $smtpUser, string $smtpPass,
-    string $smtpFrom, string $appName
-): bool {
+function sendOtpEmail(string $toEmail, string $toName, string $otp, string $smtpHost, int $smtpPort, string $smtpUser, string $smtpPass, string $smtpFrom, string $appName): bool
+{
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
-        $mail->Host       = $smtpHost;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $smtpUser;
-        $mail->Password   = $smtpPass;
+        $mail->Host = $smtpHost;
+        $mail->SMTPAuth = true;
+        $mail->Username = $smtpUser;
+        $mail->Password = $smtpPass;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = $smtpPort;
-
+        $mail->Port = $smtpPort;
+        $mail->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+            ],
+        ];
         $mail->setFrom($smtpFrom, $appName);
         $mail->addAddress($toEmail, $toName);
-
         $mail->isHTML(true);
-        $mail->Subject = $subject;
-        $mail->Body    = $body;
-        $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $body));
-
+        $mail->Subject = 'Your OTP Code — ' . $appName;
+        $mail->Body = '
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family:Arial,sans-serif;background:#0d1117;margin:0;padding:0;">
+    <div style="max-width:480px;margin:40px auto;background:#161b27;border:1px solid rgba(74,222,128,.18);border-radius:14px;overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#0f1f15,#111827);padding:28px 32px;text-align:center;border-bottom:1px solid rgba(74,222,128,.15);">
+        <h1 style="color:#4ade80;font-size:1.4rem;margin:0 0 4px;">&#x1F510; ' . htmlspecialchars($appName) . '</h1>
+        <p style="color:#64748b;font-size:.8rem;margin:0;">Password Reset OTP</p>
+        </div>
+        <div style="padding:32px;text-align:center;">
+        <p style="color:#94a3b8;margin:0 0 20px;">Hi <strong style="color:#e2e8f0;">' . htmlspecialchars($toName) . '</strong>, use the OTP below to reset your password.</p>
+        <div style="background:rgba(74,222,128,.08);border:2px dashed rgba(74,222,128,.3);border-radius:12px;padding:24px;margin:20px 0;">
+            <div style="font-size:2.8rem;font-weight:900;letter-spacing:14px;color:#4ade80;font-family:monospace;">' . $otp . '</div>
+            <p style="color:#64748b;font-size:.75rem;margin:8px 0 0;">This OTP is valid for <strong style="color:#e2e8f0;">10 minutes</strong></p>
+        </div>
+        <p style="color:#475569;font-size:.8rem;margin-top:20px;">If you did not request this, please ignore this email.</p>
+        </div>
+        <div style="padding:16px 32px;border-top:1px solid rgba(255,255,255,.06);text-align:center;font-size:.72rem;color:#475569;">
+        &copy; ' . date('Y') . ' ' . htmlspecialchars($appName) . ' &mdash; D Speedway Car Care Services
+        </div>
+    </div>
+    </body>
+    </html>';
+        $mail->AltBody = 'Your OTP code is: ' . $otp . '. Valid for 10 minutes.';
         $mail->send();
         return true;
     } catch (Exception $e) {
-        error_log('PHPMailer error: ' . $mail->ErrorInfo);
+        error_log('PHPMailer OTP error: ' . $e->getMessage() . ' | ' . $mail->ErrorInfo);
         return false;
     }
 }
 
-function buildResetEmailHtml(string $username, string $resetLink, string $appName): string
-{
-    return '
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; background:#0d1117; color:#e2e8f0; margin:0; padding:0; }
-    .wrap { max-width:520px; margin:40px auto; background:#161b27;
-            border:1px solid rgba(74,222,128,.18); border-radius:14px; overflow:hidden; }
-    .header { background:linear-gradient(135deg,#0f1f15,#111827);
-              padding:28px 32px; text-align:center; border-bottom:1px solid rgba(74,222,128,.15); }
-    .header h1 { color:#4ade80; font-size:1.4rem; margin:0 0 4px; }
-    .header p  { color:#64748b; font-size:.8rem; margin:0; }
-    .body { padding:32px; }
-    .body p { color:#94a3b8; line-height:1.7; margin:0 0 16px; font-size:.9rem; }
-    .body strong { color:#e2e8f0; }
-    .btn-wrap { text-align:center; margin:28px 0; }
-    .btn { display:inline-block; padding:13px 32px;
-           background:linear-gradient(135deg,#22c55e,#16a34a);
-           color:#fff !important; font-weight:700; font-size:.95rem;
-           border-radius:9px; text-decoration:none;
-           box-shadow:0 4px 18px rgba(34,197,94,.3); }
-    .link-box { background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);
-                border-radius:8px; padding:10px 14px; word-break:break-all;
-                font-size:.75rem; color:#64748b; margin-top:6px; }
-    .footer { padding:18px 32px; border-top:1px solid rgba(255,255,255,.06);
-              text-align:center; font-size:.72rem; color:#475569; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="header">
-      <h1>&#x1F510; ' . htmlspecialchars($appName) . '</h1>
-      <p>Password Reset Request</p>
-    </div>
-    <div class="body">
-      <p>Hi <strong>' . htmlspecialchars($username) . '</strong>,</p>
-      <p>We received a request to reset your password. Click the button below to create a new password. This link is valid for <strong>1 hour</strong>.</p>
-      <div class="btn-wrap">
-        <a href="' . htmlspecialchars($resetLink) . '" class="btn">Reset My Password</a>
-      </div>
-      <p style="font-size:.8rem;color:#64748b;">If the button doesn\'t work, copy and paste this link into your browser:</p>
-      <div class="link-box">' . htmlspecialchars($resetLink) . '</div>
-      <p style="margin-top:20px;font-size:.8rem;color:#475569;">
-        If you did not request a password reset, you can safely ignore this email.
-        Your password will not change.
-      </p>
-    </div>
-    <div class="footer">&copy; ' . date('Y') . ' ' . htmlspecialchars($appName) . ' &mdash; D Speedway Car Care Services</div>
-  </div>
-</body>
-</html>';
-}
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
-
-// ── ACTION: request ──────────────────────────────────────
-if ($action === 'request') {
+// ── SEND OTP ─────────────────────────────────────────────
+if ($action === 'send_otp') {
     $email = trim($_POST['email'] ?? '');
 
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -140,158 +90,144 @@ if ($action === 'request') {
         exit;
     }
 
-    $stmt = $conn->prepare("SELECT id AS user_id, name AS username FROM users WHERE email = ? LIMIT 1");
+    $stmt = $conn->prepare("SELECT id, name FROM users WHERE email = ? LIMIT 1");
     $stmt->bind_param('s', $email);
     $stmt->execute();
     $result = $stmt->get_result();
 
-    // Always return the same message — don't reveal if email exists
+
     if ($result->num_rows === 0) {
         $stmt->close();
-        echo json_encode(['success' => true, 'message' => 'If that email is registered, a reset link has been sent.']);
+        echo json_encode(['success' => true, 'message' => 'If that email is registered, an OTP has been sent.']);
         exit;
     }
 
     $user = $result->fetch_assoc();
     $stmt->close();
 
-    // Invalidate any previous unused tokens
-    $del = $conn->prepare("DELETE FROM password_reset_tokens WHERE user_id = ? AND used = 0");
-    $del->bind_param('i', $user['user_id']);
+    $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $expires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+    $conn->query("CREATE TABLE IF NOT EXISTS otp_codes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            otp VARCHAR(6) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used TINYINT(1) DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    $del = $conn->prepare("DELETE FROM otp_codes WHERE user_id = ?");
+    $del->bind_param('i', $user['id']);
     $del->execute();
     $del->close();
 
-    // Generate secure token
-    $token   = bin2hex(random_bytes(32));
-    $expires = date('Y-m-d H:i:s', strtotime('+1 hour', strtotime('+8 hours', time() - (int)date('Z'))));
-
-    $ins = $conn->prepare("INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)");
-    $ins->bind_param('iss', $user['user_id'], $token, $expires);
+    $ins = $conn->prepare("INSERT INTO otp_codes (user_id, otp, expires_at) VALUES (?, ?, ?)");
+    $ins->bind_param('iss', $user['id'], $otp, $expires);
 
     if (!$ins->execute()) {
         $ins->close();
-        echo json_encode(['success' => false, 'message' => 'Could not generate reset token. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Could not generate OTP. Please try again.']);
         exit;
     }
     $ins->close();
 
-    // Build reset URL
-    $protocol  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host      = $_SERVER['HTTP_HOST'];
-    $basePath  = rtrim(dirname(dirname($_SERVER['PHP_SELF'])), '/');
-    $resetLink = $protocol . '://' . $host . $basePath . '/reset-password.php?token=' . urlencode($token);
-
-    $subject = 'Password Reset — ' . $appName;
-    $body    = buildResetEmailHtml($user['username'], $resetLink, $appName);
-
-    $sent = sendMail(
-        $email, $user['username'], $subject, $body,
-        $smtpHost, $smtpPort, $smtpUser, $smtpPass, $smtpFrom, $appName
-    );
+    $sent = sendOtpEmail($email, $user['name'], $otp, $smtpHost, $smtpPort, $smtpUser, $smtpPass, $smtpFrom, $appName);
 
     if ($sent) {
-        echo json_encode(['success' => true, 'message' => 'A password reset link has been sent to your email.']);
+        echo json_encode(['success' => true, 'message' => 'OTP sent to your email.']);
     } else {
-        // Clean up the token so the user can retry — use prepared statement
-        $cleanup = $conn->prepare("DELETE FROM password_reset_tokens WHERE token = ?");
-        $cleanup->bind_param('s', $token);
-        $cleanup->execute();
-        $cleanup->close();
-
-        echo json_encode([
-            'success' => false,
-            'message' => 'Failed to send email. Please check SMTP settings in .env or contact support.'
-        ]);
+        $conn->query("DELETE FROM otp_codes WHERE user_id = " . (int) $user['id']);
+        echo json_encode(['success' => false, 'message' => 'Failed to send OTP email. Please check SMTP settings.']);
     }
     exit;
 }
 
-// ── ACTION: verify ───────────────────────────────────────
-if ($action === 'verify') {
-    $token = trim($_GET['token'] ?? '');
+// ── VERIFY OTP ───────────────────────────────────────────
+if ($action === 'verify_otp') {
+    $email = trim($_POST['email'] ?? '');
+    $otp = trim($_POST['otp'] ?? '');
 
-    if (empty($token)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid token.']);
+    if (empty($email) || empty($otp)) {
+        echo json_encode(['success' => false, 'message' => 'Email and OTP are required.']);
         exit;
     }
 
     $stmt = $conn->prepare("
-        SELECT prt.user_id, u.name AS username
-        FROM password_reset_tokens prt
-        JOIN users u ON prt.user_id = u.id
-        WHERE prt.token = ? AND prt.expires_at > NOW() AND prt.used = 0
-        LIMIT 1
-    ");
-    $stmt->bind_param('s', $token);
+            SELECT oc.id, oc.user_id
+            FROM otp_codes oc
+            JOIN users u ON oc.user_id = u.id
+            WHERE u.email = ? AND oc.otp = ? AND oc.expires_at > NOW() AND oc.used = 0
+            LIMIT 1
+        ");
+    $stmt->bind_param('ss', $email, $otp);
     $stmt->execute();
     $result = $stmt->get_result();
 
     if ($result->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'This link is invalid or has expired.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid or expired OTP. Please try again.']);
         exit;
     }
 
-    $user = $result->fetch_assoc();
+    $row = $result->fetch_assoc();
     $stmt->close();
 
-    echo json_encode(['success' => true, 'user_id' => $user['user_id'], 'username' => $user['username']]);
+    $mark = $conn->prepare("UPDATE otp_codes SET used = 1 WHERE id = ?");
+    $mark->bind_param('i', $row['id']);
+    $mark->execute();
+    $mark->close();
+
+    $_SESSION['otp_verified_email'] = $email;
+    $_SESSION['otp_verified_user'] = $row['user_id'];
+
+    echo json_encode(['success' => true, 'message' => 'OTP verified successfully.']);
     exit;
 }
 
-// ── ACTION: reset ────────────────────────────────────────
-if ($action === 'reset') {
-    $token           = trim($_POST['token'] ?? '');
-    $password        = $_POST['password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
+// ── RESET PASSWORD ───────────────────────────────────────
+if ($action === 'reset_password') {
+    $email = trim($_POST['email'] ?? '');
+    $pass = $_POST['password'] ?? '';
+    $confirm = $_POST['confirm_password'] ?? '';
 
-    if (empty($token) || empty($password) || empty($confirmPassword)) {
+    if (empty($email) || empty($pass) || empty($confirm)) {
         echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         exit;
     }
 
-    if (strlen($password) < 6) {
-        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
-        exit;
-    }
-
-    if ($password !== $confirmPassword) {
+    if ($pass !== $confirm) {
         echo json_encode(['success' => false, 'message' => 'Passwords do not match.']);
         exit;
     }
 
-    $stmt = $conn->prepare("
-        SELECT user_id FROM password_reset_tokens
-        WHERE token = ? AND expires_at > NOW() AND used = 0
-        LIMIT 1
-    ");
-    $stmt->bind_param('s', $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'This reset link is invalid or has expired.']);
+    if (strlen($pass) < 6) {
+        echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
         exit;
     }
 
-    $reset = $result->fetch_assoc();
-    $stmt->close();
+    if (
+        !isset($_SESSION['otp_verified_email']) ||
+        !isset($_SESSION['otp_verified_user']) ||
+        $_SESSION['otp_verified_email'] !== $email
+    ) {
+        echo json_encode(['success' => false, 'message' => 'OTP verification required. Please start over.']);
+        exit;
+    }
 
-    $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    $upd  = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-    $upd->bind_param('si', $hash, $reset['user_id']);
+    $userId = (int) $_SESSION['otp_verified_user'];
+    $hash = password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]);
+
+    $upd = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $upd->bind_param('si', $hash, $userId);
 
     if ($upd->execute()) {
         $upd->close();
-
-        $mark = $conn->prepare("UPDATE password_reset_tokens SET used = 1 WHERE token = ?");
-        $mark->bind_param('s', $token);
-        $mark->execute();
-        $mark->close();
-
-        echo json_encode(['success' => true, 'message' => 'Password changed successfully! You can now log in.']);
+        unset($_SESSION['otp_verified_email'], $_SESSION['otp_verified_user']);
+        echo json_encode(['success' => true, 'message' => 'Password reset successfully!']);
     } else {
         $upd->close();
-        echo json_encode(['success' => false, 'message' => 'Failed to update password. Please try again.']);
+        echo json_encode(['success' => false, 'message' => 'Failed to reset password. Please try again.']);
     }
     exit;
 }
