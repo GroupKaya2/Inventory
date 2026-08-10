@@ -321,10 +321,12 @@
 .txn-page .pay-toggle {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .txn-page .pay-toggle > div {
     flex: 1;
+    min-width: 120px;
 }
 
 .txn-page .pay-toggle input[type="radio"] {
@@ -368,6 +370,12 @@
     border-color: rgba(96, 165, 250, .55) !important;
     background: rgba(96, 165, 250, .14) !important;
     color: #60a5fa !important;
+}
+
+.txn-page .pay-toggle input:checked + label.pay-credit {
+    border-color: rgba(167, 139, 250, .55) !important;
+    background: rgba(167, 139, 250, .14) !important;
+    color: #a78bfa !important;
 }
 
 /* ── Summary sidebar ── */

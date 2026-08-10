@@ -462,9 +462,7 @@ $initials = substr($initials, 0, 2);
         pointer-events: auto;
     }
 
-    /* ══════════════════
-   RESPONSIVE
-══════════════════ */
+    
     @media (max-width:991px) {
         .sidebar {
             transform: translateX(-100%);
@@ -524,7 +522,7 @@ $initials = substr($initials, 0, 2);
         </div>
     </a>
 
-    <!-- ── WORKING SEARCH BAR ── -->
+    
     <div class="sb-search">
         <i class="bi bi-search sb-search-icon" aria-hidden="true"></i>
         <input type="search" id="sbSearch" class="sb-search-input" placeholder="Search menu…" autocomplete="off"

@@ -437,10 +437,10 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;</script>
-<script src="assets/js/InventoryAPI.js"></script>
-<script src="assets/js/StockLedger.js"></script>
-<script src="assets/js/InventoryRenderer.js"></script>
-<script src="assets/js/InventoryController.js"></script>
+<script src="assets/js/InventoryAPI.js?v=<?= time() ?>"></script>
+<script src="assets/js/StockLedger.js?v=<?= time() ?>"></script>
+<script src="assets/js/InventoryRenderer.js?v=<?= time() ?>"></script>
+<script src="assets/js/InventoryController.js?v=<?= time() ?>"></script>
 <script src="assets/js/inventory.js?v=<?= time() ?>"></script>
 <script>
 (function () {
@@ -557,5 +557,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
     }
 })();
 </script>
+<?php include 'footer.php'; ?>
+
 </body>
 </html>

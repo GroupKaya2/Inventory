@@ -6,6 +6,10 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/audit.php';
 header('Content-Type: application/json');
 
+// Self-healing: ensure compatible_brand exists even if db.php on the server
+// is an older copy that doesn't create it yet.
+$conn->query("ALTER TABLE products ADD COLUMN IF NOT EXISTS compatible_brand VARCHAR(50) NULL");
+
 function json_out($data) {
     echo json_encode($data);
     exit;
@@ -51,14 +55,26 @@ if ($action === 'fetch') {
             SELECT p.product_id, p.code, p.description, p.unit,
                 p.unit_cost, p.selling_price,
                 (p.selling_price - p.unit_cost) AS margin,
+                p.initial_quantity AS starting_stock,
+                COALESCE((
+                    SELECT SUM(-t.quantity_change)
+                    FROM inventory_transactions t
+                    WHERE t.product_id = p.product_id AND t.transaction_type = 'sale'
+                ), 0) AS total_sold,
+                COALESCE((
+                    SELECT SUM(t.quantity_change)
+                    FROM inventory_transactions t
+                    WHERE t.product_id = p.product_id AND t.transaction_type = 'restock'
+                ), 0) AS total_restocked,
                 COALESCE(ps.current_stock,
-                    COALESCE((
+                    p.initial_quantity + COALESCE((
                         SELECT SUM(t.quantity_change)
                         FROM inventory_transactions t
                         WHERE t.product_id = p.product_id
                     ), 0)
                 ) AS current_stock,
                 p.reorder_threshold,
+                p.compatible_brand,
                 c.category_name
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.category_id
@@ -127,6 +143,7 @@ if ($action === 'add') {
     $price = (float) ($_POST['selling_price'] ?? 0);
     $qty = (int) ($_POST['initial_quantity'] ?? 0);
     $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
+    $brand = trim($_POST['compatible_brand'] ?? '');
 
     if (!$catId || !$desc || !$unit) {
         json_out(['success' => false, 'message' => 'Required fields missing']);
@@ -134,10 +151,10 @@ if ($action === 'add') {
     }
 
     $stmt = $conn->prepare(
-        "INSERT INTO products (category_id, description, unit, code, unit_cost, selling_price, initial_quantity, reorder_threshold)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        "INSERT INTO products (category_id, description, unit, code, unit_cost, selling_price, initial_quantity, reorder_threshold, compatible_brand)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    $stmt->bind_param('isssddii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh);
+    $stmt->bind_param('isssddiis', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $brand);
     if ($stmt->execute()) {
         $newId = $conn->insert_id;
 
@@ -164,7 +181,8 @@ if ($action === 'add') {
             'unit_cost' => $cost,
             'selling_price' => $price,
             'initial_quantity' => $qty,
-            'reorder_threshold' => $thresh
+            'reorder_threshold' => $thresh,
+            'compatible_brand' => $brand
         ]);
         logAudit($conn, $userId, 'INSERT', 'products', $newId, null, $newValues);
         json_out(['success' => true, 'message' => 'Product added successfully']);
@@ -193,6 +211,7 @@ if ($action === 'update') {
     $price = (float) ($_POST['selling_price'] ?? 0);
     $qty = (int) ($_POST['initial_quantity'] ?? 0);
     $thresh = (int) ($_POST['reorder_threshold'] ?? 5);
+    $brand = trim($_POST['compatible_brand'] ?? '');
 
     if (!$id || !$catId || !$desc || !$unit) {
         json_out(['success' => false, 'message' => 'Missing fields']);
@@ -208,10 +227,10 @@ if ($action === 'update') {
 
     $stmt = $conn->prepare(
         "UPDATE products SET category_id=?, description=?, unit=?, code=?,
-            unit_cost=?, selling_price=?, initial_quantity=?, reorder_threshold=?
+            unit_cost=?, selling_price=?, initial_quantity=?, reorder_threshold=?, compatible_brand=?
             WHERE product_id=?"
     );
-    $stmt->bind_param('isssddiii', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $id);
+    $stmt->bind_param('isssddiisi', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $brand, $id);
     if ($stmt->execute()) {
         // Log audit entry
         $oldValues = json_encode($oldResult);
@@ -223,7 +242,8 @@ if ($action === 'update') {
             'unit_cost' => $cost,
             'selling_price' => $price,
             'initial_quantity' => $qty,
-            'reorder_threshold' => $thresh
+            'reorder_threshold' => $thresh,
+            'compatible_brand' => $brand
         ]);
         logAudit($conn, $userId, 'UPDATE', 'products', $id, $oldValues, $newValues);
         json_out(['success' => true, 'message' => 'Updated successfully']);
@@ -271,7 +291,9 @@ if ($action === 'delete') {
 }
 
 /* ══════════════════════════════════
-RESTOCK  ← fixed, bulletproof
+RESTOCK  ← self-healing: always adds cleanly from whatever is
+           currently shown, even if hidden negative debt exists
+           from past overselling.
 ══════════════════════════════════ */
 if ($action === 'restock') {
     $productId = (int) ($_POST['product_id'] ?? 0);
@@ -301,13 +323,27 @@ if ($action === 'restock') {
 
     $today = date('Y-m-d');
 
+    // Current TRUE ledger balance, which can be negative if past sales ever
+    // oversold this product below what the UI displayed as "0 / Out of Stock".
+    $rawStock = getCurrentStock($conn, $productId);
+
+    // The amount we actually write to the ledger. If there's hidden negative
+    // debt, we absorb it here so the visible stock always becomes exactly
+    // "what was shown" + "what you typed in" -- never short-changed.
+    $healedDebt = $rawStock < 0 ? -$rawStock : 0;
+    $transactionQty = $qty + $healedDebt;
+
+    if ($healedDebt > 0) {
+        $remarks .= " (auto-corrected {$healedDebt} unit(s) of prior negative stock)";
+    }
+
     // Insert inventory transaction
     $stmt = $conn->prepare(
         "INSERT INTO inventory_transactions
             (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
             VALUES (?, ?, ?, 'restock', ?, ?)"
     );
-    $stmt->bind_param('iissi', $productId, $today, $qty, $remarks, $userId);
+    $stmt->bind_param('iissi', $productId, $today, $transactionQty, $remarks, $userId);
 
     if (!$stmt->execute()) {
         json_out(['success' => false, 'message' => 'Restock failed: ' . $stmt->error]);
@@ -338,8 +374,19 @@ if ($action === 'reorder-list') {
     $result = $conn->query("
             SELECT p.product_id, p.code, p.description,
                 COALESCE(c.category_name,'') AS category_name,
+                p.initial_quantity AS starting_stock,
+                COALESCE((
+                    SELECT SUM(-t.quantity_change)
+                    FROM inventory_transactions t
+                    WHERE t.product_id = p.product_id AND t.transaction_type = 'sale'
+                ), 0) AS total_sold,
+                COALESCE((
+                    SELECT SUM(t.quantity_change)
+                    FROM inventory_transactions t
+                    WHERE t.product_id = p.product_id AND t.transaction_type = 'restock'
+                ), 0) AS total_restocked,
                 COALESCE(ps.current_stock,
-                    COALESCE((
+                    p.initial_quantity + COALESCE((
                         SELECT SUM(t.quantity_change)
                         FROM inventory_transactions t
                         WHERE t.product_id = p.product_id
@@ -351,7 +398,7 @@ if ($action === 'reorder-list') {
             LEFT JOIN categories c ON p.category_id = c.category_id
             LEFT JOIN product_stock ps ON p.product_id = ps.product_id
             WHERE COALESCE(ps.current_stock,
-                    COALESCE((
+                    p.initial_quantity + COALESCE((
                         SELECT SUM(t2.quantity_change)
                         FROM inventory_transactions t2
                         WHERE t2.product_id = p.product_id

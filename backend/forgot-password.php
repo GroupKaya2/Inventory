@@ -27,6 +27,20 @@ $appName = 'DSpeedway';
 function sendOtpEmail(string $toEmail, string $toName, string $otp, string $smtpHost, int $smtpPort, string $smtpUser, string $smtpPass, string $smtpFrom, string $appName): bool
 {
     $mail = new PHPMailer(true);
+
+    // Capture the full SMTP conversation to a log file so failures can be
+    // diagnosed exactly instead of guessing. Safe to leave on -- it never
+    // outputs to the browser, only writes to disk.
+    $logDir = __DIR__ . '/logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+    $logFile = $logDir . '/mail.log';
+    $mail->SMTPDebug = 2; // client -> server and server -> client messages
+    $mail->Debugoutput = function ($str, $level) use ($logFile) {
+        file_put_contents($logFile, '[' . date('Y-m-d H:i:s') . "] $str\n", FILE_APPEND);
+    };
+
     try {
         $mail->isSMTP();
         $mail->Host = $smtpHost;
@@ -74,14 +88,18 @@ function sendOtpEmail(string $toEmail, string $toName, string $otp, string $smtp
         $mail->send();
         return true;
     } catch (Exception $e) {
-        error_log('PHPMailer OTP error: ' . $e->getMessage() . ' | ' . $mail->ErrorInfo);
+        file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] SEND FAILED: ' . $e->getMessage() . ' | ErrorInfo: ' . $mail->ErrorInfo . "\n",
+            FILE_APPEND
+        );
         return false;
     }
 }
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
-// ── SEND OTP ─────────────────────────────────────────────
+//SEND OTP 
 if ($action === 'send_otp') {
     $email = trim($_POST['email'] ?? '');
 

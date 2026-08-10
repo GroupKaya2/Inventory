@@ -1,4 +1,4 @@
-    <?php
+<?php
     session_start();
     require_once 'backend/db.php';
 
@@ -104,7 +104,7 @@
         while ($row = $r->fetch_assoc())
             $stockItems[] = $row;
 
-    // ── Chart 6: Cash vs GCash per month (last 6 months) ──
+    // ── Chart 6: Cash vs Online Payment vs Credit per month (last 6 months) ──
     $paymentSplit = [];
     for ($i = 5; $i >= 0; $i--) {
         $ms = date('Y-m-01', strtotime("-$i months"));
@@ -112,7 +112,8 @@
         $lbl = date('M', strtotime($ms));
         $cash = (float) $conn->query("SELECT COALESCE(SUM(parts_total+labor_total),0) AS t FROM sales WHERE sale_date BETWEEN '$ms' AND '$me' AND payment_method='cash'")->fetch_assoc()['t'];
         $gcash = (float) $conn->query("SELECT COALESCE(SUM(parts_total+labor_total),0) AS t FROM sales WHERE sale_date BETWEEN '$ms' AND '$me' AND payment_method='gcash'")->fetch_assoc()['t'];
-        $paymentSplit[] = ['label' => $lbl, 'cash' => $cash, 'gcash' => $gcash];
+        $credit = (float) $conn->query("SELECT COALESCE(SUM(parts_total+labor_total),0) AS t FROM sales WHERE sale_date BETWEEN '$ms' AND '$me' AND payment_method='credit'")->fetch_assoc()['t'];
+        $paymentSplit[] = ['label' => $lbl, 'cash' => $cash, 'gcash' => $gcash, 'credit' => $credit];
     }
 
     // ── Recent sales ──
@@ -601,23 +602,24 @@
                     </div>
                 </div>
 
-                <!-- Chart 6: Cash vs GCash -->
+                <!-- Chart 6: Cash vs Online Payment vs Credit -->
                 <div class="col-lg-4">
                     <div class="chart-wrap" style="height:100%;">
                         <div class="chart-hdr">
                             <div>
                                 <div class="chart-title"><i class="bi bi-credit-card-2-front me-2"
                                         style="color:#fbbf24;"></i>Payment Methods</div>
-                                <div class="chart-sub">Cash vs GCash — last 6 months</div>
+                                <div class="chart-sub">Cash vs Online Payment vs Credit — last 6 months</div>
                             </div>
                         </div>
                         <div class="clegend">
                             <span><span class="cleg-sq" style="background:#378ADD;"></span>Cash</span>
-                            <span><span class="cleg-sq" style="background:#7F77DD;"></span>GCash</span>
+                            <span><span class="cleg-sq" style="background:#7F77DD;"></span>Online Payment</span>
+                            <span><span class="cleg-sq" style="background:#a78bfa;"></span>Credit</span>
                         </div>
                         <div style="position:relative;height:220px;">
                             <canvas id="paymentChart" role="img"
-                                aria-label="Stacked bar chart of cash vs GCash payments per month">Payment method breakdown
+                                aria-label="Stacked bar chart of cash, online payment, and credit payments per month">Payment method breakdown
                                 by month.</canvas>
                         </div>
                     </div>
@@ -784,7 +786,9 @@
                                                     <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
                                                     <td>
                                                         <?php if ($pm === 'gcash'): ?>
-                                                            <span class="badge-blue"><i class="bi bi-phone-fill me-1"></i>GCash</span>
+                                                            <span class="badge-blue"><i class="bi bi-phone-fill me-1"></i>Online Payment</span>
+                                                        <?php elseif ($pm === 'credit'): ?>
+                                                            <span class="badge-gray" style="background:rgba(167,139,250,.12);color:#a78bfa;"><i class="bi bi-credit-card me-1"></i>Credit</span>
                                                         <?php else: ?>
                                                             <span class="badge-green"><i class="bi bi-cash-coin me-1"></i>Cash</span>
                                                         <?php endif; ?>
@@ -1102,18 +1106,7 @@
                                 data: values,
                                 backgroundColor: colors,
                                 borderRadius: 4, borderSkipped: false,
-                                order: 1,
-                            },
-                            {
-                                label: 'Reorder Threshold',
-                                data: thresh,
-                                type: 'line',
-                                borderColor: 'rgba(251,191,36,.5)',
-                                borderWidth: 1.5,
-                                borderDash: [4, 3],
-                                pointRadius: 0,
-                                fill: false,
-                                order: 0,
+                                barThickness: 14,
                             }
                         ],
                     },
@@ -1126,10 +1119,10 @@
                                 ...TOOLTIP,
                                 callbacks: {
                                     label: c => {
-                                        if (c.datasetIndex === 1) return ' Threshold: ' + c.parsed.x;
+                                        
                                         const stock = c.parsed.x;
                                         const status = stock <= 0 ? ' ⛔ Out of stock' : stock <= thresh[c.dataIndex] ? ' ⚠ Low stock' : ' ✓ OK';
-                                        return ' Stock: ' + stock + status;
+                                        return [' Stock: ' + stock + status, ' Reorder at: ' + thresh[c.dataIndex]];
                                     }
                                 }
                             }
@@ -1151,7 +1144,7 @@
                     }
                 });
             })();
-    // CHART 6: Cash vs GCash
+    // CHART 6: Cash vs Online Payment vs Credit
             (function () {
                 const ctx = document.getElementById('paymentChart')?.getContext('2d');
                 if (!ctx) return;
@@ -1167,9 +1160,15 @@
                                 stack: 'pay', borderRadius: 4, borderSkipped: false,
                             },
                             {
-                                label: 'GCash',
+                                label: 'Online Payment',
                                 data: PAYMENTS.map(p => p.gcash),
                                 backgroundColor: '#7F77DD',
+                                stack: 'pay', borderRadius: 4, borderSkipped: false,
+                            },
+                            {
+                                label: 'Credit',
+                                data: PAYMENTS.map(p => p.credit),
+                                backgroundColor: '#a78bfa',
                                 stack: 'pay', borderRadius: 4, borderSkipped: false,
                             }
                         ],
@@ -1404,6 +1403,9 @@
             })();
 
         </script>
+
+        <?php include 'footer.php'; ?>
+
     </body>
 
     </html>

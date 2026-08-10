@@ -63,18 +63,74 @@ $totalExpenses = array_sum(array_column($expenseRows, 'amount'));
 $hasPayCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'payment_method'")->num_rows > 0;
 $paySelect = $hasPayCol ? ", payment_method" : ", 'cash' AS payment_method";
 
+$hasCarModelCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'car_model'")->num_rows > 0;
+$carModelSelect = $hasCarModelCol ? ", car_model" : ", '' AS car_model";
+
+$hasRefCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'reference_number'")->num_rows > 0;
+$refSelect = $hasRefCol ? ", reference_number" : ", '' AS reference_number";
+
 $salesRows = [];
 $r = $conn->query("
     SELECT id, sale_date, customer_name, plate_number,
            parts_total, labor_total,
            (parts_total + labor_total) AS grand_total
            $paySelect
+           $carModelSelect
+           $refSelect
     FROM sales
     ORDER BY sale_date DESC, id DESC
 ");
 if ($r)
     while ($row = $r->fetch_assoc())
         $salesRows[] = $row;
+
+// Parts used, categories touched, and full search text — per sale.
+// Joins sale_items -> products -> categories so we can:
+//   1) show which parts were used on each sale (Parts column)
+//   2) let the search box match a category name (e.g. "Coolant")
+//   3) power a Category filter dropdown
+$partsBySale = [];       // sale_id => [ ['description'=>.., 'quantity'=>.., 'category'=>..], ... ]
+$partsQtyBySale = [];    // sale_id => total quantity of parts sold on that sale
+$categoriesBySale = [];  // sale_id => [category_name => true]  (set, for the filter)
+$searchTermsBySale = []; // sale_id => [term, term, ...] (descriptions + categories, for the search box)
+
+$rp = $conn->query("
+    SELECT si.sale_id, si.line_type, si.description, si.quantity,
+           c.category_name
+    FROM sale_items si
+    LEFT JOIN products p ON si.product_id = p.product_id
+    LEFT JOIN categories c ON p.category_id = c.category_id
+    ORDER BY si.sale_id, si.id
+");
+if ($rp) {
+    while ($row = $rp->fetch_assoc()) {
+        $sid = $row['sale_id'];
+
+        $searchTermsBySale[$sid] ??= [];
+        $searchTermsBySale[$sid][] = $row['description'];
+        if ($row['category_name']) {
+            $searchTermsBySale[$sid][] = $row['category_name'];
+            $categoriesBySale[$sid][$row['category_name']] = true;
+        }
+
+        if ($row['line_type'] === 'parts') {
+            $partsBySale[$sid] ??= [];
+            $partsBySale[$sid][] = [
+                'description' => $row['description'],
+                'quantity'    => (int) $row['quantity'],
+                'category'    => $row['category_name'],
+            ];
+            $partsQtyBySale[$sid] = ($partsQtyBySale[$sid] ?? 0) + (int) $row['quantity'];
+        }
+    }
+}
+
+// Category list for the filter dropdown
+$allCategories = [];
+$rc = $conn->query("SELECT category_name FROM categories ORDER BY category_name ASC");
+if ($rc)
+    while ($row = $rc->fetch_assoc())
+        $allCategories[] = $row['category_name'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -112,6 +168,19 @@ if ($r)
             gap: 4px;
             background: rgba(96, 165, 250, .12);
             color: #60a5fa;
+            padding: 3px 9px;
+            border-radius: 6px;
+            font-size: .7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .pay-credit {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(167, 139, 250, .12);
+            color: #a78bfa;
             padding: 3px 9px;
             border-radius: 6px;
             font-size: .7rem;
@@ -264,14 +333,21 @@ if ($r)
 
         <!-- Filter bar -->
         <div class="filter-bar">
-            <input type="text" id="searchInput" class="form-control" style="max-width:200px;"
-                placeholder="Customer or plate…">
+            <input type="text" id="searchInput" class="form-control" style="max-width:220px;"
+                placeholder="Customer, plate, car model, category, part/service…">
             <input type="date" id="dateFrom" class="form-control" style="max-width:145px;">
             <input type="date" id="dateTo" class="form-control" style="max-width:145px;">
             <select id="payFilter" class="form-control" style="max-width:130px;">
                 <option value="">All Payments</option>
                 <option value="cash">💵 Cash</option>
-                <option value="gcash">📱 GCash</option>
+                <option value="gcash">📱 Online Payment</option>
+                <option value="credit">💳 Credit</option>
+            </select>
+            <select id="categoryFilter" class="form-control" style="max-width:160px;">
+                <option value="">All Categories</option>
+                <?php foreach ($allCategories as $cat): ?>
+                    <option value="<?= htmlspecialchars(strtolower($cat)) ?>"><?= htmlspecialchars($cat) ?></option>
+                <?php endforeach; ?>
             </select>
             <button class="btn-pink" style="font-size:.82rem;padding:7px 16px;" onclick="filterTable()">
                 <i class="bi bi-search me-1"></i>Search
@@ -291,9 +367,13 @@ if ($r)
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Ref #</th>
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Plate</th>
+                                <th>Car Model</th>
+                                <th>Parts Used</th>
+                                <th>QTY</th>
                                 <th>Parts ₱</th>
                                 <th>Labor ₱</th>
                                 <th>Gross Total ₱</th>
@@ -304,7 +384,7 @@ if ($r)
                         <tbody id="salesBody">
                             <?php if (empty($salesRows)): ?>
                                 <tr>
-                                    <td colspan="11" style="text-align:center;padding:30px;color:#64748b;">
+                                    <td colspan="13" style="text-align:center;padding:30px;color:#64748b;">
                                         No sales yet. <a href="sales.php">Record one →</a>
                                     </td>
                                 </tr>
@@ -315,12 +395,55 @@ if ($r)
                                     $pm = $s['payment_method'] ?? 'cash';
                                     $gross = (float) $s['grand_total'];
                                     ?>
+                                    <?php
+                                    $saleParts   = $partsBySale[$s['id']] ?? [];
+                                    $savedPartsQty = $partsQtyBySale[$s['id']] ?? 0;
+                                    $saleCats    = $categoriesBySale[$s['id']] ?? [];
+                                    $searchTerms = $searchTermsBySale[$s['id']] ?? [];
+
+                                    $partsLabel = $saleParts
+                                        ? implode(', ', array_map(
+                                            fn($p) => (
+                                                $p['description'] === '' || ctype_digit((string) $p['description'])
+                                                    ? '⚠ Unrecorded part'
+                                                    : $p['description']
+                                            ),
+                                            $saleParts
+                                          ))
+                                        : '';
+
+                                    $searchIndex = strtolower(htmlspecialchars(
+                                        $s['customer_name'] . ' ' . $s['plate_number'] . ' ' . ($s['car_model'] ?? '')
+                                        . ' ' . implode(' ', $searchTerms)
+                                    ));
+
+                                    $catAttr = strtolower(htmlspecialchars(implode(' ', array_keys($saleCats))));
+                                    ?>
                                     <tr data-id="<?= $s['id'] ?>" data-date="<?= $s['sale_date'] ?>" data-pay="<?= $pm ?>"
-                                        data-search="<?= strtolower(htmlspecialchars($s['customer_name'] . ' ' . $s['plate_number'])) ?>">
+                                        data-categories="<?= $catAttr ?>"
+                                        data-search="<?= $searchIndex ?>">
                                         <td><span class="badge-gray row-num"><?= $rowNum ?></span></td>
+                                        <td style="white-space:nowrap;">
+                                            <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:#4ade80;">
+                                                <?= htmlspecialchars($s['reference_number'] ?: '—') ?>
+                                            </span>
+                                        </td>
                                         <td style="white-space:nowrap;"><?= date('M d, Y', strtotime($s['sale_date'])) ?></td>
                                         <td><?= htmlspecialchars($s['customer_name'] ?: '—') ?></td>
                                         <td><?= htmlspecialchars($s['plate_number'] ?: '—') ?></td>
+                                        <td><?= htmlspecialchars($s['car_model'] ?: '—') ?></td>
+                                        <td style="max-width:220px;">
+                                            <?php if ($partsLabel): ?>
+                                                <span style="font-size:.8rem;color:#93c5fd;" title="<?= htmlspecialchars($partsLabel) ?>">
+                                                    <?= htmlspecialchars(mb_strimwidth($partsLabel, 0, 60, '…')) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="color:#2e3a4e;font-style:italic;">—</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="text-align:center;color:#94a3b8;">
+                                            <?= $savedPartsQty > 0 ? $savedPartsQty : '—' ?>
+                                        </td>
                                         <td style="color:#60a5fa;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?>
                                         </td>
                                         <td style="color:#4ade80;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?>
@@ -328,7 +451,9 @@ if ($r)
                                         <td style="font-weight:700;">₱<?= number_format($gross, 2) ?></td>
                                         <td>
                                             <?php if ($pm === 'gcash'): ?>
-                                                <span class="pay-gcash"><i class="bi bi-phone-fill"></i> GCash</span>
+                                                <span class="pay-gcash"><i class="bi bi-phone-fill"></i> Online Payment</span>
+                                            <?php elseif ($pm === 'credit'): ?>
+                                                <span class="pay-credit"><i class="bi bi-credit-card"></i> Credit</span>
                                             <?php else: ?>
                                                 <span class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</span>
                                             <?php endif; ?>
@@ -461,12 +586,25 @@ if ($r)
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
         // Clean PHP data for CSV export — no HTML scraping needed
-        const SALES_DATA = <?= json_encode(array_map(function($s) {
+        const SALES_DATA = <?= json_encode(array_map(function($s) use ($partsBySale, $partsQtyBySale) {
+            $parts = $partsBySale[$s['id']] ?? [];
+            $partsUsed = implode('; ', array_map(
+                fn($p) => (
+                    $p['description'] === '' || ctype_digit((string) $p['description'])
+                        ? 'Unrecorded part'
+                        : $p['description']
+                ),
+                $parts
+            ));
             return [
                 'id'             => $s['id'],
+                'reference_number' => $s['reference_number'] ?: '',
                 'sale_date'      => $s['sale_date'],
                 'customer_name'  => $s['customer_name'] ?: '',
                 'plate_number'   => $s['plate_number'] ?: '',
+                'car_model'      => $s['car_model'] ?: '',
+                'parts_used'     => $partsUsed,
+                'parts_qty'      => $partsQtyBySale[$s['id']] ?? 0,
                 'parts_total'    => number_format((float)$s['parts_total'], 2, '.', ''),
                 'labor_total'    => number_format((float)$s['labor_total'], 2, '.', ''),
                 'grand_total'    => number_format((float)$s['grand_total'], 2, '.', ''),
@@ -504,13 +642,15 @@ if ($r)
             const from = document.getElementById('dateFrom').value;
             const to = document.getElementById('dateTo').value;
             const pay = document.getElementById('payFilter').value;
+            const cat = document.getElementById('categoryFilter').value;
 
             document.querySelectorAll('#salesBody tr[data-date]').forEach(tr => {
                 const d = tr.dataset.date;
                 const matchQ = !q || tr.dataset.search.includes(q);
                 const matchD = (!from || d >= from) && (!to || d <= to);
                 const matchP = !pay || tr.dataset.pay === pay;
-                tr.style.display = matchQ && matchD && matchP ? '' : 'none';
+                const matchC = !cat || (tr.dataset.categories || '').split(' ').includes(cat);
+                tr.style.display = matchQ && matchD && matchP && matchC ? '' : 'none';
             });
             renumberRows('salesBody');
         }
@@ -518,12 +658,14 @@ if ($r)
         function resetFilter() {
             ['searchInput', 'dateFrom', 'dateTo'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('payFilter').value = '';
+            document.getElementById('categoryFilter').value = '';
             document.querySelectorAll('#salesBody tr').forEach(tr => tr.style.display = '');
             renumberRows('salesBody');
         }
 
         document.getElementById('searchInput').addEventListener('input', filterTable);
         document.getElementById('payFilter').addEventListener('change', filterTable);
+        document.getElementById('categoryFilter').addEventListener('change', filterTable);
 
         function exportCSV() {
             // Collect which sale IDs are currently visible (respects filters)
@@ -532,10 +674,10 @@ if ($r)
                 if (tr.style.display !== 'none') visibleIds.add(String(tr.dataset.id));
             });
 
-            const rows = [['ID','Date','Customer','Plate No.','Parts (PHP)','Labor (PHP)','Gross Total (PHP)','Payment']];
+            const rows = [['ID','Ref #','Date','Customer','Plate No.','Car Model','Parts Used','QTY','Parts (PHP)','Labor (PHP)','Gross Total (PHP)','Payment']];
             SALES_DATA.forEach(s => {
                 if (!visibleIds.has(String(s.id))) return;
-                rows.push([s.id, s.sale_date, s.customer_name, s.plate_number,
+                rows.push([s.id, s.reference_number, s.sale_date, s.customer_name, s.plate_number, s.car_model, s.parts_used, s.parts_qty,
                     s.parts_total, s.labor_total, s.grand_total, s.payment_method.toUpperCase()]);
             });
 
@@ -573,8 +715,10 @@ if ($r)
                 const net = gross - expAmt;
 
                 const payBadge = pm === 'gcash'
-                    ? `<span class="pay-gcash"><i class="bi bi-phone-fill"></i> GCash</span>`
-                    : `<span class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</span>`;
+                    ? `<span class="pay-gcash"><i class="bi bi-phone-fill"></i> Online Payment</span>`
+                    : pm === 'credit'
+                        ? `<span class="pay-credit"><i class="bi bi-credit-card"></i> Credit</span>`
+                        : `<span class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</span>`;
 
                 // Build expense items HTML
                 let expHtml = '';
@@ -623,6 +767,10 @@ if ($r)
                 body.innerHTML = `
             <div class="row mb-3 g-3">
                 <div class="col-6 col-sm-3">
+                    <div class="detail-label">Reference #</div>
+                    <div class="detail-value" style="color:#4ade80;font-weight:700;">${s.reference_number || '—'}</div>
+                </div>
+                <div class="col-6 col-sm-3">
                     <div class="detail-label">Date</div>
                     <div class="detail-value">${s.sale_date}</div>
                 </div>
@@ -638,6 +786,10 @@ if ($r)
                     <div class="detail-label">Payment</div>
                     <div style="margin-top:2px;">${payBadge}</div>
                 </div>
+                <div class="col-6 col-sm-3">
+                    <div class="detail-label">Car Model</div>
+                    <div class="detail-value">${s.car_model || '—'}</div>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -652,14 +804,18 @@ if ($r)
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.items.map(i => `
+                        ${data.items.map(i => {
+                            const isBogus = !i.description || /^\d+$/.test(String(i.description));
+                            const label = isBogus ? '⚠ Unrecorded item' : i.description;
+                            return `
                         <tr>
                             <td><span class="${i.line_type === 'parts' ? 'badge-blue' : 'badge-green'}">${i.line_type}</span></td>
-                            <td>${i.description || '—'}</td>
+                            <td>${label}${i.category_name ? ` <span style="color:#4b5a6e;font-size:.72rem;">(${i.category_name})</span>` : ''}</td>
                             <td>${i.quantity}</td>
                             <td>₱${parseFloat(i.unit_price).toFixed(2)}</td>
                             <td>₱${parseFloat(i.amount).toFixed(2)}</td>
-                        </tr>`).join('')}
+                        </tr>`;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
@@ -812,6 +968,8 @@ if ($r)
             a.click();
         }
     </script>
+    <?php include 'footer.php'; ?>
+
 </body>
 
 </html>

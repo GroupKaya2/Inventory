@@ -1,4 +1,4 @@
-    <?php
+<?php
     session_start();
     require_once 'backend/db.php';
 
@@ -11,9 +11,15 @@
     $today = date('Y-m-d');
     $todayDow = (int) date('N');
 
+    // Self-healing: ensure compatible_brand exists even if backend/db.php on the
+    // server is an older copy that doesn't create it yet.
+    $conn->query("ALTER TABLE products ADD COLUMN IF NOT EXISTS compatible_brand VARCHAR(50) NULL");
+
     $products = [];
+    $hasBrandCol = $conn->query("SHOW COLUMNS FROM products LIKE 'compatible_brand'")->num_rows > 0;
+    $brandSelect = $hasBrandCol ? "p.compatible_brand" : "'' AS compatible_brand";
     $r = $conn->query("
-        SELECT p.product_id, p.code, p.description, p.unit, p.selling_price,
+        SELECT p.product_id, p.code, p.description, p.unit, p.selling_price, $brandSelect,
             COALESCE(ps.current_stock,
                 p.initial_quantity + COALESCE((
                     SELECT SUM(t.quantity_change)
@@ -42,7 +48,13 @@
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method ENUM('cash','gcash') NOT NULL DEFAULT 'cash'");
+    $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method ENUM('cash','gcash','credit') NOT NULL DEFAULT 'cash'");
+    $conn->query("ALTER TABLE sales MODIFY COLUMN payment_method ENUM('cash','gcash','credit') NOT NULL DEFAULT 'cash'");
+    $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS reference_number VARCHAR(10) NULL");
+
+    // Next reference number for today: 001, 002, 003... resets daily
+    $refCountRow = $conn->query("SELECT COUNT(*) AS cnt FROM sales WHERE sale_date = '$today'")->fetch_assoc();
+    $nextRefNumber = str_pad((int) ($refCountRow['cnt'] ?? 0) + 1, 3, '0', STR_PAD_LEFT);
 
     $savedExpenses = [];
     $re = $conn->query("SELECT id, description, amount FROM expenses WHERE expense_date = '$today' ORDER BY id DESC");
@@ -68,7 +80,63 @@
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <link rel="stylesheet" href="assets/css/app.css">
-        <link rel="stylesheet" href="assets/css/sales.css?v=2">
+        <link rel="stylesheet" href="assets/css/sales.css?v=3">
+        <style>
+            /* Inline fallback so the Credit option highlights on tap even if
+               assets/css/sales.css hasn't been updated on the server yet. */
+            .txn-page .pay-toggle {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .txn-page .pay-toggle > div {
+                flex: 1;
+                min-width: 120px;
+            }
+            .txn-page .pay-toggle input[type="radio"] {
+                position: absolute;
+                opacity: 0;
+                width: 0;
+                height: 0;
+                pointer-events: none;
+            }
+            .txn-page .pay-toggle label {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 11px 16px;
+                border-radius: 10px;
+                cursor: pointer;
+                width: 100%;
+                border: 1.5px solid rgba(255, 255, 255, .1) !important;
+                background: rgba(255, 255, 255, .04) !important;
+                font-size: .88rem;
+                font-weight: 600;
+                color: #64748b !important;
+                margin: 0;
+                transition: all .15s;
+            }
+            .txn-page .pay-toggle label:hover {
+                border-color: rgba(255, 255, 255, .2) !important;
+                color: #94a3b8 !important;
+            }
+            .txn-page .pay-toggle input:checked + label.pay-cash {
+                border-color: rgba(74, 222, 128, .55) !important;
+                background: rgba(74, 222, 128, .14) !important;
+                color: #4ade80 !important;
+            }
+            .txn-page .pay-toggle input:checked + label.pay-gcash {
+                border-color: rgba(96, 165, 250, .55) !important;
+                background: rgba(96, 165, 250, .14) !important;
+                color: #60a5fa !important;
+            }
+            .txn-page .pay-toggle input:checked + label.pay-credit {
+                border-color: rgba(167, 139, 250, .55) !important;
+                background: rgba(167, 139, 250, .14) !important;
+                color: #a78bfa !important;
+            }
+        </style>
     </head>
 
     <body>
@@ -87,18 +155,6 @@
                 </a>
             </header>
 
-            <?php if ($todayDow === 7): ?>
-                <div class="txn-card">
-                    <div class="sunday-screen">
-                        <i class="bi bi-moon-stars-fill"></i>
-                        <h5 style="color:#e2e8f0;margin-bottom:8px;">Shop is Closed Today</h5>
-                        <p style="color:#64748b;max-width:340px;margin:0 auto;font-size:.88rem;">
-                            No transactions are recorded on Sundays. Come back Monday!
-                        </p>
-                    </div>
-                </div>
-            <?php else: ?>
-
                 <div class="txn-layout">
                     <!-- Left: form cards -->
                     <div class="txn-form-col">
@@ -109,7 +165,7 @@
                                 <div>
                                     <label class="field-label" for="saleDate">Date</label>
                                     <input type="date" class="txn-input" id="saleDate" value="<?= $today ?>"
-                                        max="<?= $today ?>" onchange="guardSunday(this)">
+                                        max="<?= $today ?>">
                                 </div>
                                 <div>
                                     <label class="field-label" for="customerName">Customer Name</label>
@@ -119,6 +175,14 @@
                                     <label class="field-label" for="plateNumber">Plate Number</label>
                                     <input type="text" class="txn-input" id="plateNumber" placeholder="e.g. ABC 1234"
                                         style="text-transform:uppercase;">
+                                </div>
+                                <div>
+                                    <label class="field-label" for="carModel">Car Model</label>
+                                    <input type="text" class="txn-input" id="carModel" placeholder="e.g. Honda Click 125i" oninput="renderParts()">
+                                </div>
+                                <div>
+                                    <label class="field-label" for="refNumber">Reference Number</label>
+                                    <input type="text" class="txn-input" id="refNumber" value="<?= $nextRefNumber ?>" readonly>
                                 </div>
                                 <div class="pay-field">
                                     <label class="field-label">Payment Method</label>
@@ -132,7 +196,13 @@
                                         <div>
                                             <input type="radio" name="payment" id="pay-gcash" value="gcash">
                                             <label for="pay-gcash" class="pay-gcash">
-                                                <i class="bi bi-phone-fill"></i> GCash
+                                                <i class="bi bi-phone-fill"></i> Online Payment
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <input type="radio" name="payment" id="pay-credit" value="credit">
+                                            <label for="pay-credit" class="pay-credit">
+                                                <i class="bi bi-credit-card"></i> Credit
                                             </label>
                                         </div>
                                     </div>
@@ -150,6 +220,13 @@
                                 <button type="button" class="btn-add-row parts" onclick="addPart()">
                                     <i class="bi bi-plus-lg"></i> Add Part
                                 </button>
+                            </div>
+                            <div id="brandFilterNote" style="display:none;margin-bottom:12px;font-size:.78rem;color:#94a3b8;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <span>Showing parts for <strong id="brandFilterName" style="color:#4ade80;"></strong></span>
+                                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin:0;font-weight:500;">
+                                    <input type="checkbox" id="showAllPartsToggle" onchange="renderParts()">
+                                    Show all parts instead
+                                </label>
                             </div>
                             <div id="partsWrap"></div>
                             <p id="noPartsMsg" class="empty-hint">
@@ -258,8 +335,6 @@
                     </div>
                 </div>
 
-            <?php endif; ?>
-
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -268,27 +343,61 @@
 
             const PRODUCTS = <?= json_encode($products, JSON_UNESCAPED_UNICODE) ?>;
             const TODAY = '<?= $today ?>';
+            const KNOWN_BRANDS = ['Honda', 'Yamaha', 'Suzuki', 'Kawasaki', 'Rusi'];
 
             let parts = [];
             let labors = [];
             let exps = [];
             let uid = 0;
 
-            function productOptions(selectedId) {
-                let html = '<option value="">-- Select Part --</option>';
-                PRODUCTS.forEach(p => {
-                    const sel = String(p.product_id) === String(selectedId) ? ' selected' : '';
-                    const stock = parseInt(p.current_stock) || 0;
-                    html += `<option value="${p.product_id}" data-price="${p.selling_price}" data-unit="${esc(p.unit)}" data-desc="${esc(p.description)}"${sel}>${esc(p.description)} (${stock} in stock)</option>`;
-                });
-                return html;
+            // Look for a known brand name inside whatever the user typed into Car Model,
+            // e.g. "Honda Click 125i" -> "Honda". Case-insensitive, matches anywhere in the text.
+            function detectBrand(carModelText) {
+                const text = String(carModelText || '').toLowerCase().trim();
+                if (!text) return null;
+                const found = KNOWN_BRANDS.find(b => text.includes(b.toLowerCase()));
+                return found || null;
             }
 
-            function guardSunday(el) {
-                const d = new Date(el.value + 'T12:00:00');
-                if (d.getDay() === 0) {
-                    Swal.fire({ icon: 'warning', title: 'Shop Closed Sunday', text: 'No transactions allowed on Sundays.' });
-                    el.value = TODAY;
+            function isUniversalPart(p) {
+                const b = String(p.compatible_brand || '').trim().toLowerCase();
+                return b === '' || b === 'universal';
+            }
+
+            function filteredProducts(selectedId) {
+                const carModelText = document.getElementById('carModel')?.value || '';
+                const showAll = document.getElementById('showAllPartsToggle')?.checked;
+                const detectedBrand = detectBrand(carModelText);
+
+                let list = PRODUCTS;
+                if (detectedBrand && !showAll) {
+                    list = PRODUCTS.filter(p =>
+                        isUniversalPart(p) ||
+                        String(p.compatible_brand).toLowerCase() === detectedBrand.toLowerCase() ||
+                        String(p.product_id) === String(selectedId) // never hide a part already chosen on this row
+                    );
+                }
+                return list;
+            }
+
+            function partLabel(p) {
+                const stock = parseInt(p.current_stock) || 0;
+                return `${p.description} (${stock} in stock)`;
+            }
+
+            function updateBrandFilterNote() {
+                const carModelText = document.getElementById('carModel')?.value || '';
+                const showAll = document.getElementById('showAllPartsToggle')?.checked;
+                const detectedBrand = detectBrand(carModelText);
+                const note = document.getElementById('brandFilterNote');
+                const nameEl = document.getElementById('brandFilterName');
+                if (!note || !nameEl) return;
+
+                if (detectedBrand) {
+                    nameEl.textContent = detectedBrand;
+                    note.style.display = 'flex';
+                } else {
+                    note.style.display = 'none';
                 }
             }
 
@@ -332,22 +441,6 @@
                 });
             }
 
-            function onPartSelect(idx, sel) {
-                const opt = sel.options[sel.selectedIndex];
-                if (!opt.value) {
-                    parts[idx].product_id = '';
-                    parts[idx].description = '';
-                    parts[idx].unit = '';
-                    parts[idx].unit_price = 0;
-                } else {
-                    parts[idx].product_id = opt.value;
-                    parts[idx].description = opt.dataset.desc || '';
-                    parts[idx].unit = opt.dataset.unit || '';
-                    parts[idx].unit_price = parseFloat(opt.dataset.price) || 0;
-                }
-                renderParts();
-            }
-
             function addPart() {
                 parts.push({ id: ++uid, product_id: '', description: '', unit: '', qty: 1, unit_price: 0 });
                 renderParts();
@@ -355,6 +448,7 @@
             function removePart(idx) { parts.splice(idx, 1); renderParts(); }
 
             function renderParts() {
+                updateBrandFilterNote();
                 const wrap = document.getElementById('partsWrap');
                 const noMsg = document.getElementById('noPartsMsg');
                 if (!parts.length) {
@@ -365,11 +459,23 @@
                 }
                 noMsg.style.display = 'none';
 
-                wrap.innerHTML = parts.map((row, idx) => `
+                wrap.innerHTML = parts.map((row, idx) => {
+                    const matched = row.product_id
+                        ? PRODUCTS.find(p => String(p.product_id) === String(row.product_id))
+                        : null;
+                    const initialValue = matched ? partLabel(matched) : '';
+                    const listId = `partSearchList-${idx}`;
+                    const datalistHtml = filteredProducts(row.product_id)
+                        .map(p => `<option value="${esc(partLabel(p))}">`).join('');
+
+                    return `
     <div class="item-line parts-grid">
     <div>
         <label class="field-label">Part</label>
-        <select class="txn-select" onchange="onPartSelect(${idx}, this)">${productOptions(row.product_id)}</select>
+        <input type="text" class="txn-input" list="${listId}" autocomplete="off"
+        placeholder="Type to search parts…" value="${esc(initialValue)}"
+        oninput="onPartSearchInput(${idx}, this)" onblur="onPartSearchBlur(${idx}, this)">
+        <datalist id="${listId}">${datalistHtml}</datalist>
     </div>
     <div>
         <label class="field-label">Qty</label>
@@ -378,7 +484,7 @@
     </div>
     <div>
         <label class="field-label">Unit Price</label>
-        <input type="number" class="txn-input" min="0" step="0.01" value="${row.unit_price || ''}"
+        <input type="number" class="txn-input" id="partPrice-${idx}" min="0" step="0.01" value="${row.unit_price || ''}"
         oninput="parts[${idx}].unit_price=parseFloat(this.value)||0;recalc();">
     </div>
     <div>
@@ -390,8 +496,43 @@
         <label class="field-label">&nbsp;</label>
         <button type="button" class="btn-remove" onclick="removePart(${idx})" title="Remove"><i class="bi bi-trash"></i></button>
     </div>
-    </div>`).join('');
+    </div>`;
+                }).join('');
                 recalc();
+            }
+
+            function onPartSearchInput(idx, el) {
+                const typed = el.value.trim();
+                const list = filteredProducts(parts[idx].product_id);
+                const match = list.find(p => partLabel(p) === typed);
+
+                if (match) {
+                    parts[idx].product_id = match.product_id;
+                    parts[idx].description = match.description;
+                    parts[idx].unit = match.unit;
+                    parts[idx].unit_price = parseFloat(match.selling_price) || 0;
+                    el.style.borderColor = 'rgba(74,222,128,.55)';
+
+                    const priceInput = document.getElementById(`partPrice-${idx}`);
+                    if (priceInput) priceInput.value = parts[idx].unit_price;
+
+                    recalc();
+                } else {
+                    parts[idx].product_id = '';
+                    parts[idx].description = '';
+                    parts[idx].unit_price = 0;
+                    el.style.borderColor = typed ? 'rgba(251,191,36,.55)' : '';
+                    recalc();
+                }
+            }
+
+            function onPartSearchBlur(idx, el) {
+                // If they leave the field without landing on a real part, clear the
+                // stray text so it's obvious a real selection is still needed.
+                if (!parts[idx].product_id) {
+                    el.value = '';
+                    el.style.borderColor = '';
+                }
             }
 
             function addLabor() {
@@ -485,25 +626,31 @@
                 parts = [];
                 labors = [];
                 exps = [];
+                document.getElementById('customerName').value = '';
+                document.getElementById('plateNumber').value = '';
+                document.getElementById('carModel').value = '';
+                document.getElementById('saleDate').value = TODAY;
+                document.getElementById('pay-cash').checked = true;
                 renderParts();
                 renderLabor();
                 renderExp();
-                document.getElementById('customerName').value = '';
-                document.getElementById('plateNumber').value = '';
-                document.getElementById('saleDate').value = TODAY;
-                document.getElementById('pay-cash').checked = true;
+
+                // Bump the reference number for the next transaction of the day
+                const refInput = document.getElementById('refNumber');
+                const nextRef = (parseInt(refInput.value, 10) || 0) + 1;
+                refInput.value = String(nextRef).padStart(3, '0');
+
                 recalc();
             }
 
             async function submitSale() {
                 const saleDate = document.getElementById('saleDate').value;
 
-                if (new Date(saleDate + 'T12:00:00').getDay() === 0) {
-                    Swal.fire({ icon: 'warning', title: 'Shop Closed', text: 'No transactions on Sundays.' });
-                    return;
-                }
+                // A blank labor row (no description, no price) means the user never
+                // intended to add a service -- don't treat it as an incomplete entry.
+                const activeLabors = labors.filter(r => r.description.trim() !== '' || laborAmount(r) > 0);
 
-                if (!parts.length && !labors.length) {
+                if (!parts.length && !activeLabors.length) {
                     Swal.fire({ icon: 'warning', title: 'Nothing to save', text: 'Add at least one part or labor row.' });
                     return;
                 }
@@ -524,8 +671,8 @@
                     }
                 }
 
-                for (let i = 0; i < labors.length; i++) {
-                    const r = labors[i];
+                for (let i = 0; i < activeLabors.length; i++) {
+                    const r = activeLabors[i];
                     const amt = laborAmount(r);
                     if (!r.description.trim()) {
                         Swal.fire({ icon: 'warning', title: 'Incomplete', text: `Labor row ${i + 1}: enter a service description.` });
@@ -563,7 +710,7 @@
                         unit_price: r.unit_price,
                         amount: r.qty * r.unit_price,
                     })),
-                    ...labors.map(r => ({
+                    ...activeLabors.map(r => ({
                         type: 'labor',
                         product_id: null,
                         description: r.description.trim(),
@@ -581,6 +728,8 @@
                     sale_date: saleDate,
                     customer_name: document.getElementById('customerName').value.trim(),
                     plate_number: document.getElementById('plateNumber').value.trim().toUpperCase(),
+                    car_model: document.getElementById('carModel').value.trim(),
+                    reference_number: document.getElementById('refNumber').value.trim(),
                     payment_method: paymentMethod,
                     items,
                     expenses,
@@ -597,7 +746,8 @@
                     if (data.success) {
                         const lowItems = (data.stock_summary || []).filter(s => s.low_stock);
                         let html = `Transaction <strong>#${data.sale_id}</strong> saved!`;
-                        if (paymentMethod === 'gcash') html += ' <span style="color:#60a5fa;">(GCash)</span>';
+                        if (paymentMethod === 'gcash') html += ' <span style="color:#60a5fa;">(Online Payment)</span>';
+                        if (paymentMethod === 'credit') html += ' <span style="color:#a78bfa;">(Credit)</span>';
                         if (expenses.length) {
                             const expSum = expenses.reduce((s, e) => s + e.amount, 0);
                             html += `<br><small style="color:#f87171;">Expenses logged: ${peso(expSum)}</small>`;
@@ -631,32 +781,9 @@
             renderLabor();
             renderExp();
             recalc();
-
-            // Client-side Sunday guard
-            function guardSunday(dateInput) {
-                if (!dateInput.value) return;
-                const date = new Date(dateInput.value);
-                const dayOfWeek = date.getDay();
-                if (dayOfWeek === 7) { // Sunday
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Shop is Closed on Sundays',
-                        text: 'Please select a different date.',
-                        confirmButtonColor: '#e8175d'
-                    }).then(() => {
-                        dateInput.value = '<?= $today ?>';
-                    });
-                }
-            }
-
-            // Check on page load
-            document.addEventListener('DOMContentLoaded', function() {
-                const dateInput = document.getElementById('saleDate');
-                if (dateInput) {
-                    guardSunday(dateInput);
-                }
-            });
         </script>
+        <?php include 'footer.php'; ?>
+
     </body>
 
     </html>

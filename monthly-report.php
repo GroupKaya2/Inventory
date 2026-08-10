@@ -320,9 +320,7 @@ $today = date('Y-m-d');
 
         <div class="page-header mb-3">
             <h4 style="margin:0;"><i class="bi bi-calendar-week me-2"></i>Weekly Sales Report</h4>
-            <p style="margin:4px 0 0;color:#64748b;font-size:.85rem;">
-                Pick any date to view that week (Monday–Saturday). Weekly and monthly totals are shown at the bottom of the table.
-            </p>
+
         </div>
 
         <!-- Toolbar -->
@@ -591,6 +589,8 @@ $today = date('Y-m-d');
 
         loadReport();
     </script>
+    <?php include 'footer.php'; ?>
+
 </body>
 
 </html>

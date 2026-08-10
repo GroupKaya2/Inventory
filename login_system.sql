@@ -1,41 +1,17 @@
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Generation Time: Mar 25, 2026 at 09:44 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
-
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
 /*!40101 SET NAMES utf8mb4 */;
 
---
--- Database: `login_system`
---
-
--- --------------------------------------------------------
-
---
--- Table structure for table `categories`
---
-
 CREATE TABLE `categories` (
   `category_id` int(11) NOT NULL,
   `category_name` varchar(100) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `categories`
---
 
 INSERT INTO `categories` (`category_id`, `category_name`, `created_at`) VALUES
 (1, 'Engine Oil', '2026-02-22 09:24:23'),
@@ -45,12 +21,6 @@ INSERT INTO `categories` (`category_id`, `category_name`, `created_at`) VALUES
 (5, 'Gear Oil', '2026-02-22 09:24:23'),
 (6, 'Filters', '2026-02-22 09:24:23'),
 (7, 'Accessories', '2026-02-22 09:24:23');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `expenses`
---
 
 CREATE TABLE `expenses` (
   `id` int(11) NOT NULL,
@@ -62,18 +32,8 @@ CREATE TABLE `expenses` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `expenses`
---
-
 INSERT INTO `expenses` (`id`, `expense_date`, `category`, `description`, `amount`, `created_by`, `created_at`) VALUES
 (31, '2026-03-09', 'Salaries', 'sdfgh', 100.00, 1, '2026-03-09 02:49:09');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `inventory_transactions`
---
 
 CREATE TABLE `inventory_transactions` (
   `transaction_id` int(11) NOT NULL,
@@ -85,10 +45,6 @@ CREATE TABLE `inventory_transactions` (
   `created_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `inventory_transactions`
---
 
 INSERT INTO `inventory_transactions` (`transaction_id`, `product_id`, `transaction_date`, `quantity_change`, `transaction_type`, `remarks`, `created_by`, `created_at`) VALUES
 (1, 1, '2026-01-25', -3, 'sale', NULL, 1, '2026-02-22 09:36:30'),
@@ -173,12 +129,6 @@ INSERT INTO `inventory_transactions` (`transaction_id`, `product_id`, `transacti
 (80, 15, '2026-03-19', -2, 'sale', 'Sale #70 - jeryl', 1, '2026-03-19 10:10:06'),
 (81, 15, '2026-03-21', -1, 'sale', 'Sale #71 - dokdok', 2, '2026-03-21 03:00:10');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `products`
---
-
 CREATE TABLE `products` (
   `product_id` int(11) NOT NULL,
   `category_id` int(11) NOT NULL,
@@ -192,10 +142,6 @@ CREATE TABLE `products` (
   `reorder_threshold` int(11) DEFAULT 5,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `products`
---
 
 INSERT INTO `products` (`product_id`, `category_id`, `code`, `description`, `unit`, `unit_cost`, `selling_price`, `initial_quantity`, `reorder_threshold`, `created_at`) VALUES
 (1, 1, 'EO-001', 'Castrol GTX 20W-50 Engine Oil', 'Liter', 350.00, 450.00, 80, 10, '2026-02-22 09:25:45'),
@@ -214,12 +160,6 @@ INSERT INTO `products` (`product_id`, `category_id`, `code`, `description`, `uni
 (14, 7, 'AC-001', 'WD-40 Multi-Purpose Spray 400ml', 'Gallon', 180.00, 280.00, 50, 8, '2026-02-22 09:25:45'),
 (15, 7, 'AC-002', '3M Silicone Spray Lubricant', 'Gallon', 250.00, 380.00, 35, 5, '2026-02-22 09:25:45');
 
--- --------------------------------------------------------
-
---
--- Stand-in structure for view `product_stock`
--- (See below for the actual view)
---
 CREATE TABLE `product_stock` (
 `product_id` int(11)
 ,`code` varchar(50)
@@ -235,12 +175,6 @@ CREATE TABLE `product_stock` (
 ,`current_stock` decimal(33,0)
 );
 
--- --------------------------------------------------------
-
---
--- Table structure for table `reorder_preparations`
---
-
 CREATE TABLE `reorder_preparations` (
   `id` int(11) NOT NULL,
   `product_id` int(11) NOT NULL,
@@ -250,12 +184,6 @@ CREATE TABLE `reorder_preparations` (
   `confirmed_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sales`
---
 
 CREATE TABLE `sales` (
   `id` int(11) NOT NULL,
@@ -268,21 +196,11 @@ CREATE TABLE `sales` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `sales`
---
-
 INSERT INTO `sales` (`id`, `sale_date`, `customer_name`, `plate_number`, `parts_total`, `labor_total`, `created_by`, `created_at`) VALUES
 (67, '2026-03-09', 'HANAH', 'BBI-987', 760.00, 0.00, 1, '2026-03-09 02:57:05'),
 (68, '2026-03-14', 'jeryl', 'BBC', 380.00, 0.00, 1, '2026-03-14 02:35:38'),
 (69, '2026-03-16', 'loise', 'ABC-123', 380.00, 0.00, 1, '2026-03-16 07:36:48'),
 (70, '2026-03-19', 'jeryl', 'BBI-987', 760.00, 0.00, 1, '2026-03-19 10:10:06');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sale_items`
---
 
 CREATE TABLE `sale_items` (
   `id` int(11) NOT NULL,
@@ -296,21 +214,11 @@ CREATE TABLE `sale_items` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `sale_items`
---
-
 INSERT INTO `sale_items` (`id`, `sale_id`, `line_type`, `product_id`, `description`, `quantity`, `unit_price`, `amount`, `created_at`) VALUES
 (343, 67, '', 15, '3', 2, 380.00, 760.00, '2026-03-09 02:57:05'),
 (344, 68, '', 15, '3', 1, 380.00, 380.00, '2026-03-14 02:35:38'),
 (345, 69, '', 4, '0', 1, 380.00, 380.00, '2026-03-16 07:36:48'),
 (346, 70, '', 15, '3', 2, 380.00, 760.00, '2026-03-19 10:10:06');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `sms_history`
---
 
 CREATE TABLE `sms_history` (
   `id` int(11) NOT NULL,
@@ -323,12 +231,6 @@ CREATE TABLE `sms_history` (
   `product_ids` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`product_ids`))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `sms_settings`
---
-
 CREATE TABLE `sms_settings` (
   `id` int(11) NOT NULL,
   `setting_key` varchar(50) NOT NULL,
@@ -337,18 +239,8 @@ CREATE TABLE `sms_settings` (
   `updated_by` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `sms_settings`
---
-
 INSERT INTO `sms_settings` (`id`, `setting_key`, `setting_value`, `updated_at`, `updated_by`) VALUES
 (1, 'recipients', '[]', '2026-02-22 09:30:37', NULL);
-
--- --------------------------------------------------------
-
---
--- Table structure for table `users`
---
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
@@ -358,20 +250,10 @@ CREATE TABLE `users` (
   `role` varchar(50) NOT NULL DEFAULT 'user'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `users`
---
-
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`) VALUES
 (1, 'esrah', 'ez@gmail.com', '$2y$10$34IhsM5bbrXEevYoJ7G//u3G/1BLp6PtDDHJ7BJKm3Iz5bJW7Mpi.', 'owner'),
 (2, 'manager', 'manager@gmail.com', '$2y$10$nICcpM3Eujepp8fLUDSgF.1FL4dBRle/G8W2JBtJJfYQ0BAIwwKBm', 'manager'),
 (4, 'jeryl', 'dagunan@gmail.com', '$2y$12$2etttUfcfmGho34d.UPzduY4tIZJuuErORRV4x2urYcJFC4gYTaBW', 'manager');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `work_orders`
---
 
 CREATE TABLE `work_orders` (
   `id` int(11) NOT NULL,
@@ -381,10 +263,6 @@ CREATE TABLE `work_orders` (
   `completed_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `work_orders`
---
 
 INSERT INTO `work_orders` (`id`, `service_name`, `status`, `labor_amount`, `completed_at`, `created_at`) VALUES
 (1, 'Oil Change Service - Carlos Reyes', 'completed', 500.00, '2026-01-25 17:37:39', '2026-02-22 09:37:39'),
@@ -415,214 +293,110 @@ INSERT INTO `work_orders` (`id`, `service_name`, `status`, `labor_amount`, `comp
 (26, 'HANAH (BBI-987)', 'completed', 3000.00, '2026-02-03 12:49:54', '2026-02-22 11:49:54'),
 (27, 'thea sorro (BBI-987)', 'completed', 5000.00, '2026-03-05 10:14:09', '2026-03-05 09:14:09');
 
--- --------------------------------------------------------
-
---
--- Structure for view `product_stock`
---
 DROP TABLE IF EXISTS `product_stock`;
 
 CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `product_stock`  AS SELECT `p`.`product_id` AS `product_id`, `p`.`code` AS `code`, `p`.`description` AS `description`, `p`.`unit` AS `unit`, `p`.`unit_cost` AS `unit_cost`, `p`.`selling_price` AS `selling_price`, `p`.`margin` AS `margin`, `p`.`initial_quantity` AS `initial_quantity`, `p`.`reorder_threshold` AS `reorder_threshold`, `c`.`category_id` AS `category_id`, `c`.`category_name` AS `category_name`, `p`.`initial_quantity`+ coalesce(sum(`t`.`quantity_change`),0) AS `current_stock` FROM ((`products` `p` join `categories` `c` on(`p`.`category_id` = `c`.`category_id`)) left join `inventory_transactions` `t` on(`p`.`product_id` = `t`.`product_id`)) GROUP BY `p`.`product_id`, `p`.`code`, `p`.`description`, `p`.`unit`, `p`.`unit_cost`, `p`.`selling_price`, `p`.`margin`, `p`.`initial_quantity`, `p`.`reorder_threshold`, `c`.`category_id`, `c`.`category_name` ;
 
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `categories`
---
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`category_id`);
 
---
--- Indexes for table `expenses`
---
 ALTER TABLE `expenses`
   ADD PRIMARY KEY (`id`),
   ADD KEY `created_by` (`created_by`);
 
---
--- Indexes for table `inventory_transactions`
---
 ALTER TABLE `inventory_transactions`
   ADD PRIMARY KEY (`transaction_id`),
   ADD KEY `product_id` (`product_id`),
   ADD KEY `created_by` (`created_by`);
 
---
--- Indexes for table `products`
---
 ALTER TABLE `products`
   ADD PRIMARY KEY (`product_id`),
   ADD UNIQUE KEY `code` (`code`),
   ADD KEY `category_id` (`category_id`);
 
---
--- Indexes for table `reorder_preparations`
---
 ALTER TABLE `reorder_preparations`
   ADD PRIMARY KEY (`id`),
   ADD KEY `product_id` (`product_id`);
 
---
--- Indexes for table `sales`
---
 ALTER TABLE `sales`
   ADD PRIMARY KEY (`id`),
   ADD KEY `created_by` (`created_by`);
 
---
--- Indexes for table `sale_items`
---
 ALTER TABLE `sale_items`
   ADD PRIMARY KEY (`id`),
   ADD KEY `sale_id` (`sale_id`),
   ADD KEY `product_id` (`product_id`);
 
---
--- Indexes for table `sms_history`
---
 ALTER TABLE `sms_history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_sent_at` (`sent_at`),
   ADD KEY `idx_status` (`status`);
 
---
--- Indexes for table `sms_settings`
---
 ALTER TABLE `sms_settings`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `setting_key` (`setting_key`),
   ADD KEY `updated_by` (`updated_by`);
 
---
--- Indexes for table `users`
---
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
 
---
--- Indexes for table `work_orders`
---
 ALTER TABLE `work_orders`
   ADD PRIMARY KEY (`id`);
 
---
--- AUTO_INCREMENT for dumped tables
---
-
---
--- AUTO_INCREMENT for table `categories`
---
 ALTER TABLE `categories`
   MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
---
--- AUTO_INCREMENT for table `expenses`
---
 ALTER TABLE `expenses`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
 
---
--- AUTO_INCREMENT for table `inventory_transactions`
---
 ALTER TABLE `inventory_transactions`
   MODIFY `transaction_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=82;
 
---
--- AUTO_INCREMENT for table `products`
---
 ALTER TABLE `products`
   MODIFY `product_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
---
--- AUTO_INCREMENT for table `reorder_preparations`
---
 ALTER TABLE `reorder_preparations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `sales`
---
 ALTER TABLE `sales`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
---
--- AUTO_INCREMENT for table `sale_items`
---
 ALTER TABLE `sale_items`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=348;
 
---
--- AUTO_INCREMENT for table `sms_history`
---
 ALTER TABLE `sms_history`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `sms_settings`
---
 ALTER TABLE `sms_settings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
---
--- AUTO_INCREMENT for table `users`
---
 ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
---
--- AUTO_INCREMENT for table `work_orders`
---
 ALTER TABLE `work_orders`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
---
--- Constraints for dumped tables
---
-
---
--- Constraints for table `expenses`
---
 ALTER TABLE `expenses`
   ADD CONSTRAINT `expenses_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
---
--- Constraints for table `inventory_transactions`
---
 ALTER TABLE `inventory_transactions`
   ADD CONSTRAINT `inventory_transactions_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `inventory_transactions_ibfk_2` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
---
--- Constraints for table `products`
---
 ALTER TABLE `products`
   ADD CONSTRAINT `products_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `categories` (`category_id`);
 
---
--- Constraints for table `reorder_preparations`
---
 ALTER TABLE `reorder_preparations`
   ADD CONSTRAINT `reorder_preparations_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE CASCADE;
 
---
--- Constraints for table `sales`
---
 ALTER TABLE `sales`
   ADD CONSTRAINT `sales_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
---
--- Constraints for table `sale_items`
---
 ALTER TABLE `sale_items`
   ADD CONSTRAINT `sale_items_ibfk_1` FOREIGN KEY (`sale_id`) REFERENCES `sales` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `sale_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`product_id`) ON DELETE SET NULL;
 
---
--- Constraints for table `sms_settings`
---
 ALTER TABLE `sms_settings`
   ADD CONSTRAINT `sms_settings_ibfk_1` FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 COMMIT;
@@ -630,3 +404,17 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+UPDATE sale_items
+SET line_type = 'parts'
+WHERE line_type = '' AND product_id IS NOT NULL;
+
+UPDATE sale_items
+SET line_type = 'labor'
+WHERE line_type = '' AND product_id IS NULL;
+
+UPDATE sale_items si
+JOIN products p ON si.product_id = p.product_id
+SET si.description = p.description
+WHERE si.line_type = 'parts'
+  AND (si.description IS NULL OR si.description = '' OR si.description REGEXP '^[0-9]+$');

@@ -45,7 +45,8 @@ class InventoryRenderer {
                 <table class="data-table">
                     <thead><tr>
                         <th>#</th><th>Category</th><th>Description</th><th>Code</th>
-                        <th>Stock</th><th>Threshold</th><th>Unit</th><th>Action</th>
+                        <th>Remaining Stock</th>
+                        <th>Threshold</th><th>Unit</th><th>Needed</th><th>Action</th>
                     </tr></thead>
                     <tbody>${items.map((p, i) => this._reorderRow(p, i)).join('')}</tbody>
                 </table>`;
@@ -108,14 +109,21 @@ class InventoryRenderer {
     }
 
     _reorderRow(p, idx) {
+        // Physical stock can never be negative -- a negative ledger total means
+        // sales outran what was ever logged as received, not real remaining units.
+        const rawStock   = parseInt(p.current_stock) || 0;
+        const threshold  = parseInt(p.reorder_threshold) || 0;
+        const needed     = Math.max(0, threshold - rawStock); // units needed to reach threshold
+
         return `<tr>
             <td>${idx + 1}</td>
             <td>${p.category_name || '—'}</td>
             <td>${p.description}</td>
             <td>${p.code || '—'}</td>
-            <td style="color:#fbbf24;">${p.current_stock}</td>
-            <td>${p.reorder_threshold}</td>
+            <td>${this._stockBadge(rawStock, threshold)}</td>
+            <td>${threshold}</td>
             <td>${p.unit}</td>
+            <td style="color:#86efac;">${needed > 0 ? '+' + needed : '—'}</td>
             <td>
                 <button class="btn btn-sm btn-outline-success" onclick="openRestock(${p.product_id}, '${this._esc(p.description)}')">
                     <i class="bi bi-box-arrow-in-down"></i> Restock
@@ -127,9 +135,23 @@ class InventoryRenderer {
     _stockBadge(qty, threshold) {
         qty       = parseInt(qty) || 0;
         threshold = parseInt(threshold) || 0;
-        if (qty <= 0)         return `<span class="badge bg-danger">Out of Stock</span>`;
-        if (qty <= threshold) return `<span class="badge bg-warning text-dark">${qty} ⚠ Low</span>`;
-        return                       `<span class="badge bg-success">${qty}</span>`;
+        const remaining = Math.max(0, qty); // physical stock can never be negative
+
+        if (remaining <= 0) {
+            return `<div style="text-align:center;line-height:1.3;">
+                        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#f87171;">0</div>
+                        <div style="font-size:.68rem;font-weight:600;color:#f87171;">Out of Stock</div>
+                    </div>`;
+        }
+        if (remaining <= threshold) {
+            return `<div style="text-align:center;line-height:1.3;">
+                        <div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;color:#fbbf24;">${remaining}</div>
+                        <div style="font-size:.68rem;font-weight:600;color:#fbbf24;">⚠ Low Stock</div>
+                    </div>`;
+        }
+        return `<div style="text-align:center;">
+                    <span class="badge bg-success" style="font-size:.85rem;">${remaining}</span>
+                </div>`;
     }
 
     _peso(n) {

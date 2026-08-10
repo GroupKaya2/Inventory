@@ -431,12 +431,7 @@ $initials = substr($initials, 0, 2);
             font-weight: 600;
         }
 
-        .danger-box {
-            background: rgba(248, 113, 113, .04);
-            border: 1px solid rgba(248, 113, 113, .16);
-            border-radius: 10px;
-            padding: 20px;
-        }
+
 
         /* Modal */
         .dark-modal .modal-content {
@@ -515,11 +510,7 @@ $initials = substr($initials, 0, 2);
                         <span class="nav-icon"><i class="bi bi-journal-text"></i></span>
                         Audit Log
                     </button>
-                    <button class="ac-nav-item" onclick="showPanel('danger',this)">
-                        <span class="nav-icon" style="background:rgba(248,113,113,.1);color:#f87171;"><i
-                                class="bi bi-exclamation-triangle-fill"></i></span>
-                        <span style="color:#f87171;">Danger Zone</span>
-                    </button>
+
                 <?php endif; ?>
             </div>
 
@@ -749,23 +740,7 @@ $initials = substr($initials, 0, 2);
                         </div>
                     </div>
 
-                    <!-- DANGER ZONE -->
-                    <div class="ac-panel" id="panel-danger">
-                        <div class="ac-right-title" style="color:#f87171;">Danger Zone</div>
-                        <div class="ac-right-sub">Irreversible actions. Proceed with caution.</div>
-                        <div class="danger-box">
-                            <div style="font-weight:700;font-size:.9rem;color:#fca5a5;margin-bottom:6px;">Clear All Sales
-                                History</div>
-                            <div style="font-size:.8rem;color:#64748b;margin-bottom:14px;line-height:1.6;">
-                                Permanently deletes all sales records, line items, and inventory transactions. This cannot
-                                be undone.
-                            </div>
-                            <button onclick="clearSalesHistory()"
-                                style="background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.28);color:#fca5a5;padding:9px 20px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">
-                                <i class="bi bi-trash3 me-1"></i>Clear All Sales History
-                            </button>
-                        </div>
-                    </div>
+
 
                     <!-- AUDIT LOG -->
                     <div class="ac-panel" id="panel-audit">
@@ -1019,6 +994,8 @@ $initials = substr($initials, 0, 2);
             Swal.fire({ icon: 'info', title: 'Coming Soon', text: 'Bulk delete will be available in the next update.' });
         }
     </script>
+    <?php include 'footer.php'; ?>
+
 </body>
 
 </html>

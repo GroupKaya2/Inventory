@@ -69,9 +69,17 @@ $conn->query("CREATE TABLE IF NOT EXISTS expenses (
     INDEX idx_date (expense_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-// payment_method column on sales
+// payment_method column on sales — cash / online payment (gcash) / credit
 $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method
-    ENUM('cash','gcash') NOT NULL DEFAULT 'cash'");
+    ENUM('cash','gcash','credit') NOT NULL DEFAULT 'cash'");
+$conn->query("ALTER TABLE sales MODIFY COLUMN payment_method
+    ENUM('cash','gcash','credit') NOT NULL DEFAULT 'cash'");
+
+// car_model column on sales
+$conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS car_model VARCHAR(100) NULL");
+
+// reference_number column on sales — daily sequence e.g. 001, 002, 003...
+$conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS reference_number VARCHAR(10) NULL");
 
 $conn->query("SET SESSION sql_mode = 'NO_ZERO_IN_DATE,NO_ZERO_DATE,NO_ENGINE_SUBSTITUTION'");
 $conn->query("CREATE OR REPLACE VIEW product_stock AS
