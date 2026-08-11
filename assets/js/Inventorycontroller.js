@@ -1,5 +1,22 @@
 'use strict';
 
+// Units offered as fixed dropdown options -- anything else (an existing
+// product's custom unit, or a new one the user types) falls back to "Others".
+const STANDARD_UNITS = ['Gallon', 'Liter', 'Piece', 'Box', 'Set'];
+
+/** Show/hide the custom-unit text input next to the Unit dropdown. */
+function toggleCustomUnit(mode, value) {
+    const input = document.getElementById(mode + 'UnitOther');
+    if (!input) return;
+    if (value === '__other__') {
+        input.style.display = '';
+        input.focus();
+    } else {
+        input.style.display = 'none';
+        input.value = '';
+    }
+}
+
 class InventoryController {
     constructor(api, renderer, ledger) {
         this._api      = api;
@@ -136,7 +153,19 @@ class InventoryController {
             const catSel  = document.getElementById('editCategory');
             if (catSel)  catSel.value  = p.category_id;
             const unitSel = document.getElementById('editUnit');
-            if (unitSel) unitSel.value = p.unit;
+            if (unitSel) {
+                if (p.unit && !STANDARD_UNITS.includes(p.unit)) {
+                    unitSel.value = '__other__';
+                    const otherInput = document.getElementById('editUnitOther');
+                    if (otherInput) {
+                        otherInput.value = p.unit;
+                        otherInput.style.display = '';
+                    }
+                } else {
+                    unitSel.value = p.unit;
+                    toggleCustomUnit('edit', p.unit);
+                }
+            }
             this._updateMargin('edit');
             new bootstrap.Modal(document.getElementById('editModal')).show();
         } catch (e) {
@@ -254,7 +283,10 @@ class InventoryController {
             const btn   = document.getElementById('submitAdd');
             const catId = document.getElementById('addCategory')?.value;
             const desc  = document.getElementById('addDesc')?.value.trim();
-            const unit  = document.getElementById('addUnit')?.value;
+            let unit    = document.getElementById('addUnit')?.value;
+            if (unit === '__other__') {
+                unit = document.getElementById('addUnitOther')?.value.trim();
+            }
 
             if (!catId || !desc || !unit) {
                 Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });
@@ -299,7 +331,10 @@ class InventoryController {
             const id    = document.getElementById('editId')?.value;
             const catId = document.getElementById('editCategory')?.value;
             const desc  = document.getElementById('editDesc')?.value.trim();
-            const unit  = document.getElementById('editUnit')?.value;
+            let unit    = document.getElementById('editUnit')?.value;
+            if (unit === '__other__') {
+                unit = document.getElementById('editUnitOther')?.value.trim();
+            }
 
             if (!id || !catId || !desc || !unit) {
                 Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });

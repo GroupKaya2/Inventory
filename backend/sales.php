@@ -47,14 +47,13 @@ if ($action === 'save') {
         exit;
     }
 
-    // If no reference number was supplied (or client got out of sync), compute the next one server-side
+    // If no reference number was supplied (or client got out of sync), compute the next one server-side.
+    // Global running counter -- never resets per day, and MAX (not COUNT) avoids
+    // reusing a number if an earlier sale was ever deleted.
     if ($refNumber === '') {
-        $rc = $conn->prepare("SELECT COUNT(*) AS cnt FROM sales WHERE sale_date = ?");
-        $rc->bind_param('s', $saleDate);
-        $rc->execute();
-        $cnt = (int) ($rc->get_result()->fetch_assoc()['cnt'] ?? 0);
-        $rc->close();
-        $refNumber = str_pad($cnt + 1, 3, '0', STR_PAD_LEFT);
+        $rc = $conn->query("SELECT MAX(CAST(reference_number AS UNSIGNED)) AS maxref FROM sales WHERE reference_number REGEXP '^[0-9]+$'");
+        $maxref = (int) ($rc->fetch_assoc()['maxref'] ?? 0);
+        $refNumber = str_pad($maxref + 1, 3, '0', STR_PAD_LEFT);
     }
 
     $partsTotal = 0.0;

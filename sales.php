@@ -53,8 +53,11 @@
     $conn->query("ALTER TABLE sales ADD COLUMN IF NOT EXISTS reference_number VARCHAR(10) NULL");
 
     // Next reference number for today: 001, 002, 003... resets daily
-    $refCountRow = $conn->query("SELECT COUNT(*) AS cnt FROM sales WHERE sale_date = '$today'")->fetch_assoc();
-    $nextRefNumber = str_pad((int) ($refCountRow['cnt'] ?? 0) + 1, 3, '0', STR_PAD_LEFT);
+    // Reference number: continues globally across all days (016, 017, 018...),
+    // never resets to 001. Uses MAX+1 (not COUNT+1) so a deleted sale in the
+    // middle of the sequence never causes a number to be reused.
+    $refMaxRow = $conn->query("SELECT MAX(CAST(reference_number AS UNSIGNED)) AS maxref FROM sales WHERE reference_number REGEXP '^[0-9]+$'")->fetch_assoc();
+    $nextRefNumber = str_pad((int) ($refMaxRow['maxref'] ?? 0) + 1, 3, '0', STR_PAD_LEFT);
 
     $savedExpenses = [];
     $re = $conn->query("SELECT id, description, amount FROM expenses WHERE expense_date = '$today' ORDER BY id DESC");
@@ -433,9 +436,9 @@
                 document.querySelectorAll('[data-line-total]').forEach(el => {
                     const type = el.dataset.lineType;
                     const idx = parseInt(el.dataset.idx, 10);
-                    if (type === 'part') {
+                    if (type === 'part' && parts[idx]) {
                         el.value = peso(parts[idx].qty * parts[idx].unit_price);
-                    } else if (type === 'labor') {
+                    } else if (type === 'labor' && labors[idx]) {
                         el.value = peso(laborAmount(labors[idx]));
                     }
                 });
