@@ -43,8 +43,8 @@ if ($r2)
     while ($row = $r2->fetch_assoc())
         $expenses[] = $row;
 
-$categories = ['Rent', 'Salaries', 'Utilities', 'Supplies', 'Equipment', 'Maintenance', 'Marketing', 'Other'];
-$catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b82f6', 'Supplies' => '#10b981', 'Equipment' => '#f59e0b', 'Maintenance' => '#06b6d4', 'Marketing' => '#ec4899', 'Other' => '#64748b'];
+$categories = ['Rent', 'Salaries', 'Utilities', 'Supplies', 'Equipment', 'Maintenance', 'Marketing', 'Others'];
+$catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b82f6', 'Supplies' => '#10b981', 'Equipment' => '#f59e0b', 'Maintenance' => '#06b6d4', 'Marketing' => '#ec4899', 'Others' => '#64748b'];
 ?>
 <!DOCTYPE html>
 <html lang="en">

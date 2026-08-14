@@ -1,22 +1,5 @@
 'use strict';
 
-// Units offered as fixed dropdown options -- anything else (an existing
-// product's custom unit, or a new one the user types) falls back to "Others".
-const STANDARD_UNITS = ['Gallon', 'Liter', 'Piece', 'Box', 'Set'];
-
-/** Show/hide the custom-unit text input next to the Unit dropdown. */
-function toggleCustomUnit(mode, value) {
-    const input = document.getElementById(mode + 'UnitOther');
-    if (!input) return;
-    if (value === '__other__') {
-        input.style.display = '';
-        input.focus();
-    } else {
-        input.style.display = 'none';
-        input.value = '';
-    }
-}
-
 class InventoryController {
     constructor(api, renderer, ledger) {
         this._api      = api;
@@ -150,20 +133,26 @@ class InventoryController {
             document.getElementById('editPrice').value  = p.selling_price || 0;
             document.getElementById('editQty').value    = p.initial_quantity || 0;
             document.getElementById('editThresh').value = p.reorder_threshold || 5;
+            const brandField = document.getElementById('editBrand');
+            if (brandField) brandField.value = p.compatible_brand || '';
             const catSel  = document.getElementById('editCategory');
             if (catSel)  catSel.value  = p.category_id;
             const unitSel = document.getElementById('editUnit');
+            const unitOtherField = document.getElementById('editUnitOther');
             if (unitSel) {
-                if (p.unit && !STANDARD_UNITS.includes(p.unit)) {
+                const isStandard = [...unitSel.options].some(o => o.value === p.unit);
+                if (isStandard) {
+                    unitSel.value = p.unit;
+                    if (unitOtherField) unitOtherField.style.display = 'none';
+                } else if (p.unit) {
                     unitSel.value = '__other__';
-                    const otherInput = document.getElementById('editUnitOther');
-                    if (otherInput) {
-                        otherInput.value = p.unit;
-                        otherInput.style.display = '';
+                    if (unitOtherField) {
+                        unitOtherField.value = p.unit;
+                        unitOtherField.style.display = '';
                     }
                 } else {
-                    unitSel.value = p.unit;
-                    toggleCustomUnit('edit', p.unit);
+                    unitSel.value = '';
+                    if (unitOtherField) unitOtherField.style.display = 'none';
                 }
             }
             this._updateMargin('edit');
@@ -283,10 +272,10 @@ class InventoryController {
             const btn   = document.getElementById('submitAdd');
             const catId = document.getElementById('addCategory')?.value;
             const desc  = document.getElementById('addDesc')?.value.trim();
-            let unit    = document.getElementById('addUnit')?.value;
-            if (unit === '__other__') {
-                unit = document.getElementById('addUnitOther')?.value.trim();
-            }
+            const unitSelVal = document.getElementById('addUnit')?.value;
+            const unit  = unitSelVal === '__other__'
+                ? document.getElementById('addUnitOther')?.value.trim()
+                : unitSelVal;
 
             if (!catId || !desc || !unit) {
                 Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });
@@ -302,6 +291,7 @@ class InventoryController {
             fd.append('selling_price',     document.getElementById('addPrice')?.value || '0');
             fd.append('initial_quantity',  document.getElementById('addQty')?.value || '0');
             fd.append('reorder_threshold', document.getElementById('addThresh')?.value || '5');
+            fd.append('compatible_brand', document.getElementById('addBrand')?.value.trim() || '');
 
             this._setBtn(btn, true, 'Saving…');
             try {
@@ -331,10 +321,10 @@ class InventoryController {
             const id    = document.getElementById('editId')?.value;
             const catId = document.getElementById('editCategory')?.value;
             const desc  = document.getElementById('editDesc')?.value.trim();
-            let unit    = document.getElementById('editUnit')?.value;
-            if (unit === '__other__') {
-                unit = document.getElementById('editUnitOther')?.value.trim();
-            }
+            const unitSelVal = document.getElementById('editUnit')?.value;
+            const unit  = unitSelVal === '__other__'
+                ? document.getElementById('editUnitOther')?.value.trim()
+                : unitSelVal;
 
             if (!id || !catId || !desc || !unit) {
                 Swal.fire({ icon: 'warning', title: 'Required fields missing', text: 'Category, Description and Unit are required.' });
@@ -351,6 +341,7 @@ class InventoryController {
             fd.append('selling_price',     document.getElementById('editPrice')?.value || '0');
             fd.append('initial_quantity',  document.getElementById('editQty')?.value || '0');
             fd.append('reorder_threshold', document.getElementById('editThresh')?.value || '5');
+            fd.append('compatible_brand', document.getElementById('editBrand')?.value.trim() || '');
 
             this._setBtn(btn, true, 'Saving…');
             try {

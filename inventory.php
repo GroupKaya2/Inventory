@@ -79,11 +79,9 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     </div>
                     <div id="stockSummary" class="d-flex gap-2"></div>
                     <div class="d-flex gap-2">
-                        <?php if ($isOwner): ?>
-                            <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addModal">
-                                <i class="bi bi-plus-lg"></i> Add New Product
-                            </button>
-                        <?php endif; ?>
+                        <button class="btn-pink" data-bs-toggle="modal" data-bs-target="#addModal">
+                            <i class="bi bi-plus-lg"></i> Add New Product
+                        </button>
                         <button class="btn-ghost" id="exportBtn">
                             <i class="bi bi-download"></i> CSV
                         </button>
@@ -231,7 +229,6 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
 </main>
 
 <!-- ADD PRODUCT MODAL -->
-<?php if ($isOwner): ?>
 <div class="modal fade" id="addModal" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dark">
         <div class="modal-content modal-dark">
@@ -257,11 +254,12 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Unit *</label>
-                        <select class="form-input form-select" id="addUnit" required>
+                        <select class="form-input form-select" id="addUnit" required onchange="toggleCustomUnit('add')">
                             <option value="">Select Unit</option>
                             <option>Gallon</option><option>Liter</option><option>Piece</option>
-                            <option>Box</option><option>Set</option>
+                            <option>Box</option><option>Set</option><option value="__other__">Others</option>
                         </select>
+                        <input type="text" class="form-input mt-2" id="addUnitOther" placeholder="Enter unit" style="display:none;">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Unit Cost</label>
@@ -282,6 +280,10 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     <div class="col-md-4">
                         <label class="form-label">Margin (auto)</label>
                         <div class="margin-box" id="addMargin" style="color:#34d399;">₱0.00</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Compatible Brand</label>
+                        <input type="text" class="form-input" id="addBrand" list="brandOptions" placeholder="e.g. Honda (blank = fits any vehicle)">
                     </div>
                 </div>
             </div>
@@ -320,11 +322,12 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Unit *</label>
-                        <select class="form-input form-select" id="editUnit" required>
+                        <select class="form-input form-select" id="editUnit" required onchange="toggleCustomUnit('edit')">
                             <option value="">Select Unit</option>
                             <option>Gallon</option><option>Liter</option><option>Piece</option>
-                            <option>Box</option><option>Set</option>
+                            <option>Box</option><option>Set</option><option value="__other__">Others</option>
                         </select>
+                        <input type="text" class="form-input mt-2" id="editUnitOther" placeholder="Enter unit" style="display:none;">
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Unit Cost</label>
@@ -346,6 +349,10 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                         <label class="form-label">Margin</label>
                         <div class="margin-box" id="editMargin" style="color:#34d399;">₱0.00</div>
                     </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Compatible Brand</label>
+                        <input type="text" class="form-input" id="editBrand" list="brandOptions" placeholder="e.g. Honda (blank = fits any vehicle)">
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -355,7 +362,14 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
         </div>
     </div>
 </div>
-<?php endif; ?>
+<datalist id="brandOptions">
+    <option value="Honda">
+    <option value="Yamaha">
+    <option value="Suzuki">
+    <option value="Kawasaki">
+    <option value="Rusi">
+    <option value="Universal">
+</datalist>
 
 <!-- RESTOCK MODAL -->
 <div class="modal fade" id="restockModal" tabindex="-1">

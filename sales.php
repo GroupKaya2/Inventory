@@ -224,13 +224,6 @@
                                     <i class="bi bi-plus-lg"></i> Add Part
                                 </button>
                             </div>
-                            <div id="brandFilterNote" style="display:none;margin-bottom:12px;font-size:.78rem;color:#94a3b8;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                                <span>Showing parts for <strong id="brandFilterName" style="color:#4ade80;"></strong></span>
-                                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;margin:0;font-weight:500;">
-                                    <input type="checkbox" id="showAllPartsToggle" onchange="renderParts()">
-                                    Show all parts instead
-                                </label>
-                            </div>
                             <div id="partsWrap"></div>
                             <p id="noPartsMsg" class="empty-hint">
                                 No parts yet. Click <strong>Add Part</strong> to add inventory items.
@@ -369,11 +362,10 @@
 
             function filteredProducts(selectedId) {
                 const carModelText = document.getElementById('carModel')?.value || '';
-                const showAll = document.getElementById('showAllPartsToggle')?.checked;
                 const detectedBrand = detectBrand(carModelText);
 
                 let list = PRODUCTS;
-                if (detectedBrand && !showAll) {
+                if (detectedBrand) {
                     list = PRODUCTS.filter(p =>
                         isUniversalPart(p) ||
                         String(p.compatible_brand).toLowerCase() === detectedBrand.toLowerCase() ||
@@ -386,22 +378,6 @@
             function partLabel(p) {
                 const stock = parseInt(p.current_stock) || 0;
                 return `${p.description} (${stock} in stock)`;
-            }
-
-            function updateBrandFilterNote() {
-                const carModelText = document.getElementById('carModel')?.value || '';
-                const showAll = document.getElementById('showAllPartsToggle')?.checked;
-                const detectedBrand = detectBrand(carModelText);
-                const note = document.getElementById('brandFilterNote');
-                const nameEl = document.getElementById('brandFilterName');
-                if (!note || !nameEl) return;
-
-                if (detectedBrand) {
-                    nameEl.textContent = detectedBrand;
-                    note.style.display = 'flex';
-                } else {
-                    note.style.display = 'none';
-                }
             }
 
             function peso(n) {
@@ -451,7 +427,6 @@
             function removePart(idx) { parts.splice(idx, 1); renderParts(); }
 
             function renderParts() {
-                updateBrandFilterNote();
                 const wrap = document.getElementById('partsWrap');
                 const noMsg = document.getElementById('noPartsMsg');
                 if (!parts.length) {
@@ -748,17 +723,18 @@
 
                     if (data.success) {
                         const lowItems = (data.stock_summary || []).filter(s => s.low_stock);
-                        let html = `Transaction <strong>#${data.sale_id}</strong> saved!`;
-                        if (paymentMethod === 'gcash') html += ' <span style="color:#60a5fa;">(Online Payment)</span>';
-                        if (paymentMethod === 'credit') html += ' <span style="color:#a78bfa;">(Credit)</span>';
+                        let parts = [];
+                        if (paymentMethod === 'gcash') parts.push('<span style="color:#60a5fa;">Online Payment</span>');
+                        if (paymentMethod === 'credit') parts.push('<span style="color:#a78bfa;">Credit</span>');
                         if (expenses.length) {
                             const expSum = expenses.reduce((s, e) => s + e.amount, 0);
-                            html += `<br><small style="color:#f87171;">Expenses logged: ${peso(expSum)}</small>`;
+                            parts.push(`<small style="color:#f87171;">Expenses logged: ${peso(expSum)}</small>`);
                         }
                         if (lowItems.length) {
-                            html += '<br><small style="color:#fbbf24;">Low stock: '
-                                + lowItems.map(s => `${s.description} (${s.stock_left} left)`).join(', ') + '</small>';
+                            parts.push('<small style="color:#fbbf24;">Low stock: '
+                                + lowItems.map(s => `${s.description} (${s.stock_left} left)`).join(', ') + '</small>');
                         }
+                        const html = parts.join('<br>');
                         const res = await Swal.fire({
                             icon: 'success',
                             title: 'Saved!',

@@ -500,6 +500,7 @@ $initials = substr($initials, 0, 2);
             'inventory' => 'Inventory',
             'expenses' => 'Expenses',
             'profile' => 'Profile',
+            'backup' => 'Backup & Restore',
         ];
         echo htmlspecialchars($pageTitles[$activePage] ?? '');
         ?>
@@ -594,6 +595,14 @@ $initials = substr($initials, 0, 2);
         <span class="sb-icon icon-gray" aria-hidden="true"><i class="bi bi-person-gear"></i></span>
         <span class="sb-link-text"><?= $isOwner ? 'Profile & Users' : 'My Profile' ?></span>
     </a>
+
+    <?php if ($isOwner): ?>
+    <a href="backup.php" class="sb-link <?= $activePage === 'backup' ? 'active' : '' ?>"
+        data-sb-label="backup restore database">
+        <span class="sb-icon icon-teal" aria-hidden="true"><i class="bi bi-cloud-arrow-down-fill"></i></span>
+        <span class="sb-link-text">Backup & Restore</span>
+    </a>
+    <?php endif; ?>
 
     <!-- User block -->
     <div class="sb-user">

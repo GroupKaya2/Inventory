@@ -12,6 +12,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.openEdit      = (id)       => controller.openEdit(id);
     window.deleteProduct = (id, name) => controller.deleteProduct(id, name);
 
+    // Shows/hides the free-text unit input when "Others" is chosen in the Unit dropdown.
+    window.toggleCustomUnit = (prefix) => {
+        const sel = document.getElementById(prefix + 'Unit');
+        const other = document.getElementById(prefix + 'UnitOther');
+        if (!sel || !other) return;
+        if (sel.value === '__other__') {
+            other.style.display = '';
+            other.focus();
+        } else {
+            other.style.display = 'none';
+            other.value = '';
+        }
+    };
+
+    // Reset the custom unit field whenever the Add Product modal is opened fresh.
+    const addModalEl = document.getElementById('addModal');
+    if (addModalEl) {
+        addModalEl.addEventListener('show.bs.modal', () => {
+            const sel = document.getElementById('addUnit');
+            const other = document.getElementById('addUnitOther');
+            if (sel) sel.value = '';
+            if (other) { other.value = ''; other.style.display = 'none'; }
+        });
+    }
+
     try {
         await controller.init();
     } catch (err) {

@@ -81,9 +81,10 @@ class InventoryRenderer {
 
     _productRow(p, idx) {
         const margin = parseFloat(p.margin || 0);
-        const editBtn = this._isOwner
-            ? `<button class="btn btn-sm btn-outline-warning" onclick="openEdit(${p.product_id})" title="Edit"><i class="bi bi-pencil"></i></button>
-               <button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.product_id}, '${this._esc(p.description)}')" title="Delete"><i class="bi bi-trash"></i></button>`
+        // Edit is available to both Owner and Manager; Delete stays Owner-only.
+        const editBtn = `<button class="btn btn-sm btn-outline-warning" onclick="openEdit(${p.product_id})" title="Edit"><i class="bi bi-pencil"></i></button>`;
+        const deleteBtn = this._isOwner
+            ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.product_id}, '${this._esc(p.description)}')" title="Delete"><i class="bi bi-trash"></i></button>`
             : '';
         return `<tr data-id="${p.product_id}">
             <td><span class="badge-gray">${idx + 1}</span></td>
@@ -103,6 +104,7 @@ class InventoryRenderer {
                         <i class="bi bi-box-arrow-in-down"></i>
                     </button>
                     ${editBtn}
+                    ${deleteBtn}
                 </div>
             </td>
         </tr>`;
