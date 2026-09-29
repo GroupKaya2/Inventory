@@ -9,8 +9,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     window.__inv         = controller;
     window.openRestock   = (id, name) => controller.openRestock(id, name);
+    window.correctStock  = (id, name, stock) => controller.correctStock(id, name, stock);
     window.openEdit      = (id)       => controller.openEdit(id);
     window.deleteProduct = (id, name) => controller.deleteProduct(id, name);
+    window.toggleSelectMode      = () => controller.toggleSelectMode();
+    window.toggleSelectAllProducts = (masterCb) => controller.toggleSelectAll(masterCb);
+    window.updateProductSelCount = () => controller.updateSelCount();
+    window.bulkDeleteProducts    = () => controller.bulkDeleteProducts();
 
     // Shows/hides the free-text unit input when "Others" is chosen in the Unit dropdown.
     window.toggleCustomUnit = (prefix) => {

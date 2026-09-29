@@ -32,6 +32,14 @@
     --radius: 10px;
     --radius-sm: 7px;
     --shadow: 0 4px 24px rgba(0, 0, 0, .4);
+    /* Tells the browser this page is dark, so native controls -- date
+       pickers, <select> dropdowns, spinners -- render dark instead of
+       defaulting to a jarring white popup on top of the dark UI. */
+    color-scheme: dark;
+}
+
+html {
+    color-scheme: dark;
 }
 
 *,
@@ -269,6 +277,29 @@ img {
 .data-table {
     width: 100%;
     border-collapse: collapse;
+}
+
+/* Always scrollable (not just under the mobile media query below) --
+   a table wider than its card should scroll horizontally on any screen,
+   with a soft fade on the right edge so it's obvious there's more to see. */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+    scrollbar-width: thin;
+}
+
+.table-responsive::after {
+    content: '';
+    position: sticky;
+    top: 0;
+    right: 0;
+    float: right;
+    width: 18px;
+    height: 100%;
+    margin-right: -18px;
+    background: linear-gradient(90deg, transparent, rgba(13, 17, 23, .55));
+    pointer-events: none;
 }
 
 .data-table thead th {

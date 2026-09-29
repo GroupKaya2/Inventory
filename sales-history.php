@@ -63,6 +63,14 @@ $totalExpenses = array_sum(array_column($expenseRows, 'amount'));
 $hasPayCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'payment_method'")->num_rows > 0;
 $paySelect = $hasPayCol ? ", payment_method" : ", 'cash' AS payment_method";
 
+$hasSplitCols = $conn->query("SHOW COLUMNS FROM sales LIKE 'cash_amount'")->num_rows > 0;
+$splitSelect = $hasSplitCols
+    ? ", cash_amount, gcash_amount, credit_amount"
+    : ", 0 AS cash_amount, 0 AS gcash_amount, 0 AS credit_amount";
+
+$hasNotesCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'notes'")->num_rows > 0;
+$notesSelect = $hasNotesCol ? ", notes" : ", '' AS notes";
+
 $hasCarModelCol = $conn->query("SHOW COLUMNS FROM sales LIKE 'car_model'")->num_rows > 0;
 $carModelSelect = $hasCarModelCol ? ", car_model" : ", '' AS car_model";
 
@@ -75,6 +83,8 @@ $r = $conn->query("
            parts_total, labor_total,
            (parts_total + labor_total) AS grand_total
            $paySelect
+           $splitSelect
+           $notesSelect
            $carModelSelect
            $refSelect
     FROM sales
@@ -91,6 +101,7 @@ if ($r)
 //   3) power a Category filter dropdown
 $partsBySale = [];       // sale_id => [ ['description'=>.., 'quantity'=>.., 'category'=>..], ... ]
 $partsQtyBySale = [];    // sale_id => total quantity of parts sold on that sale
+$laborQtyBySale = [];    // sale_id => total quantity of labor/service lines on that sale
 $categoriesBySale = [];  // sale_id => [category_name => true]  (set, for the filter)
 $searchTermsBySale = []; // sale_id => [term, term, ...] (descriptions + categories, for the search box)
 
@@ -121,6 +132,8 @@ if ($rp) {
                 'category'    => $row['category_name'],
             ];
             $partsQtyBySale[$sid] = ($partsQtyBySale[$sid] ?? 0) + (int) $row['quantity'];
+        } elseif ($row['line_type'] === 'labor') {
+            $laborQtyBySale[$sid] = ($laborQtyBySale[$sid] ?? 0) + (int) $row['quantity'];
         }
     }
 }
@@ -188,6 +201,97 @@ if ($rc)
             white-space: nowrap;
         }
 
+        .pay-split {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: .7rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* ── Edit Payment modal: toggle + split panel (mirrors Daily Transaction) ── */
+        .pay-toggle {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+        .pay-toggle > div {
+            flex: 1;
+            min-width: 100px;
+        }
+        .pay-toggle input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+        }
+        .pay-toggle label {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            border: 1.5px solid rgba(255, 255, 255, .1) !important;
+            background: rgba(255, 255, 255, .04) !important;
+            font-size: .8rem;
+            font-weight: 600;
+            color: #64748b !important;
+            margin: 0;
+            transition: all .15s;
+        }
+        .pay-toggle input:checked + label.pay-cash {
+            border-color: rgba(74, 222, 128, .55) !important;
+            background: rgba(74, 222, 128, .14) !important;
+            color: #4ade80 !important;
+        }
+        .pay-toggle input:checked + label.pay-gcash {
+            border-color: rgba(96, 165, 250, .55) !important;
+            background: rgba(96, 165, 250, .14) !important;
+            color: #60a5fa !important;
+        }
+        .pay-toggle input:checked + label.pay-credit {
+            border-color: rgba(167, 139, 250, .55) !important;
+            background: rgba(167, 139, 250, .14) !important;
+            color: #a78bfa !important;
+        }
+        .pay-toggle input:checked + label.pay-split {
+            border-color: rgba(251, 191, 36, .55) !important;
+            background: rgba(251, 191, 36, .14) !important;
+            color: #fbbf24 !important;
+        }
+
+        .split-payment-panel {
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: rgba(251, 191, 36, .04);
+            border: 1px solid rgba(251, 191, 36, .15);
+            border-radius: 10px;
+            display: none;
+        }
+        .split-payment-panel.active { display: block; }
+        .split-payment-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .split-remaining {
+            display: flex;
+            justify-content: space-between;
+            font-size: .8rem;
+            font-weight: 700;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, .08);
+        }
+        .split-remaining.balanced { color: #4ade80; }
+        .split-remaining.unbalanced { color: #f87171; }
+
         .exp-cell {
             color: #f87171;
             font-weight: 600;
@@ -230,6 +334,67 @@ if ($rc)
         #viewModal .modal-header {
             background: linear-gradient(135deg, #0f1f15, #111827);
             border-bottom: 1px solid rgba(74, 222, 128, .15);
+        }
+
+        /* ── Edit Payment / Notes modal ── */
+        #editPaymentModal .modal-content {
+            background: #161b27;
+            border: 1px solid rgba(251, 191, 36, .18);
+            color: #e2e8f0;
+        }
+        #editPaymentModal .modal-header {
+            background: linear-gradient(135deg, #1f1608, #111827);
+            border-bottom: 1px solid rgba(251, 191, 36, .18);
+        }
+        #editPaymentModal .modal-header .modal-title {
+            color: #fbbf24;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: .95rem;
+        }
+        #editPaymentModal .modal-footer {
+            border-top: 1px solid rgba(255, 255, 255, .07);
+        }
+        #editPaymentModal .form-label {
+            font-size: .68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #64748b;
+            margin-bottom: 6px;
+            display: block;
+        }
+        #editPaymentModal .form-input {
+            width: 100%;
+            background: rgba(255, 255, 255, .04);
+            border: 1px solid rgba(255, 255, 255, .1);
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: .85rem;
+            font-family: 'Inter', sans-serif;
+        }
+        #editPaymentModal .form-input:focus {
+            outline: none;
+            border-color: rgba(251, 191, 36, .4);
+            background: rgba(251, 191, 36, .04);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, .08);
+        }
+        #editPaymentModal .form-input::placeholder {
+            color: #4b5a6e;
+        }
+        #editPaymentModal textarea.form-input {
+            resize: vertical;
+            min-height: 70px;
+        }
+        #editPaymentModal .split-payment-panel {
+            background: rgba(251, 191, 36, .05);
+            border-color: rgba(251, 191, 36, .18);
+        }
+        #epSubmit {
+            background: linear-gradient(135deg, #f59e0b, #b45309) !important;
+        }
+        #epSubmit:hover {
+            filter: brightness(1.08);
         }
 
         .detail-label {
@@ -357,6 +522,12 @@ if ($rc)
                 <button class="btn-ghost ms-auto" style="font-size:.82rem;padding:7px 16px;" onclick="exportCSV()">
                     <i class="bi bi-download me-1"></i>Export CSV
                 </button>
+                <button class="btn-ghost" id="selectModeBtn" style="font-size:.82rem;padding:7px 16px;" onclick="toggleSelectMode()">
+                    <i class="bi bi-check2-square me-1"></i>Select
+                </button>
+                <button class="btn-pink" id="bulkDeleteBtn" style="font-size:.82rem;padding:7px 16px;background:linear-gradient(135deg,#dc2626,#7f1d1d);border-color:rgba(248,113,113,.4);color:#fca5a5;display:none;" onclick="bulkDeleteSales()">
+                    <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selCount">0</span>)
+                </button>
             <?php endif; ?>
         </div>
 
@@ -366,6 +537,11 @@ if ($rc)
                     <table class="data-table" id="salesTable">
                         <thead>
                             <tr>
+                                <?php if ($isOwner): ?>
+                                <th id="checkboxColHead" style="display:none;width:36px;">
+                                    <input type="checkbox" id="selectAllSales" onchange="toggleSelectAllSales(this)">
+                                </th>
+                                <?php endif; ?>
                                 <th>#</th>
                                 <th>Ref #</th>
                                 <th>Date</th>
@@ -384,7 +560,7 @@ if ($rc)
                         <tbody id="salesBody">
                             <?php if (empty($salesRows)): ?>
                                 <tr>
-                                    <td colspan="13" style="text-align:center;padding:30px;color:#64748b;">
+                                    <td colspan="<?= $isOwner ? 14 : 13 ?>" style="text-align:center;padding:30px;color:#64748b;">
                                         No sales yet. <a href="sales.php">Record one →</a>
                                     </td>
                                 </tr>
@@ -398,6 +574,8 @@ if ($rc)
                                     <?php
                                     $saleParts   = $partsBySale[$s['id']] ?? [];
                                     $savedPartsQty = $partsQtyBySale[$s['id']] ?? 0;
+                                    $savedLaborQty = $laborQtyBySale[$s['id']] ?? 0;
+                                    $savedTotalQty = $savedPartsQty + $savedLaborQty;
                                     $saleCats    = $categoriesBySale[$s['id']] ?? [];
                                     $searchTerms = $searchTermsBySale[$s['id']] ?? [];
 
@@ -422,6 +600,11 @@ if ($rc)
                                     <tr data-id="<?= $s['id'] ?>" data-date="<?= $s['sale_date'] ?>" data-pay="<?= $pm ?>"
                                         data-categories="<?= $catAttr ?>"
                                         data-search="<?= $searchIndex ?>">
+                                        <?php if ($isOwner): ?>
+                                        <td class="checkbox-col" style="display:none;">
+                                            <input type="checkbox" class="sale-row-check" value="<?= $s['id'] ?>" onchange="updateSalesSelCount()">
+                                        </td>
+                                        <?php endif; ?>
                                         <td><span class="badge-gray row-num"><?= $rowNum ?></span></td>
                                         <td style="white-space:nowrap;">
                                             <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;color:#4ade80;">
@@ -442,15 +625,32 @@ if ($rc)
                                             <?php endif; ?>
                                         </td>
                                         <td style="text-align:center;color:#94a3b8;">
-                                            <?= $savedPartsQty > 0 ? $savedPartsQty : '—' ?>
+                                            <?= $savedTotalQty > 0 ? $savedTotalQty : '—' ?>
                                         </td>
                                         <td style="color:#60a5fa;font-weight:600;">₱<?= number_format($s['parts_total'], 2) ?>
                                         </td>
                                         <td style="color:#4ade80;font-weight:600;">₱<?= number_format($s['labor_total'], 2) ?>
+                                            <?php if (!empty($s['notes'])): ?>
+                                                <i class="bi bi-sticky-fill ms-1" style="color:#94a3b8;font-size:.75rem;cursor:help;"
+                                                   title="<?= htmlspecialchars($s['notes']) ?>"></i>
+                                            <?php endif; ?>
                                         </td>
                                         <td style="font-weight:700;">₱<?= number_format($gross, 2) ?></td>
                                         <td>
-                                            <?php if ($pm === 'gcash'): ?>
+                                            <?php if ($pm === 'split'): ?>
+                                                <span class="pay-split" style="display:inline-flex;flex-direction:column;gap:1px;line-height:1.3;">
+                                                    <span style="color:#fbbf24;"><i class="bi bi-arrow-left-right"></i> Split</span>
+                                                    <span style="font-size:.68rem;color:#64748b;">
+                                                        <?php
+                                                        $splitParts = [];
+                                                        if ($s['cash_amount'] > 0)   $splitParts[] = '₱' . number_format($s['cash_amount'], 0) . ' Cash';
+                                                        if ($s['gcash_amount'] > 0)  $splitParts[] = '₱' . number_format($s['gcash_amount'], 0) . ' Online';
+                                                        if ($s['credit_amount'] > 0) $splitParts[] = '₱' . number_format($s['credit_amount'], 0) . ' Credit';
+                                                        echo htmlspecialchars(implode(' + ', $splitParts));
+                                                        ?>
+                                                    </span>
+                                                </span>
+                                            <?php elseif ($pm === 'gcash'): ?>
                                                 <span class="pay-gcash"><i class="bi bi-phone-fill"></i> Online Payment</span>
                                             <?php elseif ($pm === 'credit'): ?>
                                                 <span class="pay-credit"><i class="bi bi-credit-card"></i> Credit</span>
@@ -469,6 +669,11 @@ if ($rc)
                                                 <i class="bi bi-printer"></i>
                                             </button>
                                             <?php if ($isOwner): ?>
+                                                <button class="btn btn-sm btn-outline-warning ms-1"
+                                                    onclick='openEditPayment(<?= $s["id"] ?>, <?= json_encode($pm) ?>, <?= (float) $s["cash_amount"] ?>, <?= (float) $s["gcash_amount"] ?>, <?= (float) $s["credit_amount"] ?>, <?= json_encode($s["notes"] ?? "") ?>, <?= (float) $s["parts_total"] + (float) $s["labor_total"] ?>)'
+                                                    title="Edit Payment / Notes">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
                                                 <button class="btn btn-sm btn-outline-danger ms-1"
                                                     onclick="deleteSale(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['customer_name'] ?: 'Sale #' . $s['id'])) ?>')"
                                                     title="Delete">
@@ -580,13 +785,81 @@ if ($rc)
         </div>
     </div>
 
+    <?php if ($isOwner): ?>
+    <div class="modal fade" id="editPaymentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Payment / Notes</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="epId">
+                    <input type="hidden" id="epGrandTotal">
+                    <div class="mb-3">
+                        <label class="form-label">Payment Method</label>
+                        <div class="pay-toggle">
+                            <div>
+                                <input type="radio" name="epPayment" id="ep-cash" value="cash" onchange="epTogglePanel()">
+                                <label for="ep-cash" class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="epPayment" id="ep-gcash" value="gcash" onchange="epTogglePanel()">
+                                <label for="ep-gcash" class="pay-gcash"><i class="bi bi-phone-fill"></i> Online</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="epPayment" id="ep-credit" value="credit" onchange="epTogglePanel()">
+                                <label for="ep-credit" class="pay-credit"><i class="bi bi-credit-card"></i> Credit</label>
+                            </div>
+                            <div>
+                                <input type="radio" name="epPayment" id="ep-split" value="split" onchange="epTogglePanel()">
+                                <label for="ep-split" class="pay-split"><i class="bi bi-arrow-left-right"></i> Split</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="split-payment-panel" id="epSplitPanel">
+                        <div class="split-payment-row">
+                            <div>
+                                <label class="field-label">Cash</label>
+                                <input type="number" class="form-input" id="epCash" min="0" step="0.01" value="0" oninput="epUpdateRemaining()">
+                            </div>
+                            <div>
+                                <label class="field-label">Online</label>
+                                <input type="number" class="form-input" id="epGcash" min="0" step="0.01" value="0" oninput="epUpdateRemaining()">
+                            </div>
+                            <div>
+                                <label class="field-label">Credit</label>
+                                <input type="number" class="form-input" id="epCredit" min="0" step="0.01" value="0" oninput="epUpdateRemaining()">
+                            </div>
+                        </div>
+                        <div class="split-remaining" id="epRemaining">
+                            <span>Remaining to allocate:</span>
+                            <span id="epRemainingValue">₱0.00</span>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-input" id="epNotes" rows="3" placeholder="Optional notes…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" id="epSubmit" style="border:none;color:#fff;padding:9px 20px;border-radius:50px;font-weight:700;cursor:pointer;">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         'use strict';
         const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
 
         // Clean PHP data for CSV export — no HTML scraping needed
-        const SALES_DATA = <?= json_encode(array_map(function($s) use ($partsBySale, $partsQtyBySale) {
+        const SALES_DATA = <?= json_encode(array_map(function($s) use ($partsBySale, $partsQtyBySale, $laborQtyBySale) {
             $parts = $partsBySale[$s['id']] ?? [];
             $partsUsed = implode('; ', array_map(
                 fn($p) => (
@@ -604,7 +877,7 @@ if ($rc)
                 'plate_number'   => $s['plate_number'] ?: '',
                 'car_model'      => $s['car_model'] ?: '',
                 'parts_used'     => $partsUsed,
-                'parts_qty'      => $partsQtyBySale[$s['id']] ?? 0,
+                'parts_qty'      => ($partsQtyBySale[$s['id']] ?? 0) + ($laborQtyBySale[$s['id']] ?? 0),
                 'parts_total'    => number_format((float)$s['parts_total'], 2, '.', ''),
                 'labor_total'    => number_format((float)$s['labor_total'], 2, '.', ''),
                 'grand_total'    => number_format((float)$s['grand_total'], 2, '.', ''),
@@ -714,11 +987,20 @@ if ($rc)
                 const expAmt = expData ? parseFloat(expData.total) : 0;
                 const net = gross - expAmt;
 
-                const payBadge = pm === 'gcash'
-                    ? `<span class="pay-gcash"><i class="bi bi-phone-fill"></i> Online Payment</span>`
-                    : pm === 'credit'
-                        ? `<span class="pay-credit"><i class="bi bi-credit-card"></i> Credit</span>`
-                        : `<span class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</span>`;
+                const payBadge = pm === 'split'
+                    ? `<span style="color:#fbbf24;"><i class="bi bi-arrow-left-right"></i> Split</span>
+                       <div style="font-size:.72rem;color:#64748b;margin-top:2px;">
+                           ${[
+                               parseFloat(s.cash_amount)   > 0 ? '₱' + parseFloat(s.cash_amount).toFixed(2)   + ' Cash'   : '',
+                               parseFloat(s.gcash_amount)  > 0 ? '₱' + parseFloat(s.gcash_amount).toFixed(2)  + ' Online' : '',
+                               parseFloat(s.credit_amount) > 0 ? '₱' + parseFloat(s.credit_amount).toFixed(2) + ' Credit' : '',
+                           ].filter(Boolean).join(' + ')}
+                       </div>`
+                    : pm === 'gcash'
+                        ? `<span class="pay-gcash"><i class="bi bi-phone-fill"></i> Online Payment</span>`
+                        : pm === 'credit'
+                            ? `<span class="pay-credit"><i class="bi bi-credit-card"></i> Credit</span>`
+                            : `<span class="pay-cash"><i class="bi bi-cash-coin"></i> Cash</span>`;
 
                 // Build expense items HTML
                 let expHtml = '';
@@ -791,6 +1073,12 @@ if ($rc)
                     <div class="detail-value">${s.car_model || '—'}</div>
                 </div>
             </div>
+
+            ${s.notes ? `
+            <div style="margin-bottom:14px;padding:12px 14px;background:rgba(148,163,184,.05);border:1px solid rgba(148,163,184,.15);border-radius:9px;">
+                <div class="detail-label" style="margin-bottom:4px;"><i class="bi bi-sticky-fill me-1"></i>Notes</div>
+                <div style="font-size:.85rem;color:#cbd5e1;white-space:pre-wrap;">${s.notes.replace(/</g, '&lt;')}</div>
+            </div>` : ''}
 
             <div class="table-responsive">
                 <table class="data-table">
@@ -894,7 +1182,162 @@ if ($rc)
             }
         }
 
+        let selectModeSales = false;
+
+        function toggleSelectMode() {
+            selectModeSales = !selectModeSales;
+            document.getElementById('checkboxColHead').style.display = selectModeSales ? '' : 'none';
+            document.querySelectorAll('#salesBody .checkbox-col').forEach(td => td.style.display = selectModeSales ? '' : 'none');
+            document.getElementById('selectModeBtn').innerHTML = selectModeSales
+                ? '<i class="bi bi-x-lg me-1"></i>Cancel'
+                : '<i class="bi bi-check2-square me-1"></i>Select';
+            if (!selectModeSales) {
+                document.querySelectorAll('.sale-row-check').forEach(cb => cb.checked = false);
+                document.getElementById('selectAllSales').checked = false;
+                document.getElementById('bulkDeleteBtn').style.display = 'none';
+            }
+            updateSalesSelCount();
+        }
+
+        function toggleSelectAllSales(masterCb) {
+            document.querySelectorAll('#salesBody tr[data-id]').forEach(tr => {
+                if (tr.style.display === 'none') return; // respect current filter
+                const cb = tr.querySelector('.sale-row-check');
+                if (cb) cb.checked = masterCb.checked;
+            });
+            updateSalesSelCount();
+        }
+
+        function updateSalesSelCount() {
+            const checked = document.querySelectorAll('.sale-row-check:checked').length;
+            document.getElementById('selCount').textContent = checked;
+            document.getElementById('bulkDeleteBtn').style.display = checked > 0 ? '' : 'none';
+        }
+
+        async function bulkDeleteSales() {
+            const ids = Array.from(document.querySelectorAll('.sale-row-check:checked')).map(cb => cb.value);
+            if (!ids.length) return;
+
+            const result = await Swal.fire({
+                title: `Delete ${ids.length} sale${ids.length > 1 ? 's' : ''}?`,
+                text: 'This will restore inventory for any parts sold and cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Delete All',
+            });
+            if (!result.isConfirmed) return;
+
+            const fd = new FormData();
+            ids.forEach(id => fd.append('ids[]', id));
+            const resp = await fetch('backend/sales.php?action=bulk_delete', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.success) {
+                ids.forEach(id => document.querySelector(`#salesBody tr[data-id="${id}"]`)?.remove());
+                renumberRows('salesBody');
+                Swal.fire({ icon: 'success', title: `${data.deleted} deleted`, timer: 1400, showConfirmButton: false });
+                toggleSelectMode();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+            }
+        }
+
+        function openEditPayment(id, paymentMethod, cashAmt, gcashAmt, creditAmt, notes, grandTotal) {
+            document.getElementById('epId').value = id;
+            document.getElementById('epGrandTotal').value = grandTotal;
+            document.getElementById('epCash').value = cashAmt || 0;
+            document.getElementById('epGcash').value = gcashAmt || 0;
+            document.getElementById('epCredit').value = creditAmt || 0;
+            document.getElementById('epNotes').value = notes || '';
+
+            const radio = document.getElementById('ep-' + (paymentMethod || 'cash'));
+            if (radio) radio.checked = true;
+
+            epTogglePanel();
+            new bootstrap.Modal(document.getElementById('editPaymentModal')).show();
+        }
+
+        function epTogglePanel() {
+            const isSplit = document.getElementById('ep-split')?.checked;
+            document.getElementById('epSplitPanel').classList.toggle('active', !!isSplit);
+            epUpdateRemaining();
+        }
+
+        function epUpdateRemaining() {
+            const panel = document.getElementById('epSplitPanel');
+            if (!panel.classList.contains('active')) return;
+
+            const grand  = parseFloat(document.getElementById('epGrandTotal').value) || 0;
+            const cash   = parseFloat(document.getElementById('epCash').value)   || 0;
+            const gcash  = parseFloat(document.getElementById('epGcash').value)  || 0;
+            const credit = parseFloat(document.getElementById('epCredit').value) || 0;
+            const remaining = grand - (cash + gcash + credit);
+
+            const wrap = document.getElementById('epRemaining');
+            const el = document.getElementById('epRemainingValue');
+            if (Math.abs(remaining) < 0.01) {
+                wrap.classList.remove('unbalanced');
+                wrap.classList.add('balanced');
+                el.textContent = '✓ Fully allocated';
+            } else {
+                wrap.classList.remove('balanced');
+                wrap.classList.add('unbalanced');
+                el.textContent = (remaining > 0 ? '₱' + remaining.toFixed(2) + ' left' : 'Over by ₱' + (-remaining).toFixed(2));
+            }
+        }
+
+        document.getElementById('epSubmit')?.addEventListener('click', async () => {
+            const btn = document.getElementById('epSubmit');
+            const id = document.getElementById('epId').value;
+            const paymentMethod = document.querySelector('input[name="epPayment"]:checked')?.value || 'cash';
+            const cashAmt   = parseFloat(document.getElementById('epCash').value)   || 0;
+            const gcashAmt  = parseFloat(document.getElementById('epGcash').value)  || 0;
+            const creditAmt = parseFloat(document.getElementById('epCredit').value) || 0;
+            const notes = document.getElementById('epNotes').value.trim();
+
+            if (paymentMethod === 'split') {
+                const grand = parseFloat(document.getElementById('epGrandTotal').value) || 0;
+                if (Math.abs(grand - (cashAmt + gcashAmt + creditAmt)) > 0.01) {
+                    Swal.fire({ icon: 'warning', title: "Split doesn't match total", text: 'Adjust the amounts so they add up to the sale total.' });
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+            try {
+                const resp = await fetch('backend/sales.php?action=update_payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id, payment_method: paymentMethod,
+                        cash_amount: cashAmt, gcash_amount: gcashAmt, credit_amount: creditAmt,
+                        notes,
+                    }),
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('editPaymentModal'))?.hide();
+                    await Swal.fire({ icon: 'success', title: 'Updated!', timer: 1200, showConfirmButton: false });
+                    location.reload();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Save Changes';
+            }
+        });
+
         async function deleteSale(id, name) {
+            if (!id) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Invalid ID' });
+                return;
+            }
+
             const result = await Swal.fire({
                 title: 'Delete this sale?',
                 text: `"${name}" will be permanently removed.`,
@@ -908,7 +1351,7 @@ if ($rc)
 
             const fd = new FormData();
             fd.append('id', id);
-            const resp = await fetch('backend/sales.php?action=delete', { method: 'POST', body: fd });
+            const resp = await fetch(`backend/sales.php?action=delete&id=${id}`, { method: 'POST', body: fd });
             const data = await resp.json();
 
             if (data.success) {

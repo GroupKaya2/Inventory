@@ -39,6 +39,17 @@
     border-radius: 8px;
 }
 
+.inv-tabs {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.inv-tabs::-webkit-scrollbar {
+    display: none;
+}
+
 .inv-tabs .nav-link {
     color: #4b5a6e;
     font-weight: 600;
@@ -46,6 +57,8 @@
     border-radius: 8px 8px 0 0;
     padding: 8px 16px;
     border: none;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .modal-content {
@@ -107,7 +120,7 @@
     }
 
     .inv-tabs .nav-link {
-        padding: 7px 10px;
+        padding: 7px 12px;
         font-size: .75rem;
     }
 

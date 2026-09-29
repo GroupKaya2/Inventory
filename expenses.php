@@ -166,12 +166,25 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                         <button class="btn-ghost" style="font-size:.8rem;padding:6px 14px;" onclick="exportCSV()">
                             <i class="bi bi-download me-1"></i>CSV
                         </button>
+                        <?php if ($isOwner): ?>
+                        <button class="btn-ghost" id="selectModeBtn" style="font-size:.8rem;padding:6px 14px;" onclick="toggleSelectMode()">
+                            <i class="bi bi-check2-square me-1"></i>Select
+                        </button>
+                        <button class="btn-pink" id="bulkDeleteBtn" style="font-size:.8rem;padding:6px 14px;background:linear-gradient(135deg,#dc2626,#7f1d1d);border-color:rgba(248,113,113,.4);color:#fca5a5;display:none;" onclick="bulkDeleteExpenses()">
+                            <i class="bi bi-trash me-1"></i>Delete Selected (<span id="selCount">0</span>)
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="table-responsive">
                     <table class="data-table" id="expTable">
                         <thead>
                             <tr>
+                                <?php if ($isOwner): ?>
+                                <th id="checkboxColHead" style="display:none;width:36px;">
+                                    <input type="checkbox" id="selectAllExp" onchange="toggleSelectAllExp(this)">
+                                </th>
+                                <?php endif; ?>
                                 <th>#</th>
                                 <th>Date</th>
                                 <th>Category</th>
@@ -184,7 +197,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                         <tbody id="expBody">
                             <?php if (empty($expenses)): ?>
                                 <tr>
-                                    <td colspan="<?= $isOwner ? 7 : 6 ?>" style="text-align:center;padding:30px;color:#7a8499;">
+                                    <td colspan="<?= $isOwner ? 8 : 6 ?>" style="text-align:center;padding:30px;color:#7a8499;">
                                         No expenses recorded yet.
                                     </td>
                                 </tr>
@@ -196,6 +209,11 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                                     ?>
                                     <tr data-cat="<?= htmlspecialchars($e['category']) ?>"
                                         data-search="<?= strtolower(htmlspecialchars($e['description'] . ' ' . $e['category'] . ' ' . $e['expense_date'] . ' ' . ($e['creator'] ?? ''))) ?>">
+                                        <?php if ($isOwner): ?>
+                                        <td class="checkbox-col" style="display:none;">
+                                            <input type="checkbox" class="exp-row-check" value="<?= $e['id'] ?>" onchange="updateExpSelCount()">
+                                        </td>
+                                        <?php endif; ?>
                                         <td><span class="badge-gray row-num"><?= $expNum ?></span></td>
                                         <td><?= date('M d, Y', strtotime($e['expense_date'])) ?></td>
                                         <td>
@@ -376,6 +394,67 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
                 Swal.fire({ icon: 'error', title: 'Error', text: data.message });
             }
         });
+
+        let selectModeExp = false;
+
+        function toggleSelectMode() {
+            selectModeExp = !selectModeExp;
+            document.getElementById('checkboxColHead').style.display = selectModeExp ? '' : 'none';
+            document.querySelectorAll('#expBody .checkbox-col').forEach(td => td.style.display = selectModeExp ? '' : 'none');
+            document.getElementById('selectModeBtn').innerHTML = selectModeExp
+                ? '<i class="bi bi-x-lg me-1"></i>Cancel'
+                : '<i class="bi bi-check2-square me-1"></i>Select';
+            if (!selectModeExp) {
+                document.querySelectorAll('.exp-row-check').forEach(cb => cb.checked = false);
+                document.getElementById('selectAllExp').checked = false;
+                document.getElementById('bulkDeleteBtn').style.display = 'none';
+            }
+            updateExpSelCount();
+        }
+
+        function toggleSelectAllExp(masterCb) {
+            document.querySelectorAll('#expBody tr[data-cat]').forEach(tr => {
+                if (tr.style.display === 'none') return; // respect current search/filter
+                const cb = tr.querySelector('.exp-row-check');
+                if (cb) cb.checked = masterCb.checked;
+            });
+            updateExpSelCount();
+        }
+
+        function updateExpSelCount() {
+            const checked = document.querySelectorAll('.exp-row-check:checked').length;
+            document.getElementById('selCount').textContent = checked;
+            document.getElementById('bulkDeleteBtn').style.display = checked > 0 ? '' : 'none';
+        }
+
+        async function bulkDeleteExpenses() {
+            const ids = Array.from(document.querySelectorAll('.exp-row-check:checked')).map(cb => cb.value);
+            if (!ids.length) return;
+
+            const confirm = await Swal.fire({
+                title: `Delete ${ids.length} expense${ids.length > 1 ? 's' : ''}?`,
+                text: 'This cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Delete All',
+            });
+            if (!confirm.isConfirmed) return;
+
+            const fd = new FormData();
+            fd.append('action', 'bulk_delete');
+            ids.forEach(id => fd.append('ids[]', id));
+
+            const resp = await fetch('backend/expenses.php', { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: `${data.deleted} deleted`, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+            }
+        }
 
         async function deleteExpense(id, desc) {
             if (!IS_OWNER) {

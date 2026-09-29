@@ -71,7 +71,7 @@ if ($action === 'update') {
         exit;
     }
 
-    $id = (int) ($_POST['category_id'] ?? 0);
+    $id = (int) ($_POST['category_id'] ?? $_POST['id'] ?? 0);
     $name = trim($_POST['category_name'] ?? '');
 
     if ($id <= 0 || empty($name)) {
@@ -119,7 +119,17 @@ if ($action === 'delete') {
         exit;
     }
 
-    $id = (int) ($_POST['category_id'] ?? 0);
+    // Some frontend code / transports send the field as "id" instead of
+    // "category_id", as a query param instead of POST body, or as a raw
+    // JSON body instead of form-encoded -- accept all of them so the
+    // delete never fails just because of which shape happened to arrive.
+    $id = (int) ($_POST['category_id'] ?? $_POST['id'] ?? $_GET['category_id'] ?? $_GET['id'] ?? 0);
+    if ($id <= 0) {
+        $raw = json_decode(file_get_contents('php://input'), true);
+        if (is_array($raw)) {
+            $id = (int) ($raw['category_id'] ?? $raw['id'] ?? 0);
+        }
+    }
     if ($id <= 0) {
         echo json_encode(['success' => false, 'message' => 'Invalid category ID']);
         exit;

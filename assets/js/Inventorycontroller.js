@@ -10,6 +10,7 @@ class InventoryController {
         this._allCategories    = [];
         this._reorderLoaded    = false;
         this._categoriesLoaded = false;
+        this._selectMode       = false;
     }
 
     async init() {
@@ -117,7 +118,46 @@ class InventoryController {
         document.getElementById('restockName').textContent = name;
         document.getElementById('restockQty').value        = 20;
         document.getElementById('restockRemarks').value    = '';
+        const costInput = document.getElementById('restockCost');
+        if (costInput) {
+            const product = this._allProducts.find(p => String(p.product_id) === String(id));
+            const currentCost = product ? parseFloat(product.unit_cost) || 0 : 0;
+            costInput.value = '';
+            costInput.placeholder = 'Current: ₱' + currentCost.toFixed(2);
+        }
         new bootstrap.Modal(document.getElementById('restockModal')).show();
+    }
+
+    async correctStock(id, name, currentStock) {
+        const { value: newTotal } = await Swal.fire({
+            title: 'Correct Stock',
+            html: `<div style="text-align:left;font-size:.85rem;color:#94a3b8;margin-bottom:10px;">
+                       <strong>${name}</strong><br>
+                       Current stock: <strong>${currentStock}</strong>
+                   </div>`,
+            input: 'number',
+            inputLabel: 'What should the stock total actually be?',
+            inputValue: currentStock,
+            inputAttributes: { min: 0, step: 1 },
+            showCancelButton: true,
+            confirmButtonText: 'Save',
+            confirmButtonColor: '#16a34a',
+            inputValidator: (value) => {
+                if (value === '' || value === null) return 'Enter a number.';
+                if (Number(value) < 0) return 'Stock cannot be negative.';
+            }
+        });
+
+        if (newTotal === undefined || newTotal === '' || Number(newTotal) === currentStock) return;
+
+        try {
+            const res = await this._api.setStock(id, Number(newTotal));
+            if (!res.success) { Swal.fire({ icon: 'error', title: 'Error', text: res.message }); return; }
+            Swal.fire({ icon: 'success', title: 'Stock updated', text: `${name} is now ${res.new_stock}.`, timer: 1600, showConfirmButton: false });
+            await this.init();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+        }
     }
 
     async openEdit(id) {
@@ -180,6 +220,68 @@ class InventoryController {
             if (json.success) {
                 Swal.fire({ icon: 'success', title: 'Deleted!', timer: 1200, showConfirmButton: false });
                 await this.refresh();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: json.message });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+        }
+    }
+
+    toggleSelectMode() {
+        this._selectMode = !this._selectMode;
+        document.getElementById('checkboxColHead').style.display = this._selectMode ? '' : 'none';
+        document.querySelectorAll('#stockTableBody .checkbox-col').forEach(td => td.style.display = this._selectMode ? '' : 'none');
+        document.getElementById('selectModeBtn').innerHTML = this._selectMode
+            ? '<i class="bi bi-x-lg"></i> Cancel'
+            : '<i class="bi bi-check2-square"></i> Select';
+        if (!this._selectMode) {
+            document.querySelectorAll('.product-row-check').forEach(cb => cb.checked = false);
+            const master = document.getElementById('selectAllProducts');
+            if (master) master.checked = false;
+            document.getElementById('bulkDeleteBtn').style.display = 'none';
+        }
+        this.updateSelCount();
+    }
+
+    toggleSelectAll(masterCb) {
+        document.querySelectorAll('#stockTableBody tr[data-id]').forEach(tr => {
+            if (tr.style.display === 'none') return; // respect current search/category filter
+            const cb = tr.querySelector('.product-row-check');
+            if (cb) cb.checked = masterCb.checked;
+        });
+        this.updateSelCount();
+    }
+
+    updateSelCount() {
+        const checked = document.querySelectorAll('.product-row-check:checked').length;
+        document.getElementById('selCount').textContent = checked;
+        document.getElementById('bulkDeleteBtn').style.display = checked > 0 ? '' : 'none';
+    }
+
+    async bulkDeleteProducts() {
+        const ids = Array.from(document.querySelectorAll('.product-row-check:checked')).map(cb => cb.value);
+        if (!ids.length) return;
+
+        const result = await Swal.fire({
+            title: `Delete ${ids.length} product${ids.length > 1 ? 's' : ''}?`,
+            text: 'This action cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Delete All',
+        });
+        if (!result.isConfirmed) return;
+
+        try {
+            const fd = new FormData();
+            ids.forEach(id => fd.append('ids[]', id));
+            const res  = await fetch('backend/products.php?action=bulk_delete', { method: 'POST', body: fd });
+            const json = await res.json();
+            if (json.success) {
+                Swal.fire({ icon: 'success', title: `${json.deleted} deleted`, timer: 1400, showConfirmButton: false });
+                await this.refresh();
+                this.toggleSelectMode(); // reset back out of select mode after a fresh render
             } else {
                 Swal.fire({ icon: 'error', title: 'Error', text: json.message });
             }
@@ -368,9 +470,14 @@ class InventoryController {
             const id      = document.getElementById('restockId')?.value;
             const qty     = parseInt(document.getElementById('restockQty')?.value) || 0;
             const remarks = document.getElementById('restockRemarks')?.value.trim() || '';
+            const costRaw = document.getElementById('restockCost')?.value.trim() || '';
 
             if (qty <= 0) {
                 Swal.fire({ icon: 'warning', title: 'Enter a valid quantity' });
+                return;
+            }
+            if (costRaw !== '' && parseFloat(costRaw) < 0) {
+                Swal.fire({ icon: 'warning', title: 'Cost price cannot be negative' });
                 return;
             }
 
@@ -380,18 +487,17 @@ class InventoryController {
                 fd.append('product_id', id);
                 fd.append('quantity',   qty);
                 fd.append('remarks',    remarks);
+                if (costRaw !== '') fd.append('unit_cost', costRaw);
                 const res  = await fetch('backend/products.php?action=restock', { method: 'POST', body: fd });
                 const json = await res.json();
                 if (json.success) {
                     const product = this._allProducts.find(p => String(p.product_id) === String(id));
-                    if (product) {
-                        this._ledger.pushBatch({
-                            batchId:  'restock-' + Date.now(),
-                            date:     new Date().toISOString().slice(0, 10),
-                            qty,
-                            unitCost: parseFloat(product.unit_cost) || 0,
-                        });
-                    }
+                    this._ledger.pushBatch({
+                        batchId:  'restock-' + Date.now(),
+                        date:     new Date().toISOString().slice(0, 10),
+                        qty,
+                        unitCost: costRaw !== '' ? parseFloat(costRaw) : (product ? parseFloat(product.unit_cost) || 0 : 0),
+                    });
                     bootstrap.Modal.getInstance(document.getElementById('restockModal'))?.hide();
                     await Swal.fire({
                         icon: 'success',

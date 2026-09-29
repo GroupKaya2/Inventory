@@ -28,4 +28,5 @@ class InventoryAPI {
     updateProduct(fields)                               { return this._post('update', fields); }
     deleteProduct(id)                                   { return this._post('delete', { id }); }
     restock(productId, quantity, remarks = 'Restock')   { return this._post('restock', { product_id: productId, quantity, remarks }); }
+    setStock(productId, newTotal, remarks = 'Stock correction') { return this._post('set_stock', { product_id: productId, new_total: newTotal, remarks }); }
 }

@@ -183,7 +183,15 @@
 .txn-page input.line-total {
     font-weight: 600;
     text-align: right;
+    padding-left: 6px !important;
+    padding-right: 8px !important;
+    font-size: .8rem !important;
+    text-overflow: ellipsis;
 }
+
+/* On very small screens the grid collapses to 2 columns anyway (see media query
+   below), so the Total field gets a full column's width there and doesn't need
+   the ellipsis fallback -- this only matters on desktop's tight 120px column. */
 
 /* General info grid */
 .txn-page .info-grid {
@@ -257,11 +265,71 @@
 }
 
 .txn-page .item-line.parts-grid {
-    grid-template-columns: minmax(0, 1.4fr) 72px 100px 100px 44px;
+    grid-template-columns: minmax(0, 1.3fr) 64px 108px 108px 120px 44px;
 }
 
 .txn-page .item-line.labor-grid {
-    grid-template-columns: minmax(0, 1.4fr) 72px 100px 100px 44px;
+    grid-template-columns: minmax(0, 1.3fr) 64px 108px 120px 44px;
+    background: rgba(74, 222, 128, .035);
+    border: 1px solid rgba(74, 222, 128, .12);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-bottom: none;
+}
+
+.txn-page .item-line.labor-grid:last-child {
+    margin-bottom: 0;
+}
+
+/* ── Labor Subtotal / Discount / Net block ── */
+.txn-page .labor-summary-block {
+    margin-top: 12px;
+    padding: 14px 16px;
+    background: rgba(74, 222, 128, .03);
+    border: 1px solid rgba(74, 222, 128, .1);
+    border-radius: 10px;
+}
+
+.txn-page .labor-summary-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: .85rem;
+    color: #94a3b8;
+    padding: 6px 0;
+}
+
+.txn-page .labor-summary-line .labor-discount-input {
+    width: 130px;
+    min-height: 34px !important;
+    text-align: right;
+    padding: 6px 10px !important;
+    font-size: .82rem !important;
+}
+
+.txn-page .labor-summary-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+    margin: 4px 0;
+}
+
+.txn-page .labor-summary-line.labor-summary-net {
+    font-weight: 700;
+    font-size: .95rem;
+    color: #fff;
+}
+
+.txn-page .labor-summary-line.labor-summary-net span:last-child {
+    color: #4ade80;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.txn-page .line-profit {
+    font-size: .68rem;
+    font-weight: 600;
+    margin-top: 4px;
+    text-align: right;
 }
 
 .txn-page .item-line.exp-grid {
@@ -278,6 +346,10 @@
     .txn-page .item-line.labor-grid .col-del {
         grid-column: 2;
         justify-self: end;
+    }
+
+    .txn-page .item-line.parts-grid {
+        grid-template-columns: 1fr 1fr;
     }
 
     .txn-page .item-line.exp-grid {

@@ -2,6 +2,7 @@
 // Handles login and logout
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/audit.php';
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
@@ -41,6 +42,10 @@ if ($action === 'login') {
         $_SESSION['email'] = base64_encode($user['email']);
         $_SESSION['role'] = $user['role'];
 
+        // Record this login so it shows up in Activity Log -- store the row's
+        // ID so logout below can fill in how long the session lasted.
+        $_SESSION['login_log_id'] = logLogin($conn, (int) $user['id']);
+
         header("Location: ../dashboard.php");
         exit();
     }
@@ -52,6 +57,10 @@ if ($action === 'login') {
 
 // LOGOUT
 if ($action === 'logout') {
+
+    if (isset($_SESSION['login_log_id'])) {
+        logLogout($conn, (int) $_SESSION['login_log_id']);
+    }
 
     $_SESSION = [];
     if (ini_get("session.use_cookies")) {

@@ -9,8 +9,9 @@ class InventoryRenderer {
     renderTable(products) {
         const tbody = document.getElementById('stockTableBody');
         if (!tbody) return;
+        const cols = this._isOwner ? 10 : 9;
         if (!products.length) {
-            tbody.innerHTML = this._emptyRow(9, 'No products found.');
+            tbody.innerHTML = this._emptyRow(cols, 'No products found.');
             return;
         }
         tbody.innerHTML = products.map((p, idx) => this._productRow(p, idx)).join('');
@@ -71,12 +72,12 @@ class InventoryRenderer {
 
     showTableLoading() {
         const tbody = document.getElementById('stockTableBody');
-        if (tbody) tbody.innerHTML = this._spinnerRow(9);
+        if (tbody) tbody.innerHTML = this._spinnerRow(this._isOwner ? 10 : 9);
     }
 
     showTableError(message) {
         const tbody = document.getElementById('stockTableBody');
-        if (tbody) tbody.innerHTML = this._errorRow(9, message);
+        if (tbody) tbody.innerHTML = this._errorRow(this._isOwner ? 10 : 9, message);
     }
 
     _productRow(p, idx) {
@@ -86,7 +87,11 @@ class InventoryRenderer {
         const deleteBtn = this._isOwner
             ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteProduct(${p.product_id}, '${this._esc(p.description)}')" title="Delete"><i class="bi bi-trash"></i></button>`
             : '';
+        const checkboxCell = this._isOwner
+            ? `<td class="checkbox-col" style="display:none;"><input type="checkbox" class="product-row-check" value="${p.product_id}" onchange="updateProductSelCount()"></td>`
+            : '';
         return `<tr data-id="${p.product_id}">
+            ${checkboxCell}
             <td><span class="badge-gray">${idx + 1}</span></td>
             <td>${p.category_name || '—'}</td>
             <td>
@@ -102,6 +107,9 @@ class InventoryRenderer {
                 <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-outline-info" onclick="openRestock(${p.product_id}, '${this._esc(p.description)}')" title="Restock">
                         <i class="bi bi-box-arrow-in-down"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="correctStock(${p.product_id}, '${this._esc(p.description)}', ${parseInt(p.current_stock) || 0})" title="Correct Stock">
+                        <i class="bi bi-sliders"></i>
                     </button>
                     ${editBtn}
                     ${deleteBtn}

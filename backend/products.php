@@ -1,4 +1,4 @@
-    <?php
+<?php
     session_start();
     error_reporting(0);
     ini_set('display_errors', 0);
@@ -79,7 +79,7 @@
                 FROM products p
                 LEFT JOIN categories c ON p.category_id = c.category_id
                 LEFT JOIN product_stock ps ON p.product_id = ps.product_id
-                ORDER BY c.category_name, p.description
+                ORDER BY p.product_id DESC
             ");
         $data = [];
         if ($result)
@@ -222,6 +222,14 @@
         );
         $stmt->bind_param('isssddiisi', $catId, $desc, $unit, $code, $cost, $price, $qty, $thresh, $brand, $id);
         if ($stmt->execute()) {
+            // NOTE: Initial Qty here is a historical record only. It intentionally
+            // does NOT touch inventory_transactions / live stock -- use the
+            // "Set Stock To" action (or Restock) to actually change displayed
+            // stock. An earlier version of this code tried to auto-adjust stock
+            // based on the delta from the old initial_quantity column, but that
+            // silently produced wrong, confusing results (e.g. typing "5" meaning
+            // "add 5 more" instead subtracted units), so it's been removed.
+
             // Log audit entry
             $oldValues = json_encode($oldResult);
             $newValues = json_encode([
@@ -280,6 +288,51 @@
         exit;
     }
 
+    if ($action === 'bulk_delete') {
+        if (!$isOwner) {
+            json_out(['success' => false, 'message' => 'Owner only']);
+            exit;
+        }
+
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids) || empty($ids)) {
+            json_out(['success' => false, 'message' => 'No products selected.']);
+            exit;
+        }
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($v) => $v > 0)));
+        if (empty($ids)) {
+            json_out(['success' => false, 'message' => 'No valid IDs provided.']);
+            exit;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $types = str_repeat('i', count($ids));
+
+        // Fetch old values first so each deletion is still individually audit-logged
+        $oldStmt = $conn->prepare("SELECT * FROM products WHERE product_id IN ($placeholders)");
+        $oldStmt->bind_param($types, ...$ids);
+        $oldStmt->execute();
+        $oldRows = $oldStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $oldStmt->close();
+
+        $stmt = $conn->prepare("DELETE FROM products WHERE product_id IN ($placeholders)");
+        $stmt->bind_param($types, ...$ids);
+
+        if ($stmt->execute()) {
+            $deleted = $stmt->affected_rows;
+            $stmt->close();
+            foreach ($oldRows as $old) {
+                logAudit($conn, $userId, 'DELETE', 'products', (int) $old['product_id'], json_encode($old), null);
+            }
+            json_out(['success' => true, 'deleted' => $deleted]);
+        } else {
+            $err = $conn->error;
+            $stmt->close();
+            json_out(['success' => false, 'message' => 'Bulk delete failed: ' . $err]);
+        }
+        exit;
+    }
+
     /* ══════════════════════════════════
     RESTOCK  ← self-healing: always adds cleanly from whatever is
             currently shown, even if hidden negative debt exists
@@ -289,6 +342,9 @@
         $productId = (int) ($_POST['product_id'] ?? 0);
         $qty = (int) ($_POST['quantity'] ?? 0);
         $remarks = trim($_POST['remarks'] ?? 'Restock');
+        // Optional: supplier price fluctuates, so let the cost be updated right
+        // from the restock form instead of requiring a separate Edit Product trip.
+        $newCost = isset($_POST['unit_cost']) && $_POST['unit_cost'] !== '' ? (float) $_POST['unit_cost'] : null;
 
         if ($productId <= 0) {
             json_out(['success' => false, 'message' => 'Invalid product ID.']);
@@ -298,9 +354,13 @@
             json_out(['success' => false, 'message' => 'Quantity must be greater than 0.']);
             exit;
         }
+        if ($newCost !== null && $newCost < 0) {
+            json_out(['success' => false, 'message' => 'Cost price cannot be negative.']);
+            exit;
+        }
 
         // Verify product exists
-        $check = $conn->prepare("SELECT product_id, description FROM products WHERE product_id = ?");
+        $check = $conn->prepare("SELECT product_id, description, unit_cost FROM products WHERE product_id = ?");
         $check->bind_param('i', $productId);
         $check->execute();
         $prod = $check->get_result()->fetch_assoc();
@@ -341,6 +401,20 @@
         }
         $stmt->close();
 
+        // Update supplier cost if a new price was entered on the restock form
+        if ($newCost !== null && abs($newCost - (float) $prod['unit_cost']) > 0.001) {
+            $costStmt = $conn->prepare("UPDATE products SET unit_cost = ? WHERE product_id = ?");
+            $costStmt->bind_param('di', $newCost, $productId);
+            $costStmt->execute();
+            $costStmt->close();
+
+            logAudit(
+                $conn, $userId, 'UPDATE', 'products', $productId,
+                json_encode(['unit_cost' => $prod['unit_cost']]),
+                json_encode(['unit_cost' => $newCost, 'note' => 'Cost updated via Restock'])
+            );
+        }
+
         // NOTE: Do NOT update initial_quantity here.
         // Stock is calculated as: initial_quantity + SUM(inventory_transactions.quantity_change)
         // The transaction insert above is the only thing needed.
@@ -354,6 +428,77 @@
             'new_stock' => $newStock,
             'product' => $prod['description'],
             'qty_added' => $qty,
+        ]);
+    }
+
+    /* ══════════════════════
+    SET STOCK TO AN EXACT VALUE (owner and manager)
+    Unlike Restock (always adds), this lets you type the actual correct total
+    you want the Stock column to show, and computes the difference from the
+    real current stock automatically -- unambiguous in either direction.
+    ══════════════════════ */
+    if ($action === 'set_stock') {
+        $productId = (int) ($_POST['product_id'] ?? 0);
+        $target    = (int) ($_POST['new_total'] ?? -1);
+        $remarks   = trim($_POST['remarks'] ?? 'Stock correction');
+
+        if ($productId <= 0) {
+            json_out(['success' => false, 'message' => 'Invalid product ID.']);
+            exit;
+        }
+        if ($target < 0) {
+            json_out(['success' => false, 'message' => 'New stock total cannot be negative.']);
+            exit;
+        }
+
+        $check = $conn->prepare("SELECT product_id, description FROM products WHERE product_id = ?");
+        $check->bind_param('i', $productId);
+        $check->execute();
+        $prod = $check->get_result()->fetch_assoc();
+        $check->close();
+
+        if (!$prod) {
+            json_out(['success' => false, 'message' => 'Product not found.']);
+            exit;
+        }
+
+        $currentStock = getCurrentStock($conn, $productId);
+        $delta = $target - $currentStock;
+
+        if ($delta === 0) {
+            json_out([
+                'success' => true,
+                'message' => 'Stock is already ' . $target . '. No change made.',
+                'new_stock' => $currentStock,
+            ]);
+            exit;
+        }
+
+        $today = date('Y-m-d');
+        $remarks .= " ({$currentStock} → {$target})";
+
+        $stmt = $conn->prepare(
+            "INSERT INTO inventory_transactions
+                (product_id, transaction_date, quantity_change, transaction_type, remarks, created_by)
+                VALUES (?, ?, ?, 'adjustment', ?, ?)"
+        );
+        $stmt->bind_param('iissi', $productId, $today, $delta, $remarks, $userId);
+
+        if (!$stmt->execute()) {
+            json_out(['success' => false, 'message' => 'Stock correction failed: ' . $stmt->error]);
+            exit;
+        }
+        $stmt->close();
+
+        logAudit($conn, $userId, 'ADJUSTMENT', 'products', $productId,
+            json_encode(['stock' => $currentStock]),
+            json_encode(['stock' => $target]));
+
+        json_out([
+            'success'    => true,
+            'message'    => 'Stock corrected successfully.',
+            'new_stock'  => $target,
+            'product'    => $prod['description'],
         ]);
     }
 

@@ -85,6 +85,32 @@
     $splitParts = (float) $conn->query("SELECT COALESCE(SUM(parts_total),0) AS t FROM sales WHERE sale_date BETWEEN '$monthStart' AND '$monthEnd'")->fetch_assoc()['t'];
     $splitLabor = (float) $conn->query("SELECT COALESCE(SUM(labor_total),0) AS t FROM sales WHERE sale_date BETWEEN '$monthStart' AND '$monthEnd'")->fetch_assoc()['t'];
 
+    // ── Accounts Payable Overview ──
+    // Guard against the table not existing yet if no AP invoice has ever
+    // been added -- it's only created lazily inside backend/accounts-payable.php.
+    $apTableExists  = $conn->query("SHOW TABLES LIKE 'accounts_payable'")->num_rows > 0;
+    $apOutstanding  = 0.0;
+    $apOverdueCount = 0;
+    $apOverdueList  = [];
+    if ($apTableExists) {
+        $apOutstanding = (float) ($conn->query(
+            "SELECT COALESCE(SUM(balance_due),0) AS t FROM accounts_payable WHERE status='unpaid'"
+        )->fetch_assoc()['t'] ?? 0);
+
+        $apOverdueCount = (int) ($conn->query(
+            "SELECT COUNT(*) AS c FROM accounts_payable WHERE status='unpaid' AND due_date IS NOT NULL AND due_date < CURDATE()"
+        )->fetch_assoc()['c'] ?? 0);
+
+        $r = $conn->query("
+            SELECT supplier_name, invoice_number, balance_due, due_date
+            FROM accounts_payable
+            WHERE status='unpaid' AND due_date IS NOT NULL AND due_date < CURDATE()
+            ORDER BY due_date ASC
+            LIMIT 5
+        ");
+        if ($r) while ($row = $r->fetch_assoc()) $apOverdueList[] = $row;
+    }
+
     // ── Chart 5: Low stock items ──
     $stockItems = [];
     $r = $conn->query("
@@ -212,6 +238,110 @@
             'net'       => $totalRev - $totalExp,
             'avg_daily' => round($avg, 2),
         ];
+    }
+    // ── Export entire dashboard as CSV ──
+    // Reuses every dataset already computed above so the export always
+    // matches exactly what's rendered on screen.
+    if (($_GET['export'] ?? '') === 'csv') {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="dashboard_export_' . date('Y-m-d_His') . '.csv"');
+
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel reads ₱/accents correctly
+
+        fputcsv($out, ['D Speedway Car Care Services — Dashboard Export']);
+        fputcsv($out, ['Generated', date('F j, Y g:i A')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['=== TODAY (' . date('F j, Y') . ') ===']);
+        fputcsv($out, ['Revenue', 'Expenses', 'Net Profit', 'Transactions', 'Labor Total']);
+        fputcsv($out, [$todayRevenue, $todayExp, $todayProfit, (int) $todayRow['cnt'], (float) $todayRow['labor']]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['=== THIS MONTH (' . date('F Y') . ') ===']);
+        fputcsv($out, ['Revenue', 'Expenses', 'Net Profit', 'Margin %', 'Transactions']);
+        fputcsv($out, [$monthRevenue, $monthExp, $monthProfit, round($monthMargin, 2), (int) $monthRow['cnt']]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['=== ACCOUNTS PAYABLE OVERVIEW ===']);
+        fputcsv($out, ['Payables Outstanding', 'Overdue Invoices']);
+        fputcsv($out, [$apOutstanding, $apOverdueCount]);
+        fputcsv($out, []);
+
+        if (!empty($apOverdueList)) {
+            fputcsv($out, ['=== AP OVERDUE INVOICES ===']);
+            fputcsv($out, ['Supplier', 'Invoice #', 'Balance Due', 'Due Date']);
+            foreach ($apOverdueList as $row) {
+                fputcsv($out, [$row['supplier_name'], $row['invoice_number'], $row['balance_due'], $row['due_date']]);
+            }
+            fputcsv($out, []);
+        }
+
+        fputcsv($out, ['=== REVENUE TREND (Last 30 Days) ===']);
+        fputcsv($out, ['Date', 'Revenue', 'Expenses', 'Profit']);
+        foreach ($last30 as $d) {
+            fputcsv($out, [$d['label'], $d['revenue'], $d['expenses'], $d['profit']]);
+        }
+        fputcsv($out, []);
+
+        fputcsv($out, ['=== MONTHLY TREND (Last 12 Months) ===']);
+        fputcsv($out, ['Month', 'Revenue', 'Expenses', 'Profit']);
+        foreach ($monthly12 as $m) {
+            fputcsv($out, [$m['label'], $m['revenue'], $m['expenses'], $m['profit']]);
+        }
+        fputcsv($out, []);
+
+        fputcsv($out, ['=== REVENUE SPLIT (This Month) ===']);
+        fputcsv($out, ['Parts', 'Labor']);
+        fputcsv($out, [$splitParts, $splitLabor]);
+        fputcsv($out, []);
+
+        if (!empty($top10products)) {
+            fputcsv($out, ['=== TOP 10 PRODUCTS SOLD (All Time) ===']);
+            fputcsv($out, ['Description', 'Code', 'Qty Sold', 'Revenue']);
+            foreach ($top10products as $p) {
+                fputcsv($out, [$p['description'], $p['code'], $p['qty_sold'], $p['revenue']]);
+            }
+            fputcsv($out, []);
+        }
+
+        fputcsv($out, ['=== PAYMENT METHODS (Last 6 Months) ===']);
+        fputcsv($out, ['Month', 'Cash', 'GCash', 'Credit']);
+        foreach ($paymentSplit as $p) {
+            fputcsv($out, [$p['label'], $p['cash'], $p['gcash'], $p['credit']]);
+        }
+        fputcsv($out, []);
+
+        if (!empty($recentSales)) {
+            fputcsv($out, ['=== RECENT SALES ===']);
+            fputcsv($out, ['ID', 'Date', 'Customer', 'Payment Method', 'Parts Total', 'Labor Total', 'Grand Total']);
+            foreach ($recentSales as $s) {
+                fputcsv($out, [$s['id'], $s['sale_date'], $s['customer_name'], $s['payment_method'], $s['parts_total'], $s['labor_total'], $s['grand_total']]);
+            }
+            fputcsv($out, []);
+        }
+
+        if (!empty($lowStockAlert)) {
+            fputcsv($out, ['=== LOW STOCK ALERT ===']);
+            fputcsv($out, ['Description', 'Category', 'Current Stock', 'Reorder Threshold']);
+            foreach ($lowStockAlert as $s) {
+                fputcsv($out, [$s['description'], $s['category_name'], $s['current_stock'], $s['reorder_threshold']]);
+            }
+            fputcsv($out, []);
+        }
+
+        fputcsv($out, ['=== MONTHLY PERFORMANCE (' . $perfYear . ') ===']);
+        fputcsv($out, ['Month', 'Total Revenue', 'Total Expenses', 'Net', 'Avg Daily Revenue']);
+        foreach ($monthlyPerfData as $mp) {
+            fputcsv($out, [$mp['label'], $mp['total_rev'], $mp['total_exp'], $mp['net'], $mp['avg_daily']]);
+        }
+
+        fclose($out);
+        $conn->close();
+        exit;
     }
     ?>
     <!DOCTYPE html>
@@ -393,8 +523,112 @@
                 border: 1px solid rgba(74, 222, 128, .18) !important;
                 color: #e2e8f0 !important;
             }
+
+            /* ── Print-only report header (hidden on screen) ── */
+            .print-header {
+                display: none;
+            }
+
+            /* ── Dashboard export (Print to PDF) ── */
+            @media print {
+
+                @page {
+                    size: A4 landscape;
+                    margin: 12mm;
+                }
+
+                html, body {
+                    background: #ffffff !important;
+                    color: #111827 !important;
+                }
+
+                /* Hide everything not part of the report */
+                .app-sidebar,
+                .sb-topbar,
+                .sb-overlay,
+                .sidebar,
+                #exportDashBtn,
+                a.btn-pink,
+                a.btn-ghost,
+                button,
+                .chart-tabs,
+                #monthPicker,
+                .kpi-sub a,
+                select {
+                    display: none !important;
+                }
+
+                .app-main {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                }
+
+                .print-header {
+                    display: block !important;
+                    margin-bottom: 16px;
+                    padding-bottom: 10px;
+                    border-bottom: 2px solid #111827;
+                }
+                .print-header-brand {
+                    font-family: 'Space Grotesk', sans-serif;
+                    font-size: 1.15rem;
+                    font-weight: 700;
+                    color: #111827 !important;
+                }
+                .print-header-meta {
+                    font-size: .78rem;
+                    color: #4b5563 !important;
+                    margin-top: 2px;
+                }
+
+                h4, h5, h6, p, span, div, small, strong, td, th {
+                    color: #111827 !important;
+                }
+
+                .section-title,
+                .chart-title,
+                .kpi-label,
+                .chart-sub,
+                .lbl {
+                    color: #4b5563 !important;
+                }
+
+                .kpi-card,
+                .chart-wrap,
+                .card,
+                .month-bar,
+                #monthlyPerfWrap,
+                .summary-pill {
+                    background: #ffffff !important;
+                    border: 1px solid #d1d5db !important;
+                    box-shadow: none !important;
+                    break-inside: avoid;
+                    page-break-inside: avoid;
+                }
+
+                .data-table th,
+                .data-table td {
+                    border-color: #e5e7eb !important;
+                    color: #111827 !important;
+                }
+
+                .row {
+                    break-inside: avoid;
+                }
+
+                canvas {
+                    max-width: 100% !important;
+                }
+
+                /* Force each major section onto a clean flow, avoid splitting charts */
+                .chart-wrap, .kpi-card, .card {
+                    margin-bottom: 10px !important;
+                }
+            }
         </style>
     </head>
+
 
     <body>
         <?php include 'sidebar.php'; ?>
@@ -412,10 +646,106 @@
                     </small>
                 </div>
                 <div class="d-flex gap-2 flex-wrap">
+                    <button type="button" class="btn-ghost" id="exportDashBtn" onclick="exportDashboard()" title="Export dashboard as PDF">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+                    </button>
                     <a href="sales.php" class="btn-pink"><i class="bi bi-plus-lg me-1"></i>New Sale</a>
                     <a href="inventory.php" class="btn-ghost"><i class="bi bi-box-seam me-1"></i>Inventory</a>
                 </div>
             </div>
+
+            <!-- Print-only header (shown when exporting/printing) -->
+            <div class="print-header">
+                <div class="print-header-brand">
+                    <i class="bi bi-speedometer2"></i> D Speedway Car Care Services — Dashboard Report
+                </div>
+                <div class="print-header-meta">
+                    Generated by <?= htmlspecialchars($_SESSION['user'] ?? 'User') ?> on <?= date('l, F j, Y g:i A') ?>
+                </div>
+            </div>
+
+            <!-- Accounts Payable Overview -->
+            <p class="section-title mb-3">Accounts Payable</p>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <div class="kpi-card">
+                        <div class="kpi-icon purple"><i class="bi bi-receipt"></i></div>
+                        <div>
+                            <div class="kpi-label">Payables Outstanding</div>
+                            <div class="kpi-value">₱<?= number_format($apOutstanding, 0) ?></div>
+                            <div class="kpi-sub">Unpaid balance</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="kpi-card">
+                        <div class="kpi-icon <?= $apOverdueCount > 0 ? 'red' : 'green' ?>">
+                            <i class="bi bi-alarm"></i>
+                        </div>
+                        <div>
+                            <div class="kpi-label">Overdue Invoices</div>
+                            <div class="kpi-value" style="<?= $apOverdueCount > 0 ? 'color:#f87171;' : '' ?>">
+                                <?= $apOverdueCount ?>
+                            </div>
+                            <div class="kpi-sub"><a href="accounts-payable.php" style="color:#4b5a6e;font-size:.72rem;">view all →</a></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="kpi-card" style="justify-content:space-between;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="kpi-icon blue"><i class="bi bi-download"></i></div>
+                            <div>
+                                <div class="kpi-label">Export CSV</div>
+                                <div class="kpi-sub" style="margin-top:2px;">All dashboard records as CSV</div>
+                            </div>
+                        </div>
+                        <a href="dashboard.php?export=csv" class="btn-pink" style="flex-shrink:0;" title="Export all dashboard records as CSV">
+                            <i class="bi bi-download"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <?php if (!empty($apOverdueList)): ?>
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="p-3" style="border-bottom:1px solid rgba(255,255,255,.06);">
+                                    <h6 style="margin:0;font-size:.88rem;color:#f87171;">
+                                        <i class="bi bi-exclamation-triangle me-2"></i>Overdue Supplier Invoices (<?= $apOverdueCount ?>)
+                                    </h6>
+                                </div>
+                                <div class="p-3">
+                                    <?php foreach ($apOverdueList as $inv): ?>
+                                        <div style="display:flex;align-items:center;justify-content:space-between;
+                                    padding:8px 10px;border-radius:8px;margin-bottom:7px;
+                                    background:rgba(248,113,113,.07);border-left:3px solid #f87171;">
+                                            <div>
+                                                <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;">
+                                                    <?= htmlspecialchars($inv['supplier_name']) ?>
+                                                    <?php if (!empty($inv['invoice_number'])): ?>
+                                                        <span style="color:#4b5a6e;font-weight:400;">(<?= htmlspecialchars($inv['invoice_number']) ?>)</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div style="font-size:.68rem;color:#4b5a6e;">
+                                                    Due <?= date('M j, Y', strtotime($inv['due_date'])) ?>
+                                                </div>
+                                            </div>
+                                            <span class="badge-red">₱<?= number_format((float) $inv['balance_due'], 0) ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                    <a href="accounts-payable.php" class="btn-pink"
+                                        style="width:100%;justify-content:center;margin-top:4px;font-size:.8rem;">
+                                        <i class="bi bi-receipt me-1"></i>Review Accounts Payable
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <!-- KPI Row -->
             <p class="section-title mb-3">Today — <?= date('F j, Y') ?></p>
@@ -863,6 +1193,7 @@
 
             </div>
 
+
         </main>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -877,6 +1208,15 @@
             const PAYMENTS = <?= json_encode($paymentSplit, JSON_UNESCAPED_UNICODE) ?>;
             const STOCKS = <?= json_encode($stockItems, JSON_UNESCAPED_UNICODE) ?>;
             const SPLIT = { parts: <?= $splitParts ?>, labor: <?= $splitLabor ?> };
+
+            // ── Export dashboard (Print to PDF) ──
+            // Uses the browser's native print dialog with dedicated @media print
+            // rules -- captures every KPI, chart, and table currently rendered
+            // on the page as a clean, light-background report the user can
+            // save as PDF or send to a printer.
+            function exportDashboard() {
+                window.print();
+            }
 
             // ── Chart.js defaults ──
             Chart.defaults.font.family = "'Inter', sans-serif";

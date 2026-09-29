@@ -85,6 +85,14 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                         <button class="btn-ghost" id="exportBtn">
                             <i class="bi bi-download"></i> CSV
                         </button>
+                        <?php if ($isOwner): ?>
+                        <button class="btn-ghost" id="selectModeBtn" onclick="toggleSelectMode()">
+                            <i class="bi bi-check2-square"></i> Select
+                        </button>
+                        <button class="btn-pink" id="bulkDeleteBtn" style="background:linear-gradient(135deg,#dc2626,#7f1d1d);border-color:rgba(248,113,113,.4);color:#fca5a5;display:none;" onclick="bulkDeleteProducts()">
+                            <i class="bi bi-trash"></i> Delete Selected (<span id="selCount">0</span>)
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -95,6 +103,11 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <?php if ($isOwner): ?>
+                                    <th id="checkboxColHead" style="display:none;width:36px;">
+                                        <input type="checkbox" id="selectAllProducts" onchange="toggleSelectAllProducts(this)">
+                                    </th>
+                                    <?php endif; ?>
                                     <th>ID</th>
                                     <th>Category</th>
                                     <th>Description / Code</th>
@@ -108,7 +121,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                             </thead>
                             <tbody id="stockTableBody">
                                 <tr>
-                                    <td colspan="9" style="text-align:center;padding:30px;color:#7a8499;">Loading products…</td>
+                                    <td colspan="<?= $isOwner ? 10 : 9 ?>" style="text-align:center;padding:30px;color:#7a8499;">Loading products…</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -385,6 +398,10 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
                 <div class="mb-3">
                     <label class="form-label">Quantity Received *</label>
                     <input type="number" class="form-input" id="restockQty" min="1" value="20">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cost Price (₱) <span style="color:#64748b;font-weight:400;">— leave blank to keep current</span></label>
+                    <input type="number" class="form-input" id="restockCost" min="0" step="0.01" placeholder="Current: —">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Remarks</label>

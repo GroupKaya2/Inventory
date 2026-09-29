@@ -501,6 +501,7 @@ $initials = substr($initials, 0, 2);
             'expenses' => 'Expenses',
             'profile' => 'Profile',
             'backup' => 'Backup & Restore',
+            'accounts_payable' => 'Accounts Payable',
         ];
         echo htmlspecialchars($pageTitles[$activePage] ?? '');
         ?>
@@ -586,6 +587,26 @@ $initials = substr($initials, 0, 2);
         }
         ?>
     </a>
+
+    <a href="accounts-payable.php" class="sb-link <?= $activePage === 'accounts_payable' ? 'active' : '' ?>"
+        data-sb-label="accounts payable supplier invoice vendor">
+        <span class="sb-icon icon-orange" aria-hidden="true"><i class="bi bi-receipt-cutoff"></i></span>
+        <span class="sb-link-text">Accounts Payable</span>
+    </a>
+
+    <a href="purchase-entry.php" class="sb-link <?= $activePage === 'purchase_entry' ? 'active' : '' ?>"
+        data-sb-label="purchase entry supplier invoice restock receiving">
+        <span class="sb-icon icon-purple" aria-hidden="true"><i class="bi bi-truck"></i></span>
+        <span class="sb-link-text">Purchase Entry</span>
+    </a>
+
+    <?php if ($isOwner): ?>
+    <a href="activity-log.php" class="sb-link <?= $activePage === 'activity_log' ? 'active' : '' ?>"
+        data-sb-label="activity log audit trail login history monitoring">
+        <span class="sb-icon icon-red" aria-hidden="true"><i class="bi bi-shield-lock-fill"></i></span>
+        <span class="sb-link-text">Activity Log</span>
+    </a>
+    <?php endif; ?>
 
     <hr class="sb-divider" data-sb-divider>
     <div class="sb-section" data-sb-section>Account</div>
