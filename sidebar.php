@@ -594,6 +594,12 @@ $initials = substr($initials, 0, 2);
         <span class="sb-link-text">Accounts Payable</span>
     </a>
 
+    <a href="accounts-receivable.php" class="sb-link <?= $activePage === 'accounts_receivable' ? 'active' : '' ?>"
+        data-sb-label="accounts receivable credit sales customer balance collection">
+        <span class="sb-icon icon-teal" aria-hidden="true"><i class="bi bi-cash-stack"></i></span>
+        <span class="sb-link-text">Accounts Receivable</span>
+    </a>
+
     <a href="purchase-entry.php" class="sb-link <?= $activePage === 'purchase_entry' ? 'active' : '' ?>"
         data-sb-label="purchase entry supplier invoice restock receiving">
         <span class="sb-icon icon-purple" aria-hidden="true"><i class="bi bi-truck"></i></span>

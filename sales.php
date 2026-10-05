@@ -1546,11 +1546,7 @@
                     })),
                 ];
 
-                // Single Labor Discount applies to the whole section, not any one line --
-                // append it as its own negative line so the sum of labor item amounts
-                // (which backend totals into sales.labor_total) nets out correctly, while
-                // each real service line keeps its own true, undiscounted amount for
-                // accurate per-service reporting.
+                
                 const laborDiscAmt = Math.max(0, Math.min(parseFloat(laborDiscount) || 0, laborSubtotal()));
                 if (laborDiscAmt > 0 && activeLabors.length) {
                     items.push({
@@ -1568,15 +1564,12 @@
                     .filter(e => e.amount > 0 && e.description.trim())
                     .map(e => ({ description: e.description.trim(), amount: e.amount }));
 
-                // Each outside-purchased part row carries its own full Accounts
-                // Payable details (edited inline), so each becomes its own invoice.
+                
                 const apRefLabel = document.getElementById('refNumber').value.trim();
                 const outsideInvoices = parts
                     .filter(r => r.outside && r.description.trim() && r.supplier && r.supplier.trim())
                     .map(r => {
-                        // AP is what we owe the SUPPLIER -- always Cost Price x Qty,
-                        // never the customer-facing retail total. Mixing the two
-                        // would inflate our liability by our own markup.
+                        
                         const total = r.qty * (r.costPrice || 0);
                         const paid = Math.min(parseFloat(r.amountPaid) || 0, total);
                         return {
@@ -1615,8 +1608,7 @@
                     const data = await resp.json();
 
                     if (data.success) {
-                        // Log each outside-purchased row to Accounts Payable now that
-                        // the sale itself has been saved successfully.
+                        
                         for (const inv of outsideInvoices) {
                             try {
                                 await fetch('backend/accounts-payable.php?action=add', {

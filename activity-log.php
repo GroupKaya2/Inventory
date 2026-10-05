@@ -418,4 +418,5 @@ function resetActivityFilters() {
 </script>
 
 </body>
+
 </html>

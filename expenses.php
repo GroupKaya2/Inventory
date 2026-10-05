@@ -496,6 +496,7 @@ $catColors = ['Rent' => '#e8175d', 'Salaries' => '#8b5cf6', 'Utilities' => '#3b8
             a.click();
         }
     </script>
+    
     <?php include 'footer.php'; ?>
 
 </body>

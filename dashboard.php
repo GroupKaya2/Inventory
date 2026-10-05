@@ -1706,6 +1706,7 @@
                 text.style.color = statusColor;
                 pill.style.background = bgColor;
                 pill.style.borderColor = statusColor.replace(')', ',.3)').replace('rgb', 'rgba');
+                
             }
 
             function switchPerfMonth(ym) {

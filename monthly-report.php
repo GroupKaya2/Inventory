@@ -323,6 +323,7 @@ $today = date('Y-m-d');
 
         </div>
 
+        
         <!-- Toolbar -->
         <div class="rpt-toolbar">
             <div class="rpt-field">

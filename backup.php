@@ -245,6 +245,7 @@ $activePage = 'backup';
             }
         }
 
+        
         loadBackups();
     </script>
 

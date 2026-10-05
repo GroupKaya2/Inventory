@@ -263,4 +263,5 @@ if ($action === 'delete_user') {
     exit;
 }
 
+
 echo json_encode(['success' => false, 'message' => 'Unknown action.']);

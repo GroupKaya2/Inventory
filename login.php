@@ -101,6 +101,7 @@ unset($_SESSION['error']);
     </div>
 
     <script src="assets/js/login.js"></script>
+    
 </body>
 
 </html>

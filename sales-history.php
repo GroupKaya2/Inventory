@@ -1387,7 +1387,7 @@ if ($rc)
         document.getElementById('expSearchInput').addEventListener('input', filterExpenses);
 
         function exportExpensesCSV() {
-            // Collect which expense IDs are currently visible
+            
             const visibleIds = new Set();
             document.querySelectorAll('#expensesBody tr[data-date]').forEach(tr => {
                 if (tr.style.display !== 'none') visibleIds.add(String(tr.dataset.id));

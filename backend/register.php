@@ -12,6 +12,7 @@ if ($name === '' || $email === '' || $password === '') {
     exit();
 }
 
+
 // Sanitize
 $email = filter_var($email, FILTER_SANITIZE_EMAIL);
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {

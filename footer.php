@@ -11,4 +11,5 @@ $currentYear = date('Y');
         <span class="footer-divider">|</span>
         <span class="footer-version">Smart Inventory &amp; Parts Planning System</span>
     </div>
+    
 </footer>

@@ -242,6 +242,7 @@ try {
     echo json_encode(['success' => false, 'message' => 'Unknown action.']);
     $conn->close();
 
+    
 } catch (\Throwable $e) {
     while (ob_get_level() > 0) { ob_end_clean(); }
     header('Content-Type: application/json');

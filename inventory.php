@@ -588,6 +588,7 @@ $isOwner    = ($_SESSION['role'] ?? 'manager') === 'owner';
     }
 })();
 </script>
+
 <?php include 'footer.php'; ?>
 
 </body>
