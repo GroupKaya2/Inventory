@@ -9,589 +9,895 @@ if (!isset($_SESSION['user_id'])) {
 
 $activePage = 'monthly_report';
 $isOwner = ($_SESSION['role'] ?? 'manager') === 'owner';
+$initialMonth = (isset($_GET['month']) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $_GET['month']))
+    ? $_GET['month'] : date('Y-m');
 $today = date('Y-m-d');
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weekly Sales Report  DSpeedway</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet">
+    <title>Monthly Sales Report — DSpeedway</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="assets/css/app.css">
     <style>
-        .rpt-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: flex-end;
-            padding: 16px 18px;
-            background: #111827;
-            border: 1px solid rgba(255, 255, 255, .07);
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-
-        .rpt-field label {
-            display: block;
-            font-size: .7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            color: #4b5a6e;
-            margin-bottom: 5px;
-        }
-
-        .rpt-date {
-            background: rgba(255, 255, 255, .06);
-            border: 1px solid rgba(255, 255, 255, .1);
-            color: #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: .88rem;
-            font-family: 'Inter', sans-serif;
-            min-width: 160px;
-        }
-
-        .rpt-date:focus {
-            outline: none;
-            border-color: rgba(74, 222, 128, .35);
-            box-shadow: 0 0 0 3px rgba(74, 222, 128, .08);
-        }
-
-        .rpt-hint {
-            flex: 1 1 220px;
-            font-size: .78rem;
-            color: #64748b;
-            line-height: 1.45;
-            padding-bottom: 4px;
-        }
-
-        .rpt-hint strong {
-            color: #94a3b8;
-        }
-
-        .week-nav {
-            display: flex;
-            gap: 6px;
-        }
-
-        .btn-week {
+        /* ── Toolbar ── */
+        .mr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .mr-month { display: flex; align-items: center; gap: 6px; }
+        .mr-select {
             background: rgba(255, 255, 255, .05);
             border: 1px solid rgba(255, 255, 255, .1);
-            color: #94a3b8;
+            color: #e2e8f0;
             border-radius: 8px;
-            padding: 8px 12px;
-            font-size: .8rem;
-            cursor: pointer;
-            transition: all .15s;
-        }
-
-        .btn-week:hover {
-            background: rgba(74, 222, 128, .08);
-            border-color: rgba(74, 222, 128, .25);
-            color: #e2e8f0;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .sum-card {
-            background: #111827;
-            border: 1px solid rgba(255, 255, 255, .07);
-            border-radius: 10px;
-            padding: 14px 16px;
-        }
-
-        .sum-card .lbl {
-            font-size: .68rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .45px;
-            color: #4b5a6e;
-            margin-bottom: 6px;
-        }
-
-        .sum-card .val {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.15rem;
-            font-weight: 700;
-        }
-
-        .sum-card .sub {
-            font-size: .68rem;
-            color: #4b5a6e;
-            margin-top: 4px;
-        }
-
-        .sum-card.week-net {
-            border-color: rgba(74, 222, 128, .2);
-            background: linear-gradient(135deg, rgba(74, 222, 128, .06), #111827);
-        }
-
-        .ledger-card {
-            background: #111827;
-            border: 1px solid rgba(255, 255, 255, .07);
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .ledger-heading {
-            background: linear-gradient(135deg, #0f1f15, #111827);
-            border-bottom: 1px solid rgba(74, 222, 128, .15);
-            padding: 16px 22px;
-        }
-
-        .ledger-heading h5 {
-            margin: 0;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1rem;
-            font-weight: 700;
-            color: #fff;
-        }
-
-        .ledger-heading p {
-            margin: 4px 0 0;
-            font-size: .76rem;
-            color: #4b5a6e;
-        }
-
-        .ledger-tbl {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .ledger-tbl thead th {
-            background: rgba(74, 222, 128, .06);
-            color: #4ade80;
-            font-size: .65rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .5px;
-            padding: 11px 14px;
-            border-bottom: 1px solid rgba(74, 222, 128, .15);
-            border-right: 1px solid rgba(255, 255, 255, .04);
-            text-align: center;
-            vertical-align: bottom;
-            line-height: 1.35;
-        }
-
-        .ledger-tbl thead th:first-child,
-        .ledger-tbl thead th:nth-child(2) {
-            text-align: left;
-        }
-
-        .ledger-tbl thead th:last-child {
-            border-right: none;
-        }
-
-        .ledger-tbl tbody td {
-            padding: 10px 14px;
+            height: 36px;
+            padding: 0 10px;
             font-size: .82rem;
-            color: #e2e8f0;
-            border-bottom: 1px solid rgba(255, 255, 255, .04);
-            border-right: 1px solid rgba(255, 255, 255, .03);
-            text-align: center;
+            font-family: 'Inter', sans-serif;
+        }
+        .mr-select option { background: #1c2336; color: #e2e8f0; }
+        .mr-select:focus { outline: none; border-color: rgba(74, 222, 128, .4); }
+        .mr-nav { height: 36px; padding: 0 11px; }
+
+        .mr-status {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: .74rem;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .mr-status.pending { display: inline-flex; background: rgba(251, 191, 36, .1); color: #fbbf24; }
+        .mr-status.saving  { display: inline-flex; background: rgba(96, 165, 250, .1); color: #60a5fa; }
+        .mr-status.saved   { display: inline-flex; background: rgba(74, 222, 128, .1); color: #4ade80; }
+        .mr-status.error   { display: inline-flex; background: rgba(248, 113, 113, .12); color: #fca5a5; cursor: pointer; }
+        .mr-status .bi-circle-fill { font-size: .5rem; }
+
+        .mr-legend {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            font-size: .76rem;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+        .mr-legend .dot {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 3px;
+            margin-right: 6px;
+            vertical-align: -1px;
+        }
+
+        /* ── Daily table ── */
+        .mr-scroll {
+            overflow: auto;
+            max-height: calc(100vh - 270px);
+            min-height: 380px;
+            border-radius: var(--radius);
+        }
+        .mr-table { min-width: 1020px; }
+        .mr-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            white-space: nowrap;
+            vertical-align: bottom;
+            padding-top: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(74, 222, 128, .18);
+        }
+        .mr-table thead th.r, .mr-table td.num { text-align: right; }
+        .mr-table thead th small {
+            display: block;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+            color: #475569;
+            font-size: .62rem;
+            margin-top: 1px;
+        }
+        .mr-table thead th.manual { color: #fbbf24; }
+        .mr-table thead th.manual small { color: rgba(251, 191, 36, .55); }
+
+        .mr-table tbody td { padding: 6px 10px; }
+        .mr-table td.num {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+        .mr-table td.num.zero { color: #3b4658; }
+        .mr-table td.num.neg { color: #f87171; }
+        .mr-table td.strong { font-weight: 700; color: #fff; }
+        .mr-table td.strong.zero { color: #3b4658; }
+
+        .mr-date { white-space: nowrap; }
+        .mr-day { font-weight: 600; color: #e2e8f0; margin-right: 8px; }
+        .mr-dow { font-size: .68rem; color: #64748b; text-transform: uppercase; letter-spacing: .4px; }
+        tr.is-sunday .mr-dow { color: #f87171; }
+        tr.is-today { background: rgba(74, 222, 128, .05); box-shadow: inset 3px 0 0 #4ade80; }
+
+        .mr-refin {
+            display: inline-block;
+            max-width: 210px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             vertical-align: middle;
+            color: #94a3b8;
+            font-size: .76rem;
+        }
+        .mr-dash { color: #2e3a4e; }
+
+        .mr-input {
+            width: 100%;
+            min-width: 100px;
+            background: rgba(251, 191, 36, .04);
+            border: 1px solid rgba(251, 191, 36, .16);
+            color: #e2e8f0;
+            border-radius: 6px;
+            padding: 5px 9px;
+            font-size: .8rem;
+            font-family: 'Inter', sans-serif;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            -moz-appearance: textfield;
+        }
+        .mr-input::-webkit-outer-spin-button,
+        .mr-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .mr-input::placeholder { color: #3b4658; }
+        .mr-input:focus {
+            outline: none;
+            border-color: rgba(251, 191, 36, .55);
+            background: rgba(251, 191, 36, .08);
+            box-shadow: 0 0 0 3px rgba(251, 191, 36, .1);
         }
 
-        .ledger-tbl tbody td:first-child,
-        .ledger-tbl tbody td:nth-child(2) {
-            text-align: left;
-        }
-
-        .ledger-tbl tbody td:last-child {
-            border-right: none;
-        }
-
-        .ledger-tbl tbody tr:not(.row-total):hover td {
-            background: rgba(74, 222, 128, .02);
-        }
-
-        .row-dim td {
-            opacity: .35;
-        }
-
-        .row-week td {
-            background: rgba(74, 222, 128, .08);
-            border-top: 2px solid rgba(74, 222, 128, .25);
+        .mr-table tfoot td {
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+            background: #0f1f15;
+            border-top: 1px solid rgba(74, 222, 128, .25);
+            border-bottom: none;
+            padding: 11px 10px;
             font-weight: 700;
             font-size: .84rem;
             color: #fff;
-            padding: 12px 14px;
         }
+        .mr-table tfoot td.num.zero { color: #4b5a6e; }
+        .mr-table tfoot td.num.neg { color: #f87171; }
+        .mr-table tfoot td.lbl { color: #4ade80; letter-spacing: .5px; }
 
-        .row-week td:first-child {
-            color: #4ade80;
+        /* ── Month-end summary ── */
+        .mr-summary { max-width: 700px; padding: 20px 24px; margin-top: 22px; margin-bottom: 24px; }
+        .mr-sum-title {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: .75rem;
-            text-transform: uppercase;
-            letter-spacing: .4px;
-        }
-
-        .row-month td {
-            background: rgba(96, 165, 250, .08);
-            border-top: 2px solid rgba(96, 165, 250, .25);
-            font-weight: 800;
-            font-size: .86rem;
-            color: #fff;
-            padding: 14px;
-        }
-
-        .row-month td:first-child {
-            color: #60a5fa;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: .75rem;
-            text-transform: uppercase;
-            letter-spacing: .4px;
-        }
-
-        .cv-parts { color: #60a5fa; font-weight: 600; }
-        .cv-labor { color: #4ade80; font-weight: 600; }
-        .cv-exp { color: #f87171; font-weight: 600; }
-        .cv-net { color: #fff; font-weight: 700; }
-        .cv-neg { color: #f87171; font-weight: 700; }
-
-        .exp-desc-list {
-            font-size: .72rem;
-            color: #f87171;
-            line-height: 1.55;
-            max-width: 220px;
-        }
-
-        .exp-desc-list div {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .d-num {
             font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin-bottom: 8px;
+        }
+        .mr-sum-title i { color: #4ade80; }
+        .mr-sum-title span { margin-left: auto; font-size: .78rem; font-weight: 500; color: #64748b; }
+        .mr-sum-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, .06);
+            font-size: .88rem;
+            color: #cbd5e1;
+        }
+        .mr-sum-row small { display: block; color: #475569; font-size: .68rem; }
+        .mr-sum-row .v {
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
             color: #e2e8f0;
+            white-space: nowrap;
+        }
+        .mr-sum-row.key {
             font-family: 'Space Grotesk', sans-serif;
-            font-size: .95rem;
+            font-weight: 700;
+            font-size: .98rem;
+            color: #fff;
+            background: rgba(74, 222, 128, .05);
+            margin: 4px -12px;
+            padding: 11px 12px;
+            border-radius: 8px;
+            border-bottom: none;
         }
+        .mr-sum-row.key .v { font-size: 1.05rem; color: #4ade80; }
+        .mr-sum-row.key .v.neg { color: #f87171; }
+        .mr-sum-row.head { font-weight: 700; color: #fff; margin-top: 6px; }
+        .mr-sum-row.exp { padding-left: 18px; color: #94a3b8; font-size: .84rem; }
+        .mr-sum-row.exp .mr-input { width: 170px; min-width: 0; }
+        .mr-sum-row.final { margin-top: 10px; }
+        .mr-sum-row.final .v { font-size: 1.25rem; }
+        .mr-sum-note { margin-top: 12px; font-size: .72rem; color: #475569; }
 
-        .d-name {
-            font-size: .7rem;
-            color: #4b5a6e;
-            margin-left: 4px;
-        }
-
-        .state-box {
-            text-align: center;
-            padding: 70px 20px;
-            color: #4b5a6e;
-        }
-
-        .state-box i {
-            font-size: 3rem;
-            display: block;
-            margin-bottom: 14px;
-        }
-
-        .formula-hint {
-            font-size: .72rem;
-            color: #4b5a6e;
-            padding: 10px 22px 14px;
-            border-top: 1px solid rgba(255, 255, 255, .05);
-        }
-
-        .formula-hint i {
-            color: #4ade80;
+        @media (max-width: 576px) {
+            .mr-sum-row.exp .mr-input { width: 130px; }
+            .mr-scroll { max-height: none; }
         }
     </style>
 </head>
-
 <body>
-    <?php include 'sidebar.php'; ?>
-    <main class="app-main">
 
-        <div class="page-header mb-3">
-            <h4 style="margin:0;"><i class="bi bi-calendar-week me-2"></i>Weekly Sales Report</h4>
+<?php include 'sidebar.php'; ?>
 
+<main class="app-main">
+
+    <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h4><i class="bi bi-bar-chart-line-fill me-2" style="color:#60a5fa;"></i>Monthly Sales Report</h4>
+            <p>Every date of the month, with month-end summary and net income. Amounts in ₱.</p>
         </div>
-
-        
-        <!-- Toolbar -->
-        <div class="rpt-toolbar">
-            <div class="rpt-field">
-                <label for="selDate"><i class="bi bi-calendar3 me-1"></i>Choose a date</label>
-                <input type="date" class="rpt-date" id="selDate" value="<?= htmlspecialchars($today) ?>">
+        <div class="mr-toolbar">
+            <div class="mr-month">
+                <button class="btn-ghost mr-nav" onclick="shiftMonth(-1)" title="Previous month"><i class="bi bi-chevron-left"></i></button>
+                <select id="mrMonth" class="mr-select" onchange="onMonthSelect()"></select>
+                <select id="mrYear" class="mr-select" onchange="onMonthSelect()"></select>
+                <button class="btn-ghost mr-nav" onclick="shiftMonth(1)" title="Next month"><i class="bi bi-chevron-right"></i></button>
             </div>
-            <div class="week-nav">
-                <button type="button" class="btn-week" id="btnPrevWeek" title="Previous week">
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-                <button type="button" class="btn-week" id="btnToday">Today</button>
-                <button type="button" class="btn-week" id="btnNextWeek" title="Next week">
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            </div>
-            <button type="button" class="btn-pink" onclick="loadReport()" style="padding:8px 18px;font-size:.84rem;">
-                <i class="bi bi-table me-1"></i>Show Week
-            </button>
-            <?php if ($isOwner): ?>
-                <button type="button" class="btn-ghost" onclick="exportCSV()" id="exportBtn"
-                    style="padding:8px 16px;font-size:.84rem;display:none;">
-                    <i class="bi bi-download me-1"></i>Export CSV
-                </button>
-            <?php endif; ?>
-
+            <span id="mrStatus" class="mr-status" onclick="onStatusClick()"></span>
+            <button class="btn-ghost" id="btnCsv" onclick="exportCsv()"><i class="bi bi-download"></i> CSV</button>
+            <button class="btn-pink" id="btnExcel" onclick="exportExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
         </div>
+    </div>
 
-        <div id="stateLoading" class="state-box" style="display:none;">
-            <div class="spinner-border" style="color:#4ade80;width:2.5rem;height:2.5rem;margin-bottom:14px;"></div>
-            <p>Loading report…</p>
+    <div class="mr-legend">
+        <span><span class="dot" style="background:rgba(251,191,36,.55);"></span>Amber columns are encoded manually and save automatically</span>
+        <span><span class="dot" style="background:rgba(148,163,184,.5);"></span>Parts / Goods and Labor come from Daily Transaction</span>
+    </div>
+
+    <div class="card">
+        <div class="mr-scroll">
+            <table class="data-table mr-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Customer / Ref</th>
+                        <th class="r">Parts / Goods</th>
+                        <th class="r">Labor</th>
+                        <th class="r">Total Sales<small>Parts + Labor</small></th>
+                        <th class="r manual">Credit<small>encode manually</small></th>
+                        <th class="r manual">COS Weekly<small>encode manually</small></th>
+                        <th class="r">Parts Margin<small>Parts − COS Weekly</small></th>
+                        <th class="r manual">Cost of Sales Labor<small>encode manually</small></th>
+                        <th class="r">Percentage<small>Margin ÷ COS Weekly</small></th>
+                    </tr>
+                </thead>
+                <tbody id="mrBody">
+                    <tr><td colspan="10" style="text-align:center;padding:40px;"><div class="spinner-border" style="color:#4ade80;"></div></td></tr>
+                </tbody>
+                <tfoot id="mrFoot"></tfoot>
+            </table>
         </div>
-        <div id="stateEmpty" class="state-box" style="display:none;">
-            <i class="bi bi-calendar-x"></i>
-            <p>No sales or expenses recorded for this week.</p>
-        </div>
+    </div>
 
-        <div id="reportOut" style="display:none;">
+    <div class="card mr-summary" id="mrSummary"></div>
 
-            <!-- Quick summary -->
-            <div class="summary-grid" id="summaryGrid"></div>
+</main>
 
-            <!-- Table -->
-            <div class="ledger-card">
-                <div class="ledger-heading">
-                    <h5 id="ledgerHeading">Week of …</h5>
-                    <p id="ledgerSub">Monday – Saturday</p>
-                </div>
+<?php include 'footer.php'; ?>
 
-                <div class="table-responsive">
-                    <table class="ledger-tbl">
-                        <thead>
-                            <tr>
-                                <th style="min-width:100px;">Date</th>
-                                <th style="min-width:200px;">List of Expenses</th>
-                                <th style="min-width:110px;">Total<br>Expenses</th>
-                                <th style="min-width:115px;">Revenue<br>Products</th>
-                                <th style="min-width:115px;">Revenue<br>Labor</th>
-                                <th style="min-width:120px;">Daily Net<br>Sales</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ledgerBody"></tbody>
-                    </table>
-                </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+'use strict';
 
-                <div class="formula-hint">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Daily Net Sales = Revenue (Products + Labor) − Total Expenses for that day.
-                </div>
-            </div>
-        </div>
+const API = 'backend/monthly-report.php';
+const TODAY = <?= json_encode($today) ?>;
+const INITIAL_MONTH = <?= json_encode($initialMonth) ?>;
 
-    </main>
+// ==== CORE START (pure logic -- no DOM access) ================================
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        'use strict';
-        const IS_OWNER = <?= $isOwner ? 'true' : 'false' ?>;
-        let _data = null;
+function num(v) {
+    const n = parseFloat(v);
+    return isFinite(n) ? n : 0;
+}
 
-        const selDate = document.getElementById('selDate');
+// Round to cents; "+ 0" turns -0 into 0 so nothing ever prints as "-0.00".
+function round2(n) {
+    return Math.round((n + Number.EPSILON) * 100) / 100 + 0;
+}
 
-        function peso(n) {
-            return '₱' + parseFloat(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-        function esc(s) {
-            return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-        }
-        function hasActivity(day) {
-            return day.has_data || parseFloat(day.expenses) > 0;
-        }
+function fmt(n) {
+    return round2(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
-        function shiftDate(days) {
-            const d = new Date(selDate.value + 'T12:00:00');
-            d.setDate(d.getDate() + days);
-            selDate.value = d.toISOString().slice(0, 10);
-            loadReport();
-        }
+// One day's computed columns.
+//   Total Sales  = Parts + Labor
+//   Parts Margin = Parts / Goods - COS Weekly
+//   Percentage   = Parts Margin / COS Weekly   (0 when COS Weekly is 0)
+function rowCalc(d) {
+    const total = round2(num(d.parts) + num(d.labor));
+    const margin = round2(num(d.parts) - num(d.cos_parts));
+    const pct = num(d.cos_parts) > 0 ? round2(margin / num(d.cos_parts) * 100) : 0;
+    return { total: total, margin: margin, pct: pct };
+}
 
-        document.getElementById('btnPrevWeek').addEventListener('click', () => shiftDate(-7));
-        document.getElementById('btnNextWeek').addEventListener('click', () => shiftDate(7));
-        document.getElementById('btnToday').addEventListener('click', () => {
-            selDate.value = new Date().toISOString().slice(0, 10);
-            loadReport();
+// Totals row. The total Percentage is Total Parts Margin / Total COS Weekly
+// (not an average of the daily percentages).
+function totalsCalc(days) {
+    const t = { parts: 0, labor: 0, credit: 0, cos_parts: 0, cos_labor: 0 };
+    days.forEach(function (d) {
+        t.parts += num(d.parts);
+        t.labor += num(d.labor);
+        t.credit += num(d.credit);
+        t.cos_parts += num(d.cos_parts);
+        t.cos_labor += num(d.cos_labor);
+    });
+    Object.keys(t).forEach(function (k) { t[k] = round2(t[k]); });
+    t.total = round2(t.parts + t.labor);
+    t.margin = round2(t.parts - t.cos_parts);
+    t.pct = t.cos_parts > 0 ? round2(t.margin / t.cos_parts * 100) : 0;
+    return t;
+}
+
+// Month-end summary.
+//   Net Sales  = Total Gross Sales - Cost of Sales Parts - Cost of Sales Labor
+//   Net Income = Net Sales - all Less Expenses lines
+function summaryCalc(t, expenses, lines) {
+    const gross = t.total;
+    const cosParts = t.cos_parts;
+    const cosLabor = t.cos_labor;
+    const netSales = round2(gross - cosParts - cosLabor);
+    let exp = 0;
+    lines.forEach(function (l) { exp += num(expenses[l.key]); });
+    exp = round2(exp);
+    return { gross: gross, cosParts: cosParts, cosLabor: cosLabor, netSales: netSales, totalExpenses: exp, netIncome: round2(netSales - exp) };
+}
+
+function csvCell(v) {
+    const s = (v === null || v === undefined) ? '' : String(v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function money(n) { return round2(n).toFixed(2); }
+function pctText(p) { return round2(p).toFixed(2) + '%'; }
+
+function dateLabel(d) {
+    const p = d.date.split('-');
+    return MONTH_SHORT[parseInt(p[1], 10) - 1] + ' ' + p[2] + ', ' + p[0] + ' (' + d.day_name + ')';
+}
+
+// Screen: ref numbers only (names in the hover). Export: ref + customer name.
+function refLabel(sales) {
+    return (sales || []).map(function (s) { return s.ref ? s.ref : (s.customer || ''); }).filter(Boolean).join(', ');
+}
+function refTitle(sales) {
+    return (sales || []).map(function (s) { return (s.ref ? s.ref + ' – ' : '') + (s.customer || 'No name'); }).join('\n');
+}
+function refExport(sales) {
+    return (sales || []).map(function (s) { return ((s.ref ? s.ref + ' ' : '') + (s.customer || '')).trim(); }).filter(Boolean).join('; ');
+}
+
+// Full table + month-end summary as CSV (UTF-8 with BOM so Excel opens it cleanly).
+function buildCsv(r) {
+    const rows = [];
+    rows.push(['MONTHLY SALES REPORT']);
+    rows.push([r.monthLabel]);
+    rows.push([]);
+    rows.push(['Date', 'Customer / Ref', 'Parts / Goods', 'Labor', 'Total Sales', 'Credit', 'COS Weekly', 'Parts Margin', 'Cost of Sales Labor', 'Percentage']);
+    r.days.forEach(function (d) {
+        const c = rowCalc(d);
+        rows.push([dateLabel(d), refExport(d.sales), money(d.parts), money(d.labor), money(c.total), money(d.credit), money(d.cos_parts), money(c.margin), money(d.cos_labor), pctText(c.pct)]);
+    });
+    const t = totalsCalc(r.days);
+    rows.push(['TOTAL', '', money(t.parts), money(t.labor), money(t.total), money(t.credit), money(t.cos_parts), money(t.margin), money(t.cos_labor), pctText(t.pct)]);
+    rows.push([]);
+    const s = summaryCalc(t, r.expenses, r.expenseLines);
+    rows.push(['MONTH-END SUMMARY']);
+    rows.push(['Total Gross Sales For The Month', money(s.gross)]);
+    rows.push(['Cost Of Sales Parts', money(s.cosParts)]);
+    rows.push(['Cost Of Sales Labor', money(s.cosLabor)]);
+    rows.push(['NET SALES', money(s.netSales)]);
+    rows.push(['LESS EXPENSES', money(s.totalExpenses)]);
+    r.expenseLines.forEach(function (l) { rows.push(['   ' + l.label, money(r.expenses[l.key])]); });
+    rows.push(['NET INCOME', money(s.netIncome)]);
+    return '\ufeff' + rows.map(function (row) { return row.map(csvCell).join(','); }).join('\r\n');
+}
+
+// Styled .xlsx (ExcelJS) with real formulas, so edits in Excel still recalculate.
+// Every formula cell also carries its computed result for viewers that don't recalc.
+function buildWorkbook(ExcelJS, r) {
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'D Speedway';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('Monthly Report', {
+        views: [{ state: 'frozen', ySplit: 4 }],
+        pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+    });
+
+    const ORANGE = 'FFF4B183', AMBER = 'FFFFF2CC', GRAY = 'FFE7E6E6', GREEN = 'FFE2EFDA';
+    const MONEY = '#,##0.00;[Red]-#,##0.00';
+    const thin = { style: 'thin', color: { argb: 'FF808080' } };
+    const box = { top: thin, left: thin, bottom: thin, right: thin };
+    const fill = function (argb) { return { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } }; };
+
+    ws.columns = [{ width: 22 }, { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 20 }, { width: 13 }];
+
+    function put(rn, cn, value, numFmt, opts) {
+        const cell = ws.getCell(rn, cn);
+        opts = opts || {};
+        if (!opts.noValue) cell.value = value;   // never write into a merged slave: it would overwrite the master
+        if (numFmt) cell.numFmt = numFmt;
+        cell.border = box;
+        if (opts.fill) cell.fill = fill(opts.fill);
+        if (opts.bold || opts.size) cell.font = { bold: !!opts.bold, size: opts.size || 11 };
+        if (opts.align) cell.alignment = { horizontal: opts.align, vertical: 'middle', indent: opts.indent || 0 };
+        return cell;
+    }
+
+    // Title block
+    ws.mergeCells('A1:J1');
+    const title = ws.getCell('A1');
+    title.value = 'MONTHLY SALES REPORT';
+    title.font = { bold: true, size: 16 };
+    title.alignment = { horizontal: 'center', vertical: 'middle' };
+    title.fill = fill(ORANGE);
+    ws.getRow(1).height = 30;
+    ws.mergeCells('A2:J2');
+    const sub = ws.getCell('A2');
+    sub.value = 'For the month of ' + r.monthLabel;
+    sub.font = { italic: true, size: 11 };
+    sub.alignment = { horizontal: 'center' };
+    ws.getRow(3).height = 6;
+
+    // Column headers
+    const headers = ['Date', 'Customer / Ref', 'Parts / Goods', 'Labor', 'Total Sales', 'Credit', 'COS Weekly', 'Parts Margin', 'Cost of Sales Labor', 'Percentage'];
+    headers.forEach(function (h, i) {
+        put(4, i + 1, h, null, { fill: ORANGE, bold: true, align: 'center' });
+    });
+    ws.getRow(4).height = 22;
+
+    // One row per date
+    const first = 5;
+    const n = r.days.length;
+    r.days.forEach(function (d, i) {
+        const rn = first + i;
+        const c = rowCalc(d);
+        const p = d.date.split('-').map(Number);
+        // Real Excel date, written as a serial number (days since 1899-12-30) so it never depends on
+        // Date-object handling or the viewer's time zone.
+        put(rn, 1, Date.UTC(p[0], p[1] - 1, p[2]) / 86400000 + 25569, 'mmm dd, yyyy (ddd)', { align: 'left' });
+        put(rn, 2, refExport(d.sales));
+        put(rn, 3, round2(d.parts), MONEY);
+        put(rn, 4, round2(d.labor), MONEY);
+        put(rn, 5, { formula: 'C' + rn + '+D' + rn, result: c.total }, MONEY);
+        put(rn, 6, round2(d.credit), MONEY, { fill: AMBER });
+        put(rn, 7, round2(d.cos_parts), MONEY, { fill: AMBER });
+        put(rn, 8, { formula: 'C' + rn + '-G' + rn, result: c.margin }, MONEY);
+        put(rn, 9, round2(d.cos_labor), MONEY, { fill: AMBER });
+        const cosP = round2(num(d.cos_parts));
+        put(rn, 10, { formula: 'IF(G' + rn + '=0,0,H' + rn + '/G' + rn + ')', result: cosP > 0 ? c.margin / cosP : 0 }, '0.00%');
+    });
+
+    // Totals row
+    const last = first + n - 1;
+    const tr = last + 1;
+    const t = totalsCalc(r.days);
+    ws.mergeCells('A' + tr + ':B' + tr);
+    put(tr, 1, 'TOTAL', null, { fill: GRAY, bold: true, align: 'left' });
+    put(tr, 2, null, null, { fill: GRAY, noValue: true });
+    const sumCol = function (col, cn, result) {
+        put(tr, cn, { formula: 'SUM(' + col + first + ':' + col + last + ')', result: result }, MONEY, { fill: GRAY, bold: true });
+    };
+    sumCol('C', 3, t.parts);
+    sumCol('D', 4, t.labor);
+    sumCol('E', 5, t.total);
+    sumCol('F', 6, t.credit);
+    sumCol('G', 7, t.cos_parts);
+    sumCol('H', 8, t.margin);
+    sumCol('I', 9, t.cos_labor);
+    put(tr, 10, { formula: 'IF(G' + tr + '=0,0,H' + tr + '/G' + tr + ')', result: t.cos_parts > 0 ? t.margin / t.cos_parts : 0 }, '0.00%', { fill: GRAY, bold: true });
+
+    // Month-end summary
+    const s = summaryCalc(t, r.expenses, r.expenseLines);
+    let row = tr + 2;
+    const label = function (rn, text, opts) {
+        ws.mergeCells('A' + rn + ':B' + rn);
+        put(rn, 1, text, null, opts);
+        put(rn, 2, null, null, Object.assign({}, opts, { noValue: true }));
+    };
+
+    ws.mergeCells('A' + row + ':C' + row);
+    put(row, 1, 'MONTH-END SUMMARY', null, { fill: ORANGE, bold: true, size: 12, align: 'left' });
+    put(row, 2, null, null, { fill: ORANGE, noValue: true });
+    put(row, 3, null, null, { fill: ORANGE, noValue: true });
+
+    const rGross = ++row;
+    label(rGross, 'Total Gross Sales For The Month');
+    put(rGross, 3, { formula: 'E' + tr, result: s.gross }, MONEY);
+
+    const rCosP = ++row;
+    label(rCosP, 'Cost Of Sales Parts');
+    put(rCosP, 3, { formula: 'G' + tr, result: s.cosParts }, MONEY);
+
+    const rCosL = ++row;
+    label(rCosL, 'Cost Of Sales Labor');
+    put(rCosL, 3, { formula: 'I' + tr, result: s.cosLabor }, MONEY);
+
+    const rNet = ++row;
+    label(rNet, 'NET SALES', { fill: GREEN, bold: true });
+    put(rNet, 3, { formula: 'C' + rGross + '-C' + rCosP + '-C' + rCosL, result: s.netSales }, MONEY, { fill: GREEN, bold: true });
+
+    const rLess = ++row;
+    const e1 = rLess + 1;
+    const eN = rLess + r.expenseLines.length;
+    label(rLess, 'LESS EXPENSES', { bold: true });
+    put(rLess, 3, { formula: 'SUM(C' + e1 + ':C' + eN + ')', result: s.totalExpenses }, MONEY, { bold: true });
+
+    r.expenseLines.forEach(function (l) {
+        const rn = ++row;
+        label(rn, l.label, { align: 'left', indent: 1 });
+        put(rn, 3, round2(num(r.expenses[l.key])), MONEY, { fill: AMBER });
+    });
+
+    const rIncome = ++row;
+    label(rIncome, 'NET INCOME', { fill: GREEN, bold: true, size: 12 });
+    put(rIncome, 3, { formula: 'C' + rNet + '-C' + rLess, result: s.netIncome }, MONEY, { fill: GREEN, bold: true, size: 12 });
+
+    return wb;
+}
+// ==== CORE END ===============================================================
+
+// ── State ────────────────────────────────────────────────────────────────────
+let REPORT = { month: INITIAL_MONTH, monthLabel: '', days: [], expenseLines: [], expenses: {} };
+let dirtyDays = {};   // date  -> { date, credit, cos_parts, cos_labor }
+let dirtyExp = {};    // key   -> amount
+let saveTimer = null;
+let currentSave = null;
+let loaded = false;
+
+function esc(s) {
+    return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+// ── Month controls ───────────────────────────────────────────────────────────
+function syncMonthControls() {
+    const parts = REPORT.month.split('-');
+    const y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+
+    const mSel = document.getElementById('mrMonth');
+    if (!mSel.options.length) {
+        mSel.innerHTML = MONTH_NAMES.map(function (n, i) { return '<option value="' + (i + 1) + '">' + n + '</option>'; }).join('');
+    }
+    mSel.value = String(m);
+
+    const ySel = document.getElementById('mrYear');
+    const cur = new Date().getFullYear();
+    const from = Math.min(cur - 6, y), to = Math.max(cur + 1, y);
+    let opts = '';
+    for (let yy = to; yy >= from; yy--) opts += '<option value="' + yy + '">' + yy + '</option>';
+    ySel.innerHTML = opts;
+    ySel.value = String(y);
+}
+
+function shiftMonth(delta) {
+    const parts = REPORT.month.split('-').map(Number);
+    let y = parts[0], m = parts[1] + delta;
+    if (m < 1) { m = 12; y--; }
+    if (m > 12) { m = 1; y++; }
+    loadMonth(y + '-' + pad2(m));
+}
+
+function onMonthSelect() {
+    loadMonth(document.getElementById('mrYear').value + '-' + pad2(document.getElementById('mrMonth').value));
+}
+
+// ── Load ─────────────────────────────────────────────────────────────────────
+async function loadMonth(month) {
+    if (loaded && !(await ensureSaved())) { syncMonthControls(); return; }
+
+    document.getElementById('mrBody').innerHTML =
+        '<tr><td colspan="10" style="text-align:center;padding:40px;"><div class="spinner-border" style="color:#4ade80;"></div></td></tr>';
+    document.getElementById('mrFoot').innerHTML = '';
+
+    try {
+        const res = await fetch(API + '?action=fetch&month=' + encodeURIComponent(month));
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message || 'Could not load the report.');
+
+        REPORT = { month: json.month, monthLabel: json.month_label, days: json.days, expenseLines: json.expense_lines, expenses: json.expenses };
+        dirtyDays = {};
+        dirtyExp = {};
+        loaded = true;
+        syncMonthControls();
+        history.replaceState(null, '', '?month=' + REPORT.month);
+        renderAll();
+        setStatus('idle');
+    } catch (e) {
+        document.getElementById('mrBody').innerHTML =
+            '<tr><td colspan="10" style="text-align:center;padding:32px;color:#fca5a5;">⚠ ' + esc(e.message) + '</td></tr>';
+    }
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function renderAll() {
+    renderTable();
+    renderFoot();
+    renderSummary();
+}
+
+function renderTable() {
+    document.getElementById('mrBody').innerHTML = REPORT.days.map(function (d, i) {
+        const c = rowCalc(d);
+        const cls = (d.dow === 7 ? 'is-sunday ' : '') + (d.date === TODAY ? 'is-today' : '');
+        const refs = refLabel(d.sales);
+        const mp = MONTH_SHORT[parseInt(d.date.split('-')[1], 10) - 1];
+        const input = function (field, val) {
+            return '<td><input class="mr-input" type="number" min="0" step="0.01" placeholder="0.00" value="' + (val ? val : '') +
+                '" data-i="' + i + '" data-col="' + field + '" oninput="onDayInput(' + i + ",'" + field + "',this)\" onkeydown=\"onKeyNav(event)\" onfocus=\"this.select()\"></td>";
+        };
+        return '<tr class="' + cls + '" data-i="' + i + '">' +
+            '<td class="mr-date"><span class="mr-day">' + mp + ' ' + pad2(d.day) + '</span><span class="mr-dow">' + esc(d.day_name) + '</span></td>' +
+            '<td>' + (refs ? '<span class="mr-refin" title="' + esc(refTitle(d.sales)) + '">' + esc(refs) + '</span>' : '<span class="mr-dash">—</span>') + '</td>' +
+            '<td class="num' + (d.parts ? '' : ' zero') + '">' + fmt(d.parts) + '</td>' +
+            '<td class="num' + (d.labor ? '' : ' zero') + '">' + fmt(d.labor) + '</td>' +
+            '<td class="num strong' + (c.total ? '' : ' zero') + '" data-c="total">' + fmt(c.total) + '</td>' +
+            input('credit', d.credit) +
+            input('cos_parts', d.cos_parts) +
+            '<td class="num' + (c.margin < 0 ? ' neg' : (c.margin === 0 ? ' zero' : '')) + '" data-c="margin">' + fmt(c.margin) + '</td>' +
+            input('cos_labor', d.cos_labor) +
+            '<td class="num' + (c.pct < 0 ? ' neg' : (c.pct === 0 ? ' zero' : '')) + '" data-c="pct">' + c.pct.toFixed(2) + '%</td>' +
+            '</tr>';
+    }).join('');
+}
+
+function updateRow(i) {
+    const tr = document.querySelector('#mrBody tr[data-i="' + i + '"]');
+    if (!tr) return;
+    const c = rowCalc(REPORT.days[i]);
+    const set = function (key, text, value) {
+        const el = tr.querySelector('[data-c="' + key + '"]');
+        if (!el) return;
+        el.textContent = text;
+        el.classList.toggle('zero', value === 0);
+        el.classList.toggle('neg', value < 0);
+    };
+    set('total', fmt(c.total), c.total);
+    set('margin', fmt(c.margin), c.margin);
+    set('pct', c.pct.toFixed(2) + '%', c.pct);
+}
+
+function renderFoot() {
+    const t = totalsCalc(REPORT.days);
+    const cell = function (v, isPct) {
+        const text = isPct ? t.pct.toFixed(2) + '%' : fmt(v);
+        return '<td class="num' + (v < 0 ? ' neg' : (v === 0 ? ' zero' : '')) + '">' + text + '</td>';
+    };
+    document.getElementById('mrFoot').innerHTML =
+        '<tr><td class="lbl" colspan="2">TOTAL</td>' +
+        cell(t.parts) + cell(t.labor) + cell(t.total) + cell(t.credit) + cell(t.cos_parts) + cell(t.margin) + cell(t.cos_labor) + cell(t.pct, true) + '</tr>';
+}
+
+function renderSummary() {
+    const lines = REPORT.expenseLines.map(function (l) {
+        const v = REPORT.expenses[l.key];
+        return '<div class="mr-sum-row exp"><span>' + esc(l.label) + '</span>' +
+            '<input class="mr-input" type="number" min="0" step="0.01" placeholder="0.00" value="' + (v ? v : '') +
+            '" oninput="onExpInput(\'' + l.key + '\',this)" onfocus="this.select()"></div>';
+    }).join('');
+
+    document.getElementById('mrSummary').innerHTML =
+        '<div class="mr-sum-title"><i class="bi bi-journal-text"></i> Month-End Summary<span>' + esc(REPORT.monthLabel) + '</span></div>' +
+        '<div class="mr-sum-row"><span>Total Gross Sales For The Month</span><span class="v" id="sumGross"></span></div>' +
+        '<div class="mr-sum-row"><span>Cost Of Sales Parts</span><span class="v" id="sumCosP"></span></div>' +
+        '<div class="mr-sum-row"><span>Cost Of Sales Labor</span><span class="v" id="sumCosL"></span></div>' +
+        '<div class="mr-sum-row key"><span>NET SALES<small>Gross Sales − Cost of Sales Parts − Cost of Sales Labor</small></span><span class="v" id="sumNet"></span></div>' +
+        '<div class="mr-sum-row head"><span>Less Expenses</span><span class="v" id="sumExp"></span></div>' +
+        lines +
+        '<div class="mr-sum-row key final"><span>NET INCOME<small>Net Sales − Less Expenses</small></span><span class="v" id="sumIncome"></span></div>' +
+        '<div class="mr-sum-note">Expense lines are encoded manually and save automatically. Net Income still computes when some lines are empty.</div>';
+    updateSummaryValues();
+}
+
+function updateSummaryValues() {
+    const s = summaryCalc(totalsCalc(REPORT.days), REPORT.expenses, REPORT.expenseLines);
+    const peso = function (n) { return '₱' + fmt(n); };
+    const put = function (id, n, signed) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = peso(n);
+        if (signed) el.classList.toggle('neg', n < 0);
+    };
+    put('sumGross', s.gross);
+    put('sumCosP', s.cosParts);
+    put('sumCosL', s.cosLabor);
+    put('sumNet', s.netSales, true);
+    put('sumExp', s.totalExpenses);
+    put('sumIncome', s.netIncome, true);
+}
+
+// ── Editing ──────────────────────────────────────────────────────────────────
+function onDayInput(i, field, el) {
+    const d = REPORT.days[i];
+    d[field] = Math.max(0, num(el.value));
+    dirtyDays[d.date] = { date: d.date, credit: d.credit, cos_parts: d.cos_parts, cos_labor: d.cos_labor };
+    updateRow(i);
+    renderFoot();
+    updateSummaryValues();
+    scheduleSave();
+}
+
+function onExpInput(key, el) {
+    REPORT.expenses[key] = Math.max(0, num(el.value));
+    dirtyExp[key] = REPORT.expenses[key];
+    updateSummaryValues();
+    scheduleSave();
+}
+
+// Enter moves down the same column (Shift+Enter moves up), like a spreadsheet.
+function onKeyNav(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const col = e.target.dataset.col;
+    const i = parseInt(e.target.dataset.i, 10) + (e.shiftKey ? -1 : 1);
+    const next = document.querySelector('.mr-input[data-col="' + col + '"][data-i="' + i + '"]');
+    if (next) next.focus();
+}
+
+// ── Autosave ─────────────────────────────────────────────────────────────────
+function hasDirty() {
+    return Object.keys(dirtyDays).length > 0 || Object.keys(dirtyExp).length > 0;
+}
+
+function buildPayload() {
+    return { month: REPORT.month, days: Object.keys(dirtyDays).map(function (k) { return dirtyDays[k]; }), expenses: Object.assign({}, dirtyExp) };
+}
+
+function setStatus(state, msg) {
+    const el = document.getElementById('mrStatus');
+    const html = {
+        pending: '<i class="bi bi-circle-fill"></i> Unsaved changes…',
+        saving: '<span class="spinner-border spinner-border-sm"></span> Saving…',
+        saved: '<i class="bi bi-check-circle-fill"></i> All changes saved',
+        error: '<i class="bi bi-exclamation-triangle-fill"></i> Not saved — click to retry'
+    };
+    el.className = 'mr-status' + (html[state] ? ' ' + state : '');
+    el.innerHTML = html[state] || '';
+    el.title = state === 'error' && msg ? msg : '';
+}
+
+function onStatusClick() {
+    if (hasDirty()) flushSave();
+}
+
+function scheduleSave() {
+    clearTimeout(saveTimer);
+    setStatus('pending');
+    saveTimer = setTimeout(flushSave, 900);
+}
+
+function flushSave() {
+    clearTimeout(saveTimer);
+    if (currentSave) return currentSave;
+    if (!hasDirty()) return Promise.resolve();
+    currentSave = doSave().then(function () { currentSave = null; }, function () { currentSave = null; });
+    return currentSave;
+}
+
+async function doSave() {
+    const payload = buildPayload();
+    const sent = { days: dirtyDays, exp: dirtyExp };
+    dirtyDays = {};
+    dirtyExp = {};
+    setStatus('saving');
+    let ok = false;
+    try {
+        const res = await fetch(API + '?action=save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
         });
-        selDate.addEventListener('change', loadReport);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.message || 'Save failed.');
+        ok = true;
+    } catch (e) {
+        // Put the unsaved entries back (without overriding anything typed since).
+        Object.keys(sent.days).forEach(function (k) { if (!dirtyDays[k]) dirtyDays[k] = sent.days[k]; });
+        Object.keys(sent.exp).forEach(function (k) { if (!(k in dirtyExp)) dirtyExp[k] = sent.exp[k]; });
+        setStatus('error', e.message);
+    }
+    if (ok) {
+        if (hasDirty()) scheduleSave(); else setStatus('saved');
+    }
+}
 
-        async function loadReport() {
-            const date = selDate.value;
-            if (!date) return;
+async function ensureSaved() {
+    for (let tries = 0; tries < 3 && (hasDirty() || currentSave); tries++) {
+        await flushSave();
+    }
+    if (!hasDirty()) return true;
+    const r = await Swal.fire({
+        icon: 'warning',
+        title: 'Some changes are not saved',
+        text: 'Leave this month anyway? Unsaved entries will be lost.',
+        showCancelButton: true,
+        confirmButtonText: 'Leave anyway',
+        confirmButtonColor: '#dc2626'
+    });
+    return r.isConfirmed;
+}
 
-            document.getElementById('stateLoading').style.display = '';
-            document.getElementById('stateEmpty').style.display = 'none';
-            document.getElementById('reportOut').style.display = 'none';
-            if (IS_OWNER) document.getElementById('exportBtn').style.display = 'none';
+window.addEventListener('beforeunload', function (e) {
+    if (hasDirty() || currentSave) { e.preventDefault(); e.returnValue = ''; }
+});
+// Last-chance save if the tab is closed or navigated away mid-edit.
+window.addEventListener('pagehide', function () {
+    if (hasDirty() && navigator.sendBeacon) {
+        navigator.sendBeacon(API + '?action=save', new Blob([JSON.stringify(buildPayload())], { type: 'application/json' }));
+    }
+});
 
-            try {
-                const resp = await fetch(`backend/monthly-report.php?date=${encodeURIComponent(date)}`);
-                const data = await resp.json();
-                document.getElementById('stateLoading').style.display = 'none';
+// ── Export ───────────────────────────────────────────────────────────────────
+function reportForExport() {
+    return { monthLabel: REPORT.monthLabel, days: REPORT.days, expenseLines: REPORT.expenseLines, expenses: REPORT.expenses };
+}
 
-                if (!data.success) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.message });
-                    return;
-                }
+function downloadBlob(blob, filename) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 800);
+}
 
-                _data = data;
-                renderSummary(data);
-                renderTable(data);
-                document.getElementById('reportOut').style.display = '';
-                if (IS_OWNER) document.getElementById('exportBtn').style.display = '';
+function exportCsv() {
+    if (!loaded) return;
+    downloadBlob(new Blob([buildCsv(reportForExport())], { type: 'text/csv;charset=utf-8' }), 'Monthly_Sales_Report_' + REPORT.month + '.csv');
+}
 
-            } catch (err) {
-                document.getElementById('stateLoading').style.display = 'none';
-                Swal.fire({ icon: 'error', title: 'Network Error', text: err.message });
-            }
-        }
+function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+        if (window.ExcelJS) return resolve();
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = function () { reject(new Error('Could not load the Excel library. Check your internet connection, or use CSV.')); };
+        document.head.appendChild(s);
+    });
+}
 
-        function renderSummary(data) {
-            const w = data.week_totals;
-            const m = data.month_totals;
-            const netColor = parseFloat(w.net) >= 0 ? '#4ade80' : '#f87171';
+async function exportExcel() {
+    if (!loaded) return;
+    const btn = document.getElementById('btnExcel');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Preparing…';
+    try {
+        await loadScript('https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js');
+        const wb = buildWorkbook(window.ExcelJS, reportForExport());
+        const buf = await wb.xlsx.writeBuffer();
+        downloadBlob(
+            new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+            'Monthly_Sales_Report_' + REPORT.month + '.xlsx'
+        );
+    } catch (e) {
+        Swal.fire({ icon: 'error', title: 'Excel export failed', text: e.message });
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+}
 
-            document.getElementById('summaryGrid').innerHTML = `
-                <div class="sum-card">
-                    <div class="lbl">Week — Products</div>
-                    <div class="val cv-parts">${peso(w.parts)}</div>
-                    <div class="sub">This Mon–Sat</div>
-                </div>
-                <div class="sum-card">
-                    <div class="lbl">Week — Labor</div>
-                    <div class="val cv-labor">${peso(w.labor)}</div>
-                    <div class="sub">This Mon–Sat</div>
-                </div>
-                <div class="sum-card">
-                    <div class="lbl">Week — Expenses</div>
-                    <div class="val cv-exp">${peso(w.expenses)}</div>
-                    <div class="sub">This Mon–Sat</div>
-                </div>
-                <div class="sum-card week-net">
-                    <div class="lbl">Week — Net Sales</div>
-                    <div class="val" style="color:${netColor}">${peso(w.net)}</div>
-                    <div class="sub">${data.week_label}</div>
-                </div>
-                <div class="sum-card">
-                    <div class="lbl">Month — Net Sales</div>
-                    <div class="val" style="color:${parseFloat(m.net) >= 0 ? '#60a5fa' : '#f87171'}">${peso(m.net)}</div>
-                    <div class="sub">${data.month_name} (full month)</div>
-                </div>
-            `;
-        }
-
-        function renderDayRow(day) {
-            const active = hasActivity(day);
-            const d = new Date(day.date + 'T12:00:00');
-            const dayNum = d.getDate();
-            const dayName = day.day_name || d.toLocaleDateString('en-PH', { weekday: 'short' });
-
-            let expCell = '<span style="color:#2e3a4e;">—</span>';
-            if (day.expense_items && day.expense_items.length > 0) {
-                expCell = '<div class="exp-desc-list">'
-                    + day.expense_items.map(e =>
-                        `<div title="${esc(e.description)} (${peso(e.amount)})">· ${esc(e.description)} <span style="color:#64748b;">${peso(e.amount)}</span></div>`
-                    ).join('')
-                    + '</div>';
-            }
-
-            const isNeg = parseFloat(day.net) < 0;
-            const netCls = active ? (isNeg ? 'cv-neg' : 'cv-net') : '';
-            const dash = '<span style="color:#2e3a4e;">—</span>';
-
-            const tr = document.createElement('tr');
-            if (!active) tr.className = 'row-dim';
-            tr.innerHTML = `
-                <td><span class="d-num">${dayNum}</span><span class="d-name">${dayName}</span></td>
-                <td>${active ? expCell : dash}</td>
-                <td class="cv-exp">${active ? peso(day.expenses) : dash}</td>
-                <td class="cv-parts">${day.txn_count > 0 || parseFloat(day.parts) > 0 ? peso(day.parts) : dash}</td>
-                <td class="cv-labor">${day.txn_count > 0 || parseFloat(day.labor) > 0 ? peso(day.labor) : dash}</td>
-                <td class="${netCls}">${active ? peso(day.net) : dash}</td>
-            `;
-            return tr;
-        }
-
-        function renderTotalRow(label, totals, rowClass, firstColClass) {
-            const isNeg = parseFloat(totals.net) < 0;
-            const tr = document.createElement('tr');
-            tr.className = rowClass;
-            tr.innerHTML = `
-                <td colspan="2" class="${firstColClass || ''}">${label}</td>
-                <td class="cv-exp">${peso(totals.expenses)}</td>
-                <td class="cv-parts">${peso(totals.parts)}</td>
-                <td class="cv-labor">${peso(totals.labor)}</td>
-                <td class="${isNeg ? 'cv-neg' : 'cv-net'}">${peso(totals.net)}</td>
-            `;
-            return tr;
-        }
-
-        function renderTable(data) {
-            document.getElementById('ledgerHeading').textContent = 'Week of ' + data.week_label;
-            document.getElementById('ledgerSub').textContent = data.week_subtitle + ' · Pick another date to jump to a different week';
-
-            const tbody = document.getElementById('ledgerBody');
-            tbody.innerHTML = '';
-
-            data.days.forEach(day => tbody.appendChild(renderDayRow(day)));
-            tbody.appendChild(renderTotalRow('Weekly Total (Mon–Sat)', data.week_totals, 'row-week'));
-            tbody.appendChild(renderTotalRow('Monthly Total — ' + data.month_name, data.month_totals, 'row-month'));
-        }
-
-        function exportCSV() {
-            if (!_data) return;
-            const rows = [
-                ['Weekly Sales Report — ' + _data.week_label],
-                ['Month: ' + _data.month_name],
-                [],
-                ['Date', 'List of Expenses', 'Total Expenses', 'Revenue Products', 'Revenue Labor', 'Daily Net Sales'],
-            ];
-
-            _data.days.forEach(d => {
-                const expList = (d.expense_items || []).map(e => e.description + ' (' + e.amount.toFixed(2) + ')').join('; ') || '—';
-                const active = hasActivity(d);
-                rows.push([
-                    d.date,
-                    active ? expList : '—',
-                    active ? parseFloat(d.expenses).toFixed(2) : '',
-                    parseFloat(d.parts).toFixed(2),
-                    parseFloat(d.labor).toFixed(2),
-                    active ? parseFloat(d.net).toFixed(2) : '',
-                ]);
-            });
-
-            const w = _data.week_totals;
-            const m = _data.month_totals;
-            rows.push([]);
-            rows.push(['Weekly Total (Mon–Sat)', '', w.expenses.toFixed(2), w.parts.toFixed(2), w.labor.toFixed(2), w.net.toFixed(2)]);
-            rows.push(['Monthly Total — ' + _data.month_name, '', m.expenses.toFixed(2), m.parts.toFixed(2), m.labor.toFixed(2), m.net.toFixed(2)]);
-
-            const csv = rows.map(r => r.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
-            const a = document.createElement('a');
-            a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-            a.download = `weekly_report_${_data.week_start}_to_${_data.week_end}.csv`;
-            a.click();
-        }
-
-        loadReport();
-    </script>
-    <?php include 'footer.php'; ?>
+loadMonth(INITIAL_MONTH);
+</script>
 
 </body>
-
 </html>
